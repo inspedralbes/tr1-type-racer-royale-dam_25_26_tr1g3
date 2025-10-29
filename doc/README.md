@@ -39,8 +39,7 @@ Aquí pots veure els diagrames del projecte:
 
 **Diagrama del Sistema**
 
-<img width="1920" height="1080" alt="DiagramaDelSistema" src="https://github.com/user-attachments/assets/8557352c-e885-43c3-b3c4-d24b16f735dc" />
-
+![Diagrama del Sistema](arxius/DiagramaDelSistema.png)
 
 ### Gestor d'Estat Global (Pinia) TO DO
 
