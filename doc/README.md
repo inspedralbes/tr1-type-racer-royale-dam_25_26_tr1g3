@@ -27,7 +27,7 @@ Aquí pots veure els diagrames del projecte:
 
 **Diagrama de flux d'usuari**
 
-<img width="612" height="986" alt="Fluxd'usuari drawio" src="https://github.com/user-attachments/assets/afbc2510-9534-4f43-acbf-203f89ab07a7" />
+![Diagrama Flux d'Usuari](arxius/Fluxd'usuari.drawio.png)
 
 **Esquema inicial Store de Pinia**
 
@@ -36,6 +36,11 @@ Aquí pots veure els diagrames del projecte:
 **Diagrama Pinia**
 
 ![Diagrama Store de Pinia](arxius/DiagramaPiniav2.png)
+
+**Diagrama del Sistema**
+
+<img width="1920" height="1080" alt="DiagramaDelSistema" src="https://github.com/user-attachments/assets/8557352c-e885-43c3-b3c4-d24b16f735dc" />
+
 
 ### Gestor d'Estat Global (Pinia) TO DO
 
