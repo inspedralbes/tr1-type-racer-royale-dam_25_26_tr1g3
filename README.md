@@ -50,11 +50,3 @@ Començant.
 ---
 
 ## Visio del Projecte
-
--
-
-## Disseny UX/UI
-
- * El Diagrama de Flux d'Usuari.
- * Les imatges dels Esbossos de Pantalla (Wireframes).
- * Un esbós inicial de l'estructura de l'Store (Pinia).
