@@ -25,6 +25,10 @@ Llistat d'alguns dels punts que han de quedar explicats en aquesta carpeta. Pode
 
 Aquí pots veure els diagrames del projecte:
 
+**Diagrama de flux d'usuari**
+
+<img width="612" height="986" alt="Fluxd'usuari drawio" src="https://github.com/user-attachments/assets/afbc2510-9534-4f43-acbf-203f89ab07a7" />
+
 **Esquema inicial Store de Pinia**
 
 ![Diagrama Store de Pinia](arxius/EsquemaStorePinia.png)
