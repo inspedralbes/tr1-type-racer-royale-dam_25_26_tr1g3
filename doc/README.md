@@ -66,6 +66,6 @@ Aqui podres veure la documentació de la definició conceptual de com comptarem 
 
 **Esbossos (Wireframes) amb Vuetify**
 
-Fent click al en aquest link, podres veure els esbossos de la nostra aplicació amb Vuetify
+Fent click en aquest link, podres veure els esbossos de la nostra aplicació amb Vuetify
 
 [FitIA.pdf](https://github.com/user-attachments/files/23208026/FitIA.pdf)
