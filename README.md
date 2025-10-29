@@ -49,4 +49,9 @@ Començant.
 
 ---
 
-## Visio del Projecte
+## Altres enllaços interesants
+
+ * [Enunciat](https://sites.google.com/inspedralbes.cat/tr1dam2025-26/enunciat)
+ * [Bitacores](https://docs.google.com/spreadsheets/d/1dAmw4pHsqixxw78n4tTtcN0cRsuXmbkM/edit?gid=1283798028#gid=1283798028)
+
+
