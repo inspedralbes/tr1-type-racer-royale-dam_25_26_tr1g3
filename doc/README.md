@@ -36,3 +36,16 @@ Aquí pots veure els diagrames del projecte:
 **Diagrama Pinia**
 
 ![Diagrama Pinia v2](arxius/DiagramaPiniav2.png)
+
+## Protocols
+
+### 3. Esdeveniments definits
+
+| Esdeveniment (type) | Direcció | Descripció | Camps (data) |
+|---|---|---|---|
+| `join_room` | Client → Servidor | L'usuari sol·licita unir-se a una sala concreta. | `username`, `room` |
+| `room_joined` | Servidor → Client | El servidor confirma la unió a la sala i retorna la llista d'usuaris actuals. | `room`, `participants[]` |
+| `update_reps` | Client → Servidor | L'usuari envia el nombre actual de repeticions realitzades. | `username`, `reps` |
+| `leaderboard_update` | Servidor → Client | El servidor envia el rànquing actualitzat de tots els participants. | `leaderboard[]` |
+| `error` | Servidor → Client | El servidor notifica un error (p. ex. sala inexistent). | `message` |
+| `disconnect` | Client → Servidor | L'usuari es desconnecta o abandona la sala. | `username` |
