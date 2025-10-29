@@ -22,7 +22,7 @@ Un cop comenceu heu de canviar aquesta explicació amb la corresponent al vostre
 ### Grup 3
 
  * Enrique Manuel Cayo Moye
- * Kim Zairyl Galicio
+ * Kim Zairyl Galicio Lamar
  * Marc Cara Montes
  * Eric Ruiz Agustín
  * Joel Chica Herrero
