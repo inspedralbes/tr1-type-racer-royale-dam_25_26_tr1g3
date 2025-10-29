@@ -52,6 +52,8 @@ Aquí pots veure els diagrames del projecte:
 | `error` | Servidor → Client | El servidor notifica un error (p. ex. sala inexistent). | `message` |
 | `disconnect` | Client → Servidor | L'usuari es desconnecta o abandona la sala. | `username` |
 
+## Documentacions
+
 **Documentació de la Lógica de la IA**
 
 Aqui podres veure la documentació de la definició conceptual de com comptarem les repeticions de cada exercici.
