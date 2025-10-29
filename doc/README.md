@@ -39,7 +39,7 @@ Aquí pots veure els diagrames del projecte:
 
 ## Protocols
 
-### 3. Esdeveniments definits
+**Protocol de comunicació amb Esdeveniments definits**
 
 | Esdeveniment (type) | Direcció | Descripció | Camps (data) |
 |---|---|---|---|
