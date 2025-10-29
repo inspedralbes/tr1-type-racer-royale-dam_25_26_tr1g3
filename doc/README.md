@@ -37,7 +37,7 @@ Aquí pots veure els diagrames del projecte:
 
 ![Diagrama Store de Pinia](arxius/DiagramaPiniav2.png)
 
-### Gestor d'Estat Global (Pinia) TODO
+### Gestor d'Estat Global (Pinia) TO DO
 
 ## Protocols
 
@@ -51,3 +51,8 @@ Aquí pots veure els diagrames del projecte:
 | `leaderboard_update` | Servidor → Client | El servidor envia el rànquing actualitzat de tots els participants. | `leaderboard[]` |
 | `error` | Servidor → Client | El servidor notifica un error (p. ex. sala inexistent). | `message` |
 | `disconnect` | Client → Servidor | L'usuari es desconnecta o abandona la sala. | `username` |
+
+**Documentació de la Lógica de la IA**
+Aqui podres veure la documentació de la definició conceptual de com comptarem les repeticions de cada exercici.
+
+[Lógica de la IA.pdf](https://github.com/user-attachments/files/23207721/Logica.de.la.IA.pdf)
