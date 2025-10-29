@@ -53,6 +53,7 @@ Aquí pots veure els diagrames del projecte:
 | `disconnect` | Client → Servidor | L'usuari es desconnecta o abandona la sala. | `username` |
 
 **Documentació de la Lógica de la IA**
+
 Aqui podres veure la documentació de la definició conceptual de com comptarem les repeticions de cada exercici.
 
 [Lógica de la IA.pdf](https://github.com/user-attachments/files/23207721/Logica.de.la.IA.pdf)
