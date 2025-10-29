@@ -35,7 +35,42 @@ Aquí pots veure els diagrames del projecte:
 
 **Diagrama Pinia**
 
-![Diagrama Pinia v2](arxius/DiagramaPiniav2.png)
+### Gestor d'Estat Global (Pinia)
+
+Aquest és el nucli de la gestió de l'estat de l'aplicació, centralitzant totes les dades reactives i la lògica per modificar-les.
+
+---
+
+#### **ESTAT (STATE)**
+Conté totes les dades que necessiten ser compartides entre diferents components de l'aplicació.
+
+-   **Usuari Actual:** Emmagatzema la informació de l'usuari que ha iniciat sessió.
+-   **Sala Actual:** Guarda les dades de la sala o sessió a la qual l'usuari s'ha unit.
+-   **Participants:** Manté una llista actualitzada de tots els usuaris presents a la sala.
+-   **Connexió WebSocket:** Controla l'estat de la connexió en temps real amb el servidor.
+-   **Intel·ligència Artificial:** Gestiona l'estat del model d'IA (si està carregat, actiu, etc.).
+
+---
+
+#### **GETTERS**
+Són propietats calculades que deriven de l'estat. Permeten accedir a dades processades o filtrades de manera eficient.
+
+-   **Classificació ordenada:** Retorna una llista dels participants ordenada segons la seva puntuació o progrés.
+-   **Comprovació d'usuari a la sala:** Retorna un valor booleà que indica si l'usuari actual ja forma part d'una sala.
+
+---
+
+#### **ACCIONS (ACTIONS)**
+Són les funcions que s'invoquen per modificar l'estat. Tota la lògica de negoci i les crides asíncrones es gestionen aquí.
+
+-   **Unir-se a una sala:** Executa la lògica per afegir l'usuari a una sala específica.
+-   **Abandonar la sala:** Gestiona la sortida de l'usuari de la sala actual.
+-   **Actualitzar progrés:** Modifica l'estat per reflectir el progrés de l'usuari (p. ex., repeticions, puntuació).
+-   **Gestionar missatges del servidor:** Processa els missatges rebuts a través del WebSocket i actualitza l'estat segons correspongui.
+-   **Carregar model d'IA:** Inicia la càrrega del model d'intel·ligència artificial.
+-   **Processar imatge amb IA:** Envia un fotograma de vídeo al model d'IA per al seu anàlisi.
+-   **Desar resultats de la sessió:** Realitza les operacions necessàries per guardar les dades finals de la sessió d'un usuari.
+
 
 ## Protocols
 
