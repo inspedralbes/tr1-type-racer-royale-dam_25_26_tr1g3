@@ -62,10 +62,10 @@ Aquí pots veure els diagrames del projecte:
 
 Aqui podres veure la documentació de la definició conceptual de com comptarem les repeticions de cada exercici.
 
-[Lógica de la IA.pdf](https://github.com/user-attachments/files/23207721/Logica.de.la.IA.pdf)
+[Lógica de la IA.pdf](arxius/Logica.de.la.IA.pdf)
 
 **Esbossos (Wireframes) amb Vuetify**
 
 Fent click al en aquest link, podres veure els esbossos de la nostra aplicació amb Vuetify
 
-[FitIA.pdf](https://github.com/user-attachments/files/23207984/FitIA.pdf)
+[FitIA.pdf](arxius/FitIA.pdf)
