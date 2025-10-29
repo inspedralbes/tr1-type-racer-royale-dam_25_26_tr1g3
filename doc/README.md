@@ -26,7 +26,9 @@ Llistat d'alguns dels punts que han de quedar explicats en aquesta carpeta. Pode
 Aquí pots veure els diagrames del projecte:
 
 **Esquema inicial Store de Pinia**
+
 ![Diagrama Store de Pinia](arxius/EsquemaStorePinia.png)
 
 **Diagrama Pinia**
+
 ![Diagrama Pinia v2](arxius/DiagramaPiniav2.png)
