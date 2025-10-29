@@ -35,6 +35,8 @@ Aquí pots veure els diagrames del projecte:
 
 **Diagrama Pinia**
 
+![Diagrama Store de Pinia](arxius/DiagramaPiniav2.png)
+
 ### Gestor d'Estat Global (Pinia) TODO
 
 ## Protocols
