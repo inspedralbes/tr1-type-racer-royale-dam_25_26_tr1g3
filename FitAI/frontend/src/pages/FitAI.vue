@@ -29,7 +29,7 @@
             <h2 class="mb-4 text-primary font-weight-bold">Exercici: {{ ejercicioLabel }}</h2>
 
             <v-card class="overflow-hidden rounded-xl pa-2" elevation="6" width="100%">
-              <img src="/src/videos/abdominales.gif" alt="Abdominales" class="rounded-lg" width="100%" />
+              <img src="/src/assets/abdominales.gif" alt="Abdominales" class="rounded-lg" width="100%" />
             </v-card>
 
             <p class="mt-4 text-grey-darken-1">
@@ -173,7 +173,7 @@ function checkAbdominal(pose) {
 // Connectar WebSocket i unir-se a la sessió
 function connectWebSocket() {
   if (!sessionId.value) return alert('Introdueix un ID de sessió')
-  ws.value = new WebSocket('ws://localhost:3000')
+  ws.value = new WebSocket('ws://localhost:4000')
 
   ws.value.onopen = () => {
     console.log('Connectat al servidor WebSocket')

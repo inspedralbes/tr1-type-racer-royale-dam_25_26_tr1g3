@@ -6,7 +6,7 @@ import { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid'; // Per generar IDs únics de sessions
 
 const app = express();
-const port = 3000; // Port del servidor
+const port = 4000; // Port del servidor
 
 // Servidor HTTP amb Express
 app.use(cors());
