@@ -5,9 +5,9 @@
        <v-row>
          <!-- Columna izquierda: cámara -->
          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center">
-           <h2 class="mb-4 text-primary font-weight-bold">Tu cámara</h2>
-
-
+<h2 class="mb-4 text-primary font-weight-bold">
+  Ejercicio: {{ ejercicioLabel }}
+</h2>
            <v-card class="overflow-hidden rounded-xl" elevation="6" width="100%" style="position: relative;">
              <video ref="video" autoplay playsinline muted width="100%" style="border-radius: 12px;"></video>
              <canvas ref="canvas" width="640" height="480" style="position:absolute; top:0; left:0;"></canvas>
@@ -53,7 +53,19 @@
 import { ref } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
+const ejercicio = route.params.ejercicio
+
+const nombres = {
+  flexiones: 'Flexiones',
+  sentadillas: 'Sentadillas',
+  saltos: 'Saltos',
+  abdominales: 'Abdominales',
+}
+
+const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 
 const video = ref(null)
 const canvas = ref(null)

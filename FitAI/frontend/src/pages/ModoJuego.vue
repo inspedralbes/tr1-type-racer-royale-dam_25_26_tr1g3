@@ -38,12 +38,14 @@ const nombres = {
   flexiones: 'Flexiones',
   sentadillas: 'Sentadillas',
   saltos: 'Saltos',
+  abdominales: 'Abdominales',
 }
+
 
 const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 
 const jugarSolo = () => {
-  alert(`Vas a jugar solo: ${ejercicioLabel}`)
+  router.push({ name: 'JuegoSolo', params: { ejercicio } })
 }
 
 const jugarMultijugador = () => {

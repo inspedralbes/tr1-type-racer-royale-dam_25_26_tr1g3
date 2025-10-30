@@ -57,7 +57,9 @@ const ejercicios = [
   { nombre: 'flexiones', label: 'Flexiones', imagen: new URL('@/assets/flexiones.jpg', import.meta.url).href },
   { nombre: 'sentadillas', label: 'Sentadillas', imagen: new URL('@/assets/sentadilla.jpg', import.meta.url).href },
   { nombre: 'saltos', label: 'Saltos', imagen: new URL('@/assets/saltos.jpg', import.meta.url).href },
+  { nombre: 'abdominales', label: 'Abdominales', imagen: new URL('@/assets/abdominales.jpg', import.meta.url).href }, // 👈 NUEVA LÍNEA
 ]
+
 
 const irAEjercicio = (nombre) => {
   router.push({ name: 'ModoJuego', params: { ejercicio: nombre } })
