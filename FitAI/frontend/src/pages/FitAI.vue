@@ -27,17 +27,18 @@
                   cover
                   height="160"
                   width="160"
-                ></v-img>
-
-                <v-overlay
-                  :model-value="isHovering"
-                  class="d-flex align-center justify-center"
-                  opacity="0.1"
                 >
-                  <span class="text-h6 text-white font-weight-bold">
-                    {{ ejercicio.label }}
-                  </span>
-                </v-overlay>
+                  <template v-slot:default>
+                    <div
+                      v-if="isHovering"
+                      class="absolute inset-0 d-flex align-center justify-center bg-black bg-opacity-40"
+                    >
+                      <span class="text-h6 text-white font-weight-bold">
+                        {{ ejercicio.label }}
+                      </span>
+                    </div>
+                  </template>
+                </v-img>
               </v-card>
             </v-hover>
           </v-col>
@@ -54,7 +55,7 @@ const router = useRouter()
 
 const ejercicios = [
   { nombre: 'flexiones', label: 'Flexiones', imagen: new URL('@/assets/flexiones.jpg', import.meta.url).href },
-  { nombre: 'sentadillas', label: 'Sentadillas', imagen: new URL('@/assets/sentadillas.jpg', import.meta.url).href },
+  { nombre: 'sentadillas', label: 'Sentadillas', imagen: new URL('@/assets/sentadilla.jpg', import.meta.url).href },
   { nombre: 'saltos', label: 'Saltos', imagen: new URL('@/assets/saltos.jpg', import.meta.url).href },
 ]
 

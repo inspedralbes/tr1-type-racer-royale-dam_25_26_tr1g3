@@ -44,11 +44,10 @@ const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 
 const jugarSolo = () => {
   alert(`Vas a jugar solo: ${ejercicioLabel}`)
-  // Aquí puedes redirigir a la página del ejercicio en modo solo
 }
 
 const jugarMultijugador = () => {
   alert(`Vas a jugar multijugador: ${ejercicioLabel}`)
-  // Aquí puedes redirigir a la página del ejercicio en modo multijugador
 }
 </script>
+
