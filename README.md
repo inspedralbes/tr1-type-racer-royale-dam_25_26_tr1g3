@@ -41,7 +41,7 @@ Enllaç per accedir al [Prototip Gràfic](https://www.canva.com/design/DAG2-s00H
 
 ## URL de Producció
 
-Enllaç de la URL de Producció: [URL Producció](fitai3.dam.inspedralbes.catP).
+Enllaç de la: [URL Producció](fitai3.dam.inspedralbes.catP).
 
 ## Estat
 
