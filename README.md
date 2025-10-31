@@ -47,6 +47,21 @@ Enllaç de la: [URL Producció](fitai3.dam.inspedralbes.catP).
 
 Començant.
 
+## Guia d'Instal·lació 
+
+**1. Descarregar el projecte:**
+
+Descarrega el projecte des del repositori proporcionat. Això es pot fer mitjançant Git o descarregant el fitxer ZIP.
+
+**2. Extreure el projecte:**
+
+Si has descarregat un fitxer ZIP, extreu el contingut a la ubicació desitjada al teu sistema.
+
+**3. Instalació dependecies i node.js:**
+
+ * instalar node.js (Versió 22+)
+ * instal·lar les dependéncies tant del frontend i backend
+
 ---
 
 ## Altres enllaços interesants
