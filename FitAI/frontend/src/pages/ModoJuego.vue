@@ -43,18 +43,19 @@ const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 
 const jugarSolo = async () => {
   try {
-    // ✅ Llamada al backend para crear una sesión
     const res = await fetch('http://localhost:4000/create-session')
     const data = await res.json()
 
-    // Redirigimos al modo de juego con el sessionId generado
-    router.push({ name: 'JuegoSolo', params: { ejercicio, sessionId: data.sessionId } })
+    router.push({ 
+      name: 'JuegoSolo', 
+      params: { ejercicio, sessionId: data.sessionId } 
+    })
   } catch (err) {
     alert('Error al crear la sesión: ' + err.message)
   }
 }
 
 const jugarMultijugador = () => {
-  alert(`Vas a jugar multijugador: ${ejercicioLabel}`)
+  router.push({ name: 'Multiplayer', params: { ejercicio } })
 }
 </script>

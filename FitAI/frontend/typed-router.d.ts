@@ -22,6 +22,7 @@ declare module 'vue-router/auto-routes' {
     '/FitAI': RouteRecordInfo<'/FitAI', '/FitAI', Record<never, never>, Record<never, never>>,
     '/JuegoSolo': RouteRecordInfo<'/JuegoSolo', '/JuegoSolo', Record<never, never>, Record<never, never>>,
     '/ModoJuego': RouteRecordInfo<'/ModoJuego', '/ModoJuego', Record<never, never>, Record<never, never>>,
+    '/Multiplayer': RouteRecordInfo<'/Multiplayer', '/Multiplayer', Record<never, never>, Record<never, never>>,
   }
 
   /**
@@ -49,6 +50,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/ModoJuego.vue': {
       routes: '/ModoJuego'
+      views: never
+    }
+    'src/pages/Multiplayer.vue': {
+      routes: '/Multiplayer'
       views: never
     }
   }

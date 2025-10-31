@@ -21,7 +21,7 @@ const server = app.listen(port, () => {
 // Instància de WebSocket Server
 const wss = new WebSocketServer({ server });
 
-// Dades en memòria (sense BBDD)
+// Dades en memòria
 const sessions = {}; 
 // Estructura: { sessionId: { participants: { userId: { ws, reps } }, leaderboard: [] } }
 
@@ -75,6 +75,7 @@ wss.on('connection', (ws) => {
       console.log('📨 Missatge rebut:', message);
 
       switch (message.type) {
+        // 👇 Ús per unir-se o crear sessió
         case 'join': {
           const { sessionId, userId } = message;
 
@@ -82,23 +83,54 @@ wss.on('connection', (ws) => {
             return ws.send(JSON.stringify({ error: '❗ sessionId i userId requerits' }));
           }
 
+          // Si la sessió no existeix, crear-la
           if (!sessions[sessionId]) {
             sessions[sessionId] = { participants: {}, leaderboard: [] };
             console.log(`🆕 Sessió creada: ${sessionId}`);
           }
 
-          if (sessions[sessionId].participants[userId]) {
-            return ws.send(JSON.stringify({ error: 'Usuari ja connectat en aquesta sessió' }));
+          const session = sessions[sessionId];
+          const numParticipants = Object.keys(session.participants).length;
+
+          // 🚫 Si hi ha més de 4 participants, rebutjar connexió
+          if (numParticipants >= 4) {
+            console.log(`⚠️ Sessió ${sessionId} plena (4 jugadors màxim)`);
+            return ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'La sessió està plena (màxim 4 jugadors).' 
+            }));
           }
 
-          sessions[sessionId].participants[userId] = { ws, reps: 0 };
+          // Evitar duplicats
+          if (session.participants[userId]) {
+            return ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Usuari ja connectat en aquesta sessió.' 
+            }));
+          }
+
+          // Afegir jugador
+          session.participants[userId] = { ws, reps: 0 };
           currentSessionId = sessionId;
           currentUserId = userId;
 
+          // Enviar leaderboard actualitzat
           const leaderboard = calcularLeaderboard(sessionId);
-          broadcastToSession(sessionId, { type: 'leaderboard', sessionId, leaderboard });
+          broadcastToSession(sessionId, { 
+            type: 'leaderboard', 
+            sessionId, 
+            leaderboard 
+          });
 
-          console.log(`✅ Usuari ${userId} unit a la sessió ${sessionId}`);
+          // Informar que s’ha unit correctament
+          ws.send(JSON.stringify({
+            type: 'joined',
+            sessionId,
+            userId,
+            message: 'T’has unit a la sessió correctament.'
+          }));
+
+          console.log(`✅ Usuari ${userId} unit a la sessió ${sessionId} (${numParticipants + 1}/4 jugadors)`);
           break;
         }
 
@@ -110,7 +142,11 @@ wss.on('connection', (ws) => {
           ) {
             sessions[currentSessionId].participants[currentUserId].reps = message.reps || 0;
             const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
+            broadcastToSession(currentSessionId, { 
+              type: 'leaderboard', 
+              sessionId: currentSessionId, 
+              leaderboard 
+            });
           }
           break;
         }
@@ -119,7 +155,11 @@ wss.on('connection', (ws) => {
           if (currentSessionId && currentUserId) {
             delete sessions[currentSessionId].participants[currentUserId];
             const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
+            broadcastToSession(currentSessionId, { 
+              type: 'leaderboard', 
+              sessionId: currentSessionId, 
+              leaderboard 
+            });
             netejarSessio(currentSessionId);
             console.log(`👋 Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
             currentSessionId = null;
@@ -137,12 +177,17 @@ wss.on('connection', (ws) => {
     }
   });
 
+  // Quan un client es desconnecta
   ws.on('close', () => {
     console.log('🔌 Client desconnectat');
     if (currentSessionId && currentUserId) {
       delete sessions[currentSessionId].participants[currentUserId];
       const leaderboard = calcularLeaderboard(currentSessionId);
-      broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
+      broadcastToSession(currentSessionId, { 
+        type: 'leaderboard', 
+        sessionId: currentSessionId, 
+        leaderboard 
+      });
       netejarSessio(currentSessionId);
     }
   });
