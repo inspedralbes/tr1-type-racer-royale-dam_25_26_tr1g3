@@ -1,29 +1,31 @@
 // server.js - Backend per a l'Entrenador Virtual en Temps Real
 // Tecnologies: Node.js, Express, WebSockets (ws), uuid
+
 import express from 'express';
 import cors from 'cors';
-import { WebSocketServer } from 'ws';
-import { v4 as uuidv4 } from 'uuid'; // Per generar IDs únics de sessions
+import { WebSocketServer, WebSocket } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
-const port = 4000; // Port del servidor
+const port = 4000;
 
-// Servidor HTTP amb Express
+// Middleware bàsic
 app.use(cors());
-app.use(express.static('public')); // Serveix fitxers estàtics del frontend (opcional)
+app.use(express.static('public')); // Serveix fitxers del frontend (opcional)
 
-// Crea el servidor HTTP
+// Servidor HTTP
 const server = app.listen(port, () => {
-  console.log(`Servidor executant-se a http://localhost:${port}`);
+  console.log(`✅ Servidor executant-se a http://localhost:${port}`);
 });
 
 // Instància de WebSocket Server
 const wss = new WebSocketServer({ server });
 
-// Estructura de dades en memòria (sense base de dades)
-const sessions = {}; // { sessionId: { participants: { userId: { ws, reps } }, leaderboard: [] } }
+// Dades en memòria (sense BBDD)
+const sessions = {}; 
+// Estructura: { sessionId: { participants: { userId: { ws, reps } }, leaderboard: [] } }
 
-// Funció per calcular i ordenar el leaderboard
+// 📊 Funció per calcular i ordenar el leaderboard
 function calcularLeaderboard(sessionId) {
   const session = sessions[sessionId];
   if (!session) return [];
@@ -33,27 +35,36 @@ function calcularLeaderboard(sessionId) {
       userId,
       reps: data.reps,
     }))
-    .sort((a, b) => b.reps - a.reps); // Ordenat per repeticions descendents
+    .sort((a, b) => b.reps - a.reps);
 
   session.leaderboard = leaderboard;
   return leaderboard;
 }
 
-// Funció per fer broadcast a tots els clients d'una sessió
+// 📢 Broadcast a tots els participants d'una sessió
 function broadcastToSession(sessionId, message) {
   const session = sessions[sessionId];
   if (!session) return;
 
   Object.values(session.participants).forEach(({ ws }) => {
-    if (ws.readyState === ws.OPEN) {
+    if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
     }
   });
 }
 
-// Gestió de connexions WebSocket
+// 🧹 Funció per eliminar sessions buides
+function netejarSessio(sessionId) {
+  const session = sessions[sessionId];
+  if (session && Object.keys(session.participants).length === 0) {
+    delete sessions[sessionId];
+    console.log(`🗑️ Sessió ${sessionId} eliminada (sense participants)`);
+  }
+}
+
+// 🔌 Gestió de connexions WebSocket
 wss.on('connection', (ws) => {
-  console.log('Nou client connectat');
+  console.log('👋 Nou client connectat');
 
   let currentSessionId = null;
   let currentUserId = null;
@@ -61,73 +72,93 @@ wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
-      console.log('Missatge rebut:', message);
+      console.log('📨 Missatge rebut:', message);
 
       switch (message.type) {
         case 'join': {
           const { sessionId, userId } = message;
+
+          if (!sessionId || !userId) {
+            return ws.send(JSON.stringify({ error: '❗ sessionId i userId requerits' }));
+          }
+
           if (!sessions[sessionId]) {
             sessions[sessionId] = { participants: {}, leaderboard: [] };
+            console.log(`🆕 Sessió creada: ${sessionId}`);
           }
+
+          if (sessions[sessionId].participants[userId]) {
+            return ws.send(JSON.stringify({ error: 'Usuari ja connectat en aquesta sessió' }));
+          }
+
           sessions[sessionId].participants[userId] = { ws, reps: 0 };
           currentSessionId = sessionId;
           currentUserId = userId;
 
           const leaderboard = calcularLeaderboard(sessionId);
           broadcastToSession(sessionId, { type: 'leaderboard', sessionId, leaderboard });
+
+          console.log(`✅ Usuari ${userId} unit a la sessió ${sessionId}`);
           break;
         }
 
-        case 'update':
+        case 'update': {
           if (
             currentSessionId &&
             currentUserId &&
             sessions[currentSessionId]?.participants[currentUserId]
           ) {
-            sessions[currentSessionId].participants[currentUserId].reps = message.reps;
+            sessions[currentSessionId].participants[currentUserId].reps = message.reps || 0;
             const leaderboard = calcularLeaderboard(currentSessionId);
             broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
           }
           break;
+        }
 
-        case 'leave':
+        case 'leave': {
           if (currentSessionId && currentUserId) {
             delete sessions[currentSessionId].participants[currentUserId];
             const leaderboard = calcularLeaderboard(currentSessionId);
             broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
+            netejarSessio(currentSessionId);
+            console.log(`👋 Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
             currentSessionId = null;
             currentUserId = null;
           }
           break;
+        }
 
         default:
           ws.send(JSON.stringify({ error: 'Tipus de missatge desconegut' }));
       }
     } catch (error) {
-      console.error('Error processant missatge:', error);
+      console.error('❌ Error processant missatge:', error);
       ws.send(JSON.stringify({ error: 'Missatge invàlid' }));
     }
   });
 
   ws.on('close', () => {
-    console.log('Client desconnectat');
+    console.log('🔌 Client desconnectat');
     if (currentSessionId && currentUserId) {
       delete sessions[currentSessionId].participants[currentUserId];
       const leaderboard = calcularLeaderboard(currentSessionId);
       broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
+      netejarSessio(currentSessionId);
     }
   });
 
   ws.on('error', (error) => {
-    console.error('Error en WebSocket:', error);
+    console.error('⚠️ Error en WebSocket:', error);
   });
 });
 
-// Ruta per crear una nova sessió (opcional)
+// 🌐 Endpoint per crear noves sessions
 app.get('/create-session', (req, res) => {
   const sessionId = uuidv4();
   sessions[sessionId] = { participants: {}, leaderboard: [] };
+  console.log(`🆕 Nova sessió creada: ${sessionId}`);
   res.json({ sessionId });
 });
 
-console.log("Servidor WebSocket llest per gestionar sessions d'entrenament");
+console.log("🚀 Servidor WebSocket llest per gestionar sessions d'entrenament en temps real");
+
