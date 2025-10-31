@@ -117,17 +117,19 @@ const nombres = {
   abdominales: 'Abdominales',
 }
 
-// 📌 Diccionario de GIFs
+// 📌 Diccionario de GIFs con rutas correctas para Vite
 const gifs = {
-  flexiones: '/assets/flexiones.gif',
-  sentadillas: '/assets/sentadillas.gif',
-  saltos: '/assets/saltos.gif',
-  abdominales: '/assets/abdominales.gif',
+  flexiones: new URL('@/assets/flexiones.gif', import.meta.url).href,
+  sentadillas: new URL('@/assets/sentadillas.gif', import.meta.url).href,
+  saltos: new URL('@/assets/saltos.gif', import.meta.url).href,
+  abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
 }
 
 // 📌 Datos dinámicos
 const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
-const ejercicioGif = gifs[ejercicio] || '/assets/ejercicio.gif'
+const ejercicioGif =
+  gifs[ejercicio] || new URL('@/assets/ejercicio.gif', import.meta.url).href
+
 
 // ---------------------------------------------------------
 // 🧠 Lógica de cámara y detección
