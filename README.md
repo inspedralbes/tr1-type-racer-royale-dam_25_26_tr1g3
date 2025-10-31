@@ -62,6 +62,14 @@ Si has descarregat un fitxer ZIP, extreu el contingut a la ubicació desitjada a
  * instalar node.js (Versió 22+)
  * instal·lar les dependéncies tant del frontend i backend
 
+**4. Desde les carpetes backend i frontend:**
+
+Backend: 
+ * node server.js
+
+Frontend:
+ * npm run dev
+   
 ---
 
 ## Altres enllaços interesants
