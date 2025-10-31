@@ -9,23 +9,17 @@ import { v4 as uuidv4 } from 'uuid';
 const app = express();
 const port = 4000;
 
-// Middleware bàsic
 app.use(cors());
-app.use(express.static('public')); // Serveix fitxers del frontend (opcional)
+app.use(express.static('public'));
 
-// Servidor HTTP
 const server = app.listen(port, () => {
   console.log(`✅ Servidor executant-se a http://localhost:${port}`);
 });
 
-// Instància de WebSocket Server
 const wss = new WebSocketServer({ server });
 
-// Dades en memòria
-const sessions = {}; 
-// Estructura: { sessionId: { participants: { userId: { ws, reps } }, leaderboard: [] } }
+const sessions = {};
 
-// 📊 Funció per calcular i ordenar el leaderboard
 function calcularLeaderboard(sessionId) {
   const session = sessions[sessionId];
   if (!session) return [];
@@ -41,7 +35,6 @@ function calcularLeaderboard(sessionId) {
   return leaderboard;
 }
 
-// 📢 Broadcast a tots els participants d'una sessió
 function broadcastToSession(sessionId, message) {
   const session = sessions[sessionId];
   if (!session) return;
@@ -53,7 +46,6 @@ function broadcastToSession(sessionId, message) {
   });
 }
 
-// 🧹 Funció per eliminar sessions buides
 function netejarSessio(sessionId) {
   const session = sessions[sessionId];
   if (session && Object.keys(session.participants).length === 0) {
@@ -62,7 +54,6 @@ function netejarSessio(sessionId) {
   }
 }
 
-// 🔌 Gestió de connexions WebSocket
 wss.on('connection', (ws) => {
   console.log('👋 Nou client connectat');
 
@@ -75,7 +66,6 @@ wss.on('connection', (ws) => {
       console.log('📨 Missatge rebut:', message);
 
       switch (message.type) {
-        // 👇 Ús per unir-se o crear sessió
         case 'join': {
           const { sessionId, userId } = message;
 
@@ -83,7 +73,6 @@ wss.on('connection', (ws) => {
             return ws.send(JSON.stringify({ error: '❗ sessionId i userId requerits' }));
           }
 
-          // Si la sessió no existeix, crear-la
           if (!sessions[sessionId]) {
             sessions[sessionId] = { participants: {}, leaderboard: [] };
             console.log(`🆕 Sessió creada: ${sessionId}`);
@@ -92,7 +81,6 @@ wss.on('connection', (ws) => {
           const session = sessions[sessionId];
           const numParticipants = Object.keys(session.participants).length;
 
-          // 🚫 Si hi ha més de 4 participants, rebutjar connexió
           if (numParticipants >= 4) {
             console.log(`⚠️ Sessió ${sessionId} plena (4 jugadors màxim)`);
             return ws.send(JSON.stringify({ 
@@ -101,7 +89,6 @@ wss.on('connection', (ws) => {
             }));
           }
 
-          // Evitar duplicats
           if (session.participants[userId]) {
             return ws.send(JSON.stringify({ 
               type: 'error', 
@@ -109,12 +96,10 @@ wss.on('connection', (ws) => {
             }));
           }
 
-          // Afegir jugador
           session.participants[userId] = { ws, reps: 0 };
           currentSessionId = sessionId;
           currentUserId = userId;
 
-          // Enviar leaderboard actualitzat
           const leaderboard = calcularLeaderboard(sessionId);
           broadcastToSession(sessionId, { 
             type: 'leaderboard', 
@@ -122,7 +107,6 @@ wss.on('connection', (ws) => {
             leaderboard 
           });
 
-          // Informar que s’ha unit correctament
           ws.send(JSON.stringify({
             type: 'joined',
             sessionId,
@@ -177,7 +161,6 @@ wss.on('connection', (ws) => {
     }
   });
 
-  // Quan un client es desconnecta
   ws.on('close', () => {
     console.log('🔌 Client desconnectat');
     if (currentSessionId && currentUserId) {
@@ -197,7 +180,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 🌐 Endpoint per crear noves sessions
 app.get('/create-session', (req, res) => {
   const sessionId = uuidv4();
   sessions[sessionId] = { participants: {}, leaderboard: [] };

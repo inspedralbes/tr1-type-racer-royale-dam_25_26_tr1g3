@@ -4,7 +4,6 @@
       style="background: linear-gradient(135deg, #141e30, #243b55); min-height: 100vh;">
       <v-container class="elevation-8 rounded-xl pa-6 bg-white" style="max-width: 1200px;">
         <v-row>
-          <!-- Columna izquierda: cámara / video -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center">
             <v-card class="overflow-hidden rounded-xl" elevation="6" width="100%" style="position: relative;">
               <video ref="video" autoplay playsinline muted width="100%" style="border-radius: 12px;"></video>
@@ -24,7 +23,6 @@
             </v-card>
           </v-col>
 
-          <!-- Columna derecha: información del ejercicio -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center">
             <h2 class="mb-4 text-primary font-weight-bold">Ejercicio: {{ ejercicioLabel }}</h2>
 
@@ -81,7 +79,6 @@ const gifs = {
 const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 const ejercicioGif = gifs[ejercicio] || new URL('@/assets/ejercicio.gif', import.meta.url).href
 
-// Refs
 const video = ref(null)
 const canvas = ref(null)
 const fileInput = ref(null)
@@ -93,7 +90,6 @@ let up = false
 let streamRef = null
 let detecting = false
 
-// WebSocket
 const ws = ref(null)
 const userId = ref(`user_${Math.floor(Math.random() * 10000)}`)
 
@@ -101,7 +97,6 @@ onMounted(() => {
   connectWebSocket()
 })
 
-// === Cámara ===
 async function startCamera() {
   try {
     streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
@@ -127,7 +122,6 @@ function stopCamera() {
   }
 }
 
-// === Video local ===
 function selectVideo() {
   stopCamera()
   if (fileInput.value) {
@@ -150,7 +144,6 @@ async function loadVideoFromFile(event) {
   detectVideoFrame()
 }
 
-// === Detección ===
 async function initMoveNet() {
   detector = await poseDetection.createDetector(
     poseDetection.SupportedModels.MoveNet,
@@ -220,7 +213,6 @@ function checkAbdominal(pose) {
   }
 }
 
-// === WebSocket ===
 function connectWebSocket() {
   ws.value = new WebSocket('ws://localhost:4000')
   ws.value.onopen = () => {

@@ -6,7 +6,6 @@
       </v-card-title>
 
       <v-card-text>
-        <!-- Pantalla principal -->
         <div v-if="!aSala">
           <v-btn color="primary" class="mr-2" @click="crearSala">
             Crear Sala
@@ -24,7 +23,6 @@
           </v-btn>
         </div>
 
-        <!-- Dentro de la sala -->
         <div v-else>
           <p class="text-center">
             Estás en la sala <strong>{{ codiSala }}</strong>
@@ -66,9 +64,8 @@ import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
-const ejercicio = route.params.ejercicio; // ← viene de /multiplayer/:ejercicio
+const ejercicio = route.params.ejercicio;
 
-// URL del servidor WebSocket (ajusta si es necesario)
 const WS_URL = "ws://localhost:4000";
 
 let socket = null;
@@ -77,14 +74,13 @@ const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
 const hostId = ref("");
-const userId = crypto.randomUUID(); // ID único por usuario
+const userId = crypto.randomUUID();
 
 onBeforeUnmount(() => {
   sortirSala();
   if (socket) socket.close();
 });
 
-// === Funciones ===
 async function crearSala() {
   try {
     const res = await fetch("http://localhost:4000/create-session");
