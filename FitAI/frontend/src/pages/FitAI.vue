@@ -5,14 +5,14 @@
       style="background: linear-gradient(135deg, #141e30, #243b55);"
     >
       <h1 class="text-h3 font-weight-bold mb-10 text-white text-center drop-shadow-lg">
-        🏋️‍♂️ FitAI
+        FitAI
       </h1>
 
       <v-container>
         <v-row justify="center" align="center" class="ga-8">
           <v-col
-            v-for="ejercicio in ejercicios"
-            :key="ejercicio.nombre"
+            v-for="exercici in exercicis"
+            :key="exercici.nom"
             cols="12"
             sm="6"
             md="3"
@@ -25,22 +25,22 @@
                 elevation="10"
                 height="240"
                 width="220"
-                @click="irAEjercicio(ejercicio.nombre)"
+                @click="anarAExercici(exercici.nom)"
               >
                 <v-img
-                  :src="ejercicio.imagen"
-                  :alt="ejercicio.label"
+                  :src="exercici.imatge"
+                  :alt="exercici.label"
                   cover
                   height="200"
                   class="transition-img"
                 />
 
-                <!-- Nombre del ejercicio -->
+                <!-- Nom de l'exercici a la part inferior -->
                 <div
                   class="text-center py-2 bg-deep-purple-accent-4 text-white font-weight-bold text-subtitle-1 transition-name"
                   :class="{ 'shine': isHovering }"
                 >
-                  {{ ejercicio.label }}
+                  {{ exercici.label }}
                 </div>
               </v-card>
             </v-hover>
@@ -56,31 +56,31 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const ejercicios = [
+const exercicis = [
   {
-    nombre: 'flexiones',
-    label: 'Flexiones',
-    imagen: new URL('@/assets/flexiones.jpg', import.meta.url).href,
+    nom: 'flexiones',
+    label: 'Flexions',
+    imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
   },
   {
-    nombre: 'sentadillas',
-    label: 'Sentadillas',
-    imagen: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
+    nom: 'sentadillas',
+    label: 'Sentadilles',
+    imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
   },
   {
-    nombre: 'saltos',
-    label: 'Saltos',
-    imagen: new URL('@/assets/saltos.jpg', import.meta.url).href,
+    nom: 'saltos',
+    label: 'Salts',
+    imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
   },
   {
-    nombre: 'abdominales',
-    label: 'Abdominales',
-    imagen: new URL('@/assets/abdominales.jpg', import.meta.url).href,
+    nom: 'abdominales',
+    label: 'Abdominals',
+    imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
   },
 ]
 
-const irAEjercicio = (nombre) => {
-  router.push({ name: 'ModoJuego', params: { ejercicio: nombre } })
+const anarAExercici = (nom) => {
+  router.push({ name: 'ModoJuego', params: { ejercicio: nom } })
 }
 </script>
 
@@ -98,7 +98,7 @@ const irAEjercicio = (nombre) => {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
-/* Efecto sutil al pasar sobre la imagen */
+/* Efecte sutil al passar sobre la imatge */
 .transition-img {
   transition: transform 0.4s ease;
 }
@@ -107,7 +107,7 @@ const irAEjercicio = (nombre) => {
   transform: scale(1.08);
 }
 
-/* Efecto de brillo en el nombre */
+/* Efecte de brillantor al nom */
 .transition-name {
   transition: background 0.4s ease, color 0.4s ease;
 }
