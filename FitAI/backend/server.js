@@ -5,6 +5,22 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import 'dotenv/config'; // Això son les variables del .env, recordeu que això el borra el github, el posaré al drive
+
+// Base de dades
+
+import sequelize from './config/database.js';
+import Usuari from './models/Usuari.js';
+import Sala from './models/Sala.js';
+import ParticipantSala from './models/ParticipantSala.js';
+
+// Relacions
+
+Usuari.hasMany(Sala, { foreignKey: 'creador_id', as: 'salesCreades' });
+Sala.belongsTo(Usuari, { foreignKey: 'creador_id', as: 'creador', onDelete: 'SET NULL' });
+
+Usuari.belongsToMany(Sala, { through: ParticipantSala, foreignKey: 'usuari_id' });
+Sala.belongsToMany(Usuari, { through: ParticipantSala, foreignKey: 'sala_id' });
 
 const app = express();
 const port = 4000;
