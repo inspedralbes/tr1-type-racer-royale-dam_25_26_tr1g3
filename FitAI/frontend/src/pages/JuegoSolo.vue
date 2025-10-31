@@ -1,50 +1,120 @@
 <template>
   <v-app>
-    <v-main class="d-flex align-center justify-center pa-8"
-      style="background: linear-gradient(135deg, #141e30, #243b55); min-height: 100vh;">
-      <v-container class="elevation-8 rounded-xl pa-6 bg-white" style="max-width: 1200px;">
+    <v-main
+      class="d-flex align-center justify-center pa-8"
+      style="background: linear-gradient(135deg, #1a1c2c, #302b63, #24243e); min-height: 100vh;"
+    >
+      <v-container class="rounded-xl pa-6 bg-white elevation-10" style="max-width: 1200px;">
         <v-row>
+
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center">
-            <v-card class="overflow-hidden rounded-xl" elevation="6" width="100%" style="position: relative;">
-              <video ref="video" autoplay playsinline muted width="100%" style="border-radius: 12px;"></video>
-              <canvas ref="canvas" width="640" height="480" style="position:absolute; top:0; left:0;"></canvas>
+            <v-card
+              class="rounded-xl overflow-hidden"
+              elevation="8"
+              width="100%"
+              style="background-color: #000; position: relative;"
+            >
+              <video
+                ref="video"
+                autoplay
+                playsinline
+                muted
+                width="100%"
+                class="rounded-xl"
+                style="object-fit: cover;"
+              ></video>
+              <canvas
+                ref="canvas"
+                width="640"
+                height="480"
+                style="position:absolute; top:0; left:0;"
+              ></canvas>
             </v-card>
 
-            <div class="mt-4 d-flex gap-2">
-              <v-btn color="deep-purple-accent-4" @click="startCamera">Abrir cámara</v-btn>
-              <v-btn variant="outlined" color="deep-purple-accent-4" @click="stopCamera">Parar</v-btn>
-              <v-btn color="green accent-4" @click="selectVideo">Seleccionar video</v-btn>
-              <input ref="fileInput" type="file" accept="video/*" @change="loadVideoFromFile" style="display: none" />
+            <div class="mt-5 d-flex flex-wrap justify-center gap-3">
+              <v-btn color="deep-purple-accent-4" variant="elevated" size="large" @click="startCamera">
+                <v-icon start>mdi-video-outline</v-icon> Obrir càmera
+              </v-btn>
+              <v-btn color="red-darken-2" variant="outlined" size="large" @click="stopCamera">
+                <v-icon start>mdi-stop-circle-outline</v-icon> Aturar
+              </v-btn>
+              <v-btn color="green-accent-4" variant="elevated" size="large" @click="selectVideo">
+                <v-icon start>mdi-folder-video</v-icon> Carregar vídeo
+              </v-btn>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="video/*"
+                @change="loadVideoFromFile"
+                style="display: none"
+              />
             </div>
 
-            <v-card class="mt-4 pa-3 text-center rounded-xl" color="deep-purple-darken-1" dark>
-              <h3 class="mb-0">Repeticiones</h3>
-              <h1 class="display-1 font-weight-bold">{{ count }}</h1>
+            <v-card
+              class="mt-6 py-4 px-6 text-center rounded-xl"
+              color="deep-purple-darken-2"
+              dark
+              elevation="8"
+              style="width: 80%;"
+            >
+              <h3 class="text-h5 font-weight-medium mb-1">Repeticions</h3>
+              <h1 class="text-h2 font-weight-bold text-green-accent-2">{{ count }}</h1>
             </v-card>
           </v-col>
 
-          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center">
-            <h2 class="mb-4 text-primary font-weight-bold">Ejercicio: {{ ejercicioLabel }}</h2>
 
-            <v-card class="overflow-hidden rounded-xl pa-2" elevation="6" width="100%">
-              <img :src="ejercicioGif" :alt="ejercicioLabel" class="rounded-lg" width="100%" />
+          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center">
+            <h2 class="text-h4 font-weight-bold mb-4 text-deep-purple-darken-3">
+              Exercici: {{ exerciciLabel }}
+            </h2>
+
+            <v-card class="rounded-xl overflow-hidden mb-4" elevation="8" width="100%">
+              <img
+                :src="exerciciGif"
+                :alt="exerciciLabel"
+                class="rounded-lg"
+                width="100%"
+                style="object-fit: cover;"
+              />
             </v-card>
 
-            <p class="mt-4 text-grey-darken-1">
-              Realiza el ejercicio siguiendo el vídeo o sube uno propio.<br />
-              El sistema contará las repeticiones automáticamente.
+            <p class="text-body-1 text-grey-darken-1 mb-6">
+              Segueix l’exemple o utilitza el teu propi vídeo. <br />
+              El sistema comptarà les repeticions automàticament.
             </p>
 
-            <v-card class="mt-6 pa-4 rounded-xl" elevation="4" width="100%">
-              <h3>Clasificación</h3>
-              <v-list>
-                <v-list-item v-for="(user, index) in leaderboard" :key="user.userId">
-                  <v-list-item-content>
-                    {{ index + 1 }}. {{ user.userId }} - {{ user.reps }} reps
+            <v-card
+              class="pa-4 rounded-xl mb-6"
+              elevation="6"
+              width="100%"
+              color="#f7f7fc"
+              style="border: 1px solid #e0e0e0;"
+            >
+              <h3 class="text-h5 font-weight-bold text-deep-purple-darken-3 mb-3">
+                🏆 Classificació
+              </h3>
+
+              <v-list density="compact">
+                <v-list-item
+                  v-for="(user, index) in leaderboard"
+                  :key="user.userId"
+                  class="rounded-lg mb-1"
+                  :class="index === 0 ? 'bg-green-lighten-4' : index === 1 ? 'bg-amber-lighten-4' : ''"
+                >
+                  <v-list-item-content class="text-body-1">
+                    <v-icon small class="mr-2">
+                      {{ index === 0 ? 'mdi-crown' : 'mdi-account' }}
+                    </v-icon>
+                    <strong>{{ index + 1 }}.</strong> {{ user.userId }} — {{ user.reps }} repeticions
                   </v-list-item-content>
                 </v-list-item>
               </v-list>
             </v-card>
+
+            <!-- Botó per tornar -->
+            <v-btn color="deep-purple-darken-3" variant="flat" size="large" @click="tornar">
+              <v-icon start>mdi-arrow-left</v-icon> Tornar
+            </v-btn>
           </v-col>
         </v-row>
       </v-container>
@@ -56,17 +126,19 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
-const ejercicio = route.params.ejercicio
+const router = useRouter()
+
+const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 
-const nombres = {
-  flexiones: 'Flexiones',
-  sentadillas: 'Sentadillas',
-  saltos: 'Saltos',
-  abdominales: 'Abdominales',
+const noms = {
+  flexiones: 'Flexions',
+  sentadillas: 'Esquatx',
+  saltos: 'Saltar',
+  abdominales: 'Abdominals',
 }
 
 const gifs = {
@@ -76,8 +148,8 @@ const gifs = {
   abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
 }
 
-const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
-const ejercicioGif = gifs[ejercicio] || new URL('@/assets/ejercicio.gif', import.meta.url).href
+const exerciciLabel = noms[exercici] || 'Exercici'
+const exerciciGif = gifs[exercici] || new URL('@/assets/ejercicio.gif', import.meta.url).href
 
 const video = ref(null)
 const canvas = ref(null)
@@ -91,7 +163,7 @@ let streamRef = null
 let detecting = false
 
 const ws = ref(null)
-const userId = ref(`user_${Math.floor(Math.random() * 10000)}`)
+const userId = ref(`usuari_${Math.floor(Math.random() * 10000)}`)
 
 onMounted(() => {
   connectWebSocket()
@@ -99,17 +171,16 @@ onMounted(() => {
 
 async function startCamera() {
   try {
-    streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+    streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     video.value.srcObject = streamRef
     await video.value.play()
-
     if (!detector) await initMoveNet()
     if (!detecting) {
       detecting = true
       detectPose()
     }
   } catch (e) {
-    alert('No se puede abrir la cámara: ' + e.message)
+    alert('No es pot obrir la càmera: ' + e.message)
   }
 }
 
@@ -124,42 +195,35 @@ function stopCamera() {
 
 function selectVideo() {
   stopCamera()
-  if (fileInput.value) {
-    fileInput.value.value = null
-    fileInput.value.click()
-  }
+  fileInput.value?.click()
 }
 
 async function loadVideoFromFile(event) {
   const file = event.target.files[0]
   if (!file) return
-
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
   video.value.src = url
   await video.value.play()
-
   if (!detector) await initMoveNet()
   detecting = true
   detectVideoFrame()
 }
 
 async function initMoveNet() {
-  detector = await poseDetection.createDetector(
-    poseDetection.SupportedModels.MoveNet,
-    { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
-  )
+  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
+    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+  })
 }
 
 async function detectPose() {
   const ctx = canvas.value.getContext('2d')
-
   async function poseDetectionFrame() {
     if (!detecting) return
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMovimiento(poses[0])
+      checkMoviment(poses[0])
     }
     requestAnimationFrame(poseDetectionFrame)
   }
@@ -168,13 +232,12 @@ async function detectPose() {
 
 async function detectVideoFrame() {
   const ctx = canvas.value.getContext('2d')
-
   async function frameLoop() {
     if (!detecting || video.value.paused || video.value.ended) return
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMovimiento(poses[0])
+      checkMoviment(poses[0])
     }
     requestAnimationFrame(frameLoop)
   }
@@ -187,27 +250,29 @@ function drawPose(ctx, pose) {
     if (kp.score > 0.4) {
       ctx.beginPath()
       ctx.arc(kp.x, kp.y, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = '#00E676'
+      ctx.fillStyle = '#76ff03'
+      ctx.shadowBlur = 10
+      ctx.shadowColor = '#00e676'
       ctx.fill()
     }
   }
 }
 
-function checkMovimiento(pose) {
-  if (ejercicio === 'abdominales') checkAbdominal(pose)
+function checkMoviment(pose) {
+  if (exercici === 'abdominales') checkAbdominal(pose)
 }
 
 function checkAbdominal(pose) {
-  const nose = pose.keypoints.find((k) => k.name === 'nose')
-  const hip = pose.keypoints.find((k) => k.name === 'left_hip')
-  if (!nose || !hip) return
+  const nas = pose.keypoints.find((k) => k.name === 'nose')
+  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+  if (!nas || !maluc) return
 
-  const distance = nose.y - hip.y
-  if (distance < 100 && !up) up = true
-  if (distance > 150 && up) {
+  const distancia = nas.y - maluc.y
+  if (distancia < 100 && !up) up = true
+  if (distancia > 150 && up) {
     count.value++
     up = false
-    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    if (ws.value?.readyState === WebSocket.OPEN) {
       ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
     }
   }
@@ -216,19 +281,23 @@ function checkAbdominal(pose) {
 function connectWebSocket() {
   ws.value = new WebSocket('ws://localhost:4000')
   ws.value.onopen = () => {
-    console.log('Conectado al servidor WebSocket')
+    console.log('Connectat al servidor WebSocket')
     ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }))
   }
   ws.value.onmessage = (event) => {
     const message = JSON.parse(event.data)
     if (message.type === 'leaderboard') leaderboard.value = message.leaderboard
   }
-  ws.value.onclose = () => console.log('Desconectado del servidor')
+  ws.value.onclose = () => console.log('Desconnectat del servidor')
   ws.value.onerror = (err) => console.error('Error WebSocket:', err)
 }
 
+function tornar() {
+  router.back()
+}
+
 onBeforeUnmount(() => {
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+  if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({ type: 'leave' }))
     ws.value.close()
   }
@@ -236,9 +305,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+h1,
 h2,
-h3,
-h1 {
+h3 {
   font-family: 'Poppins', sans-serif;
 }
 </style>
