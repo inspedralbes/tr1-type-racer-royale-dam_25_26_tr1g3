@@ -31,7 +31,6 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-
 const ejercicio = route.params.ejercicio
 
 const nombres = {
@@ -40,12 +39,19 @@ const nombres = {
   saltos: 'Saltos',
   abdominales: 'Abdominales',
 }
-
-
 const ejercicioLabel = nombres[ejercicio] || 'Ejercicio'
 
-const jugarSolo = () => {
-  router.push({ name: 'JuegoSolo', params: { ejercicio } })
+const jugarSolo = async () => {
+  try {
+    // ✅ Llamada al backend para crear una sesión
+    const res = await fetch('http://localhost:4000/create-session')
+    const data = await res.json()
+
+    // Redirigimos al modo de juego con el sessionId generado
+    router.push({ name: 'JuegoSolo', params: { ejercicio, sessionId: data.sessionId } })
+  } catch (err) {
+    alert('Error al crear la sesión: ' + err.message)
+  }
 }
 
 const jugarMultijugador = () => {

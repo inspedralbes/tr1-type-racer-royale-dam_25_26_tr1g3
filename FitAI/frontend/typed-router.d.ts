@@ -20,6 +20,8 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/FitAI': RouteRecordInfo<'/FitAI', '/FitAI', Record<never, never>, Record<never, never>>,
+    '/JuegoSolo': RouteRecordInfo<'/JuegoSolo', '/JuegoSolo', Record<never, never>, Record<never, never>>,
+    '/ModoJuego': RouteRecordInfo<'/ModoJuego', '/ModoJuego', Record<never, never>, Record<never, never>>,
   }
 
   /**
@@ -39,6 +41,14 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/FitAI.vue': {
       routes: '/FitAI'
+      views: never
+    }
+    'src/pages/JuegoSolo.vue': {
+      routes: '/JuegoSolo'
+      views: never
+    }
+    'src/pages/ModoJuego.vue': {
+      routes: '/ModoJuego'
       views: never
     }
   }
