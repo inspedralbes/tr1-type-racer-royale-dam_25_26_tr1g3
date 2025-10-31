@@ -1,6 +1,5 @@
-// models/ParticipantSala.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 const ParticipantSala = sequelize.define('ParticipantSala', {
   id: {
@@ -24,4 +23,4 @@ const ParticipantSala = sequelize.define('ParticipantSala', {
   tableName: 'participants_sala'
 });
 
-module.exports = ParticipantSala;
+export default ParticipantSala;
