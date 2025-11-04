@@ -88,7 +88,7 @@ const jugarSol = async () => {
     const res = await fetch('http://localhost:4000/create-session')
     const data = await res.json()
     router.push({
-      name: 'JocSol',
+      name: 'JuegoSolo',
       params: { ejercicio: exercici, sessionId: data.sessionId },
     })
   } catch (err) {
@@ -97,7 +97,7 @@ const jugarSol = async () => {
 }
 
 const jugarMultijugador = () => {
-  router.push({ name: 'Multijugador', params: { ejercicio: exercici } })
+  router.push({ name: 'Multiplayer', params: { ejercicio: exercici } })
 }
 </script>
 

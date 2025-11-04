@@ -61,8 +61,8 @@ const router = useRouter()
 
 const exercicis = [
   { nom: 'flexiones', label: 'Flexions', imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href },
-  { nom: 'sentadillas', label: 'Esquatx', imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href },
-  { nom: 'saltos', label: 'Saltar', imatge: new URL('@/assets/saltos.jpg', import.meta.url).href },
+  { nom: 'sentadillas', label: 'Esquats', imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href },
+  { nom: 'saltos', label: 'Salts', imatge: new URL('@/assets/saltos.jpg', import.meta.url).href },
   { nom: 'abdominales', label: 'Abdominals', imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href },
 ]
 
