@@ -1,56 +1,143 @@
 <template>
-  <v-container class="pa-6">
-    <v-card class="pa-4 mx-auto" max-width="500">
-      <v-card-title class="text-h5 text-center">
-        🏋️ Multijugador: {{ ejercicio }}
+  <v-container
+    class="d-flex align-center justify-center pa-8"
+    style="min-height: 100vh; background: linear-gradient(135deg, #1e1e2f, #2a2a4f, #3a0ca3);"
+  >
+    <v-card
+      class="pa-6 rounded-xl elevation-10"
+      max-width="500"
+      style="background-color: #fff; border: 1px solid #e0e0e0;"
+    >
+      <v-card-title class="text-h5 text-center font-weight-bold text-deep-purple-darken-3">
+        🏋️ Multijugador — {{ exercici }}
       </v-card-title>
 
+      <v-divider class="my-3"></v-divider>
+
       <v-card-text>
-        <div v-if="!aSala">
-          <v-btn color="primary" class="mr-2" @click="crearSala">
-            Crear Sala
+        <!-- Sense sala -->
+        <div v-if="!aSala" class="text-center">
+          <v-btn
+            color="deep-purple-accent-4"
+            variant="elevated"
+            size="large"
+            class="mb-4"
+            block
+            @click="crearSala"
+          >
+            <v-icon start>mdi-plus-circle-outline</v-icon>
+            Crear nova sala
           </v-btn>
 
           <v-text-field
-            label="Código de sala"
+            label="Codi de sala"
             v-model="codiSalaInput"
-            class="mt-3"
+            variant="outlined"
             clearable
+            density="comfortable"
+            prepend-inner-icon="mdi-key"
           />
 
-          <v-btn color="success" @click="unirSala">
-            Unirse a Sala
+          <v-btn
+            color="green-accent-4"
+            variant="elevated"
+            size="large"
+            class="mt-2"
+            block
+            @click="unirSala"
+          >
+            <v-icon start>mdi-login</v-icon>
+            Unir-se a una sala
+          </v-btn>
+
+          <v-btn
+            color="grey-darken-1"
+            variant="text"
+            class="mt-4"
+            block
+            @click="tornarEnrere"
+          >
+            <v-icon start>mdi-arrow-left</v-icon>
+            Tornar enrere
           </v-btn>
         </div>
 
-        <div v-else>
-          <p class="text-center">
-            Estás en la sala <strong>{{ codiSala }}</strong>
-          </p>
-          <p class="text-center">
-            Jugadores conectados: <strong>{{ jugadors.length }}</strong>
+        <!-- En sala -->
+        <div v-else class="text-center">
+          <p class="text-h6 font-weight-medium mb-1">
+            Sala: <strong class="text-deep-purple-darken-2">{{ codiSala }}</strong>
           </p>
 
-          <v-list>
-            <v-list-item v-for="j in jugadors" :key="j">
-              <v-list-item-content>
-                {{ j === hostId ? j + ' (Host)' : j }}
-              </v-list-item-content>
-            </v-list-item>
-          </v-list>
+          <p class="text-body-2 text-grey-darken-1 mb-4">
+            Jugadors connectats: <strong>{{ jugadors.length }}</strong>
+          </p>
+
+          <v-card
+            class="rounded-lg mb-4 pa-2"
+            elevation="4"
+            color="#f9f9ff"
+            style="border: 1px solid #ddd;"
+          >
+            <v-list density="compact">
+              <v-list-item
+                v-for="j in jugadors"
+                :key="j"
+                class="rounded-lg my-1"
+                :class="j === hostId ? 'bg-green-lighten-5' : ''"
+              >
+                <v-list-item-content class="d-flex align-center justify-space-between">
+                  <span class="text-body-1">
+                    <v-icon
+                      v-if="j === hostId"
+                      color="deep-purple-accent-4"
+                      class="mr-2"
+                    >
+                      mdi-crown
+                    </v-icon>
+                    {{ j }}
+                  </span>
+                  <span v-if="j === userId" class="text-caption text-grey">
+                    (Tu)
+                  </span>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-card>
 
           <v-btn
-            color="primary"
-            class="mt-4"
-            :disabled="jugadors.length < 2"
             v-if="userId === hostId"
+            color="deep-purple-accent-4"
+            variant="elevated"
+            class="mb-2"
+            size="large"
+            block
+            :disabled="jugadors.length < 2"
             @click="iniciarPartida"
           >
+            <v-icon start>mdi-play-circle</v-icon>
             Iniciar partida
           </v-btn>
 
-          <v-btn color="error" class="mt-2" @click="salirManual">
-            Salir
+          <v-btn
+            color="error"
+            variant="outlined"
+            size="large"
+            block
+            @click="sortirManual"
+          >
+            <v-icon start>mdi-exit-to-app</v-icon>
+            Sortir de la sala
+          </v-btn>
+
+          <v-btn
+            color="grey-darken-1"
+            variant="text"
+            class="mt-3"
+            block
+            @click="tornarEnrere"
+          >
+            <v-icon start>mdi-arrow-left</v-icon>
+            Tornar enrere
           </v-btn>
         </div>
       </v-card-text>
@@ -59,12 +146,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
-const ejercicio = route.params.ejercicio;
+const exercici = route.params.ejercicio;
 
 const WS_URL = "ws://localhost:4000";
 
@@ -86,16 +173,16 @@ async function crearSala() {
     const res = await fetch("http://localhost:4000/create-session");
     const data = await res.json();
     if (data.sessionId) {
-      connectToSession(`${ejercicio}-${data.sessionId}`, true);
+      connectToSession(`${exercici}-${data.sessionId}`, true);
     }
   } catch (err) {
-    alert("❌ Error al crear la sala");
+    alert("❌ Error en crear la sala");
   }
 }
 
 function unirSala() {
   if (!codiSalaInput.value.trim()) {
-    alert("Introduce un código de sala");
+    alert("⚠️ Introdueix un codi de sala vàlid");
     return;
   }
   connectToSession(codiSalaInput.value.trim());
@@ -105,7 +192,7 @@ function connectToSession(sessionId, isHost = false) {
   socket = new WebSocket(WS_URL);
 
   socket.addEventListener("open", () => {
-    console.log("🔌 Conectado al servidor WS");
+    console.log("🔌 Connectat al servidor WS");
     codiSala.value = sessionId;
     aSala.value = true;
     hostId.value = isHost ? userId : "";
@@ -114,17 +201,20 @@ function connectToSession(sessionId, isHost = false) {
 
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    console.log("📨 Mensaje:", msg);
+    console.log("📨 Missatge:", msg);
 
     if (msg.type === "leaderboard") {
       jugadors.value = msg.leaderboard.map((p) => p.userId);
+      if (!hostId.value && msg.leaderboard.length > 0) {
+        hostId.value = msg.leaderboard[0].userId; // primer usuari = host
+      }
     } else if (msg.error) {
       alert(msg.error);
     }
   });
 
   socket.addEventListener("close", () => {
-    console.log("❌ Conexión cerrada");
+    console.log("❌ Connexió tancada");
     aSala.value = false;
   });
 }
@@ -139,19 +229,26 @@ function sortirSala() {
   jugadors.value = [];
 }
 
-function salirManual() {
+function sortirManual() {
   sortirSala();
 }
 
 function iniciarPartida() {
-  alert(`🎮 Iniciando partida de ${ejercicio}...`);
-  router.push(`/juego-solo/${ejercicio}`);
+  alert(`🎮 Iniciant partida de ${exercici}...`);
+  router.push(`/joc-solo/${exercici}`);
+}
+
+function tornarEnrere() {
+  router.back();
 }
 </script>
 
 <style scoped>
-p {
+.v-card-title {
   font-family: "Poppins", sans-serif;
-  font-size: 16px;
+}
+.v-btn {
+  text-transform: none;
+  font-weight: 500;
 }
 </style>
