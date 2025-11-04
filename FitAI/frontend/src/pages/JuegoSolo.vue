@@ -39,8 +39,9 @@
                 <v-icon start>mdi-stop-circle-outline</v-icon> Aturar
               </v-btn>
               <v-btn color="green-accent-4" variant="elevated" size="large" @click="selectVideo">
-                <v-icon start>mdi-folder-video</v-icon> Carregar vídeo
+                <svg-icon type="mdi" :path="pathCarregar" class="mr-2" />Carregar vídeo
               </v-btn>
+              
               <input
                 ref="fileInput"
                 type="file"
@@ -127,6 +128,13 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
+
+import SvgIcon from '@jamescoyle/vue-icon'
+import { mdiFolderOutline } from '@mdi/js'
+
+
+const pathCarregar = mdiFolderOutline
+
 
 const route = useRoute()
 const router = useRouter()
