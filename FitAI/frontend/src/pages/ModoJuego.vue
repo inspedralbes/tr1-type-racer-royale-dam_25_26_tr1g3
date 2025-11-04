@@ -25,7 +25,7 @@
               @click="jugarSol"
             >
               <div class="text-h5 font-weight-bold text-white mb-2">
-                Mode Sol
+                Solitari
               </div>
               <p class="text-body-2 text-grey-lighten-3">
                 Entrena al teu ritme i millora les teves marques.
