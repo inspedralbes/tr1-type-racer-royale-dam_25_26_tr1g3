@@ -1,148 +1,156 @@
 <template>
-  <v-container
-    class="d-flex align-center justify-center pa-8"
-    style="min-height: 100vh; background: linear-gradient(135deg, #1e1e2f, #2a2a4f, #3a0ca3);"
-  >
-    <v-card
-      class="pa-6 rounded-xl elevation-10"
-      max-width="500"
-      style="background-color: #fff; border: 1px solid #e0e0e0;"
+  <v-app>
+    <v-main
+      class="d-flex align-center justify-center pa-10"
+      style="min-height: 100vh; background: linear-gradient(135deg, #201f3a, #3b2d72, #5c2fa0);"
     >
-      <v-card-title class="text-h5 text-center font-weight-bold text-deep-purple-darken-3">
-        🏋️ Multijugador — {{ exercici }}
-      </v-card-title>
+      <v-container
+        class="rounded-2xl pa-10 elevation-12 bg-glass"
+        style="max-width: 700px; backdrop-filter: blur(18px);"
+      >
+        <v-row class="justify-center text-center">
+          <v-col cols="12">
+            <h1 class="text-h4 font-weight-bold text-purple-lighten-4 mb-2 drop-title">
+              🏋️ Multijugador — {{ exercici }}
+            </h1>
+            <v-divider class="my-5" color="purple-lighten-2"></v-divider>
+          </v-col>
 
-      <v-divider class="my-3"></v-divider>
+          <!-- SIN SALA -->
+          <v-col cols="12" v-if="!aSala">
+            <v-btn
+              color="deep-purple-accent-3"
+              variant="elevated"
+              size="large"
+              class="main-btn mb-6"
+              block
+              rounded
+              @click="crearSala"
+            >
+              <v-icon start>mdi-plus-circle-outline</v-icon>
+              Crear nova sala
+            </v-btn>
 
-      <v-card-text>
-        <!-- Sense sala -->
-        <div v-if="!aSala" class="text-center">
-          <v-btn
-            color="deep-purple-accent-4"
-            variant="elevated"
-            size="large"
-            class="mb-4"
-            block
-            @click="crearSala"
-          >
-            <v-icon start>mdi-plus-circle-outline</v-icon>
-            Crear nova sala
-          </v-btn>
+            <v-text-field
+              label="Codi de sala"
+              v-model="codiSalaInput"
+              variant="outlined"
+              color="deep-purple-accent-2"
+              prepend-inner-icon="mdi-key"
+              clearable
+              hide-details
+              class="mb-5 rounded-xl"
+            />
 
-          <v-text-field
-            label="Codi de sala"
-            v-model="codiSalaInput"
-            variant="outlined"
-            clearable
-            density="comfortable"
-            prepend-inner-icon="mdi-key"
-          />
+            <v-btn
+              color="green-accent-4"
+              variant="elevated"
+              size="large"
+              class="main-btn mb-6"
+              block
+              rounded
+              @click="unirSala"
+            >
+              <v-icon start>mdi-login</v-icon>
+              Unir-se a una sala
+            </v-btn>
 
-          <v-btn
-            color="green-accent-4"
-            variant="elevated"
-            size="large"
-            class="mt-2"
-            block
-            @click="unirSala"
-          >
-            <v-icon start>mdi-login</v-icon>
-            Unir-se a una sala
-          </v-btn>
+            <v-btn
+              color="grey-lighten-1"
+              variant="text"
+              size="large"
+              block
+              rounded
+              @click="tornarEnrere"
+            >
+              <v-icon start>mdi-arrow-left</v-icon>
+              Tornar enrere
+            </v-btn>
+          </v-col>
 
-          <v-btn
-            color="grey-darken-1"
-            variant="text"
-            class="mt-4"
-            block
-            @click="tornarEnrere"
-          >
-            <v-icon start>mdi-arrow-left</v-icon>
-            Tornar enrere
-          </v-btn>
-        </div>
+          <!-- EN SALA -->
+          <v-col cols="12" v-else>
+            <v-card
+              class="rounded-xl pa-6 text-center bg-light-card"
+              elevation="6"
+              style="border: 1px solid rgba(255,255,255,0.1);"
+            >
+              <h2 class="text-h5 font-weight-medium text-purple-lighten-4 mb-2">
+                Sala: <span class="text-green-accent-3">{{ codiSala }}</span>
+              </h2>
+              <p class="text-body-2 text-grey-lighten-1 mb-5">
+                Jugadors connectats: <strong>{{ jugadors.length }}</strong>
+              </p>
 
-        <!-- En sala -->
-        <div v-else class="text-center">
-          <p class="text-h6 font-weight-medium mb-1">
-            Sala: <strong class="text-deep-purple-darken-2">{{ codiSala }}</strong>
-          </p>
+              <v-list class="text-grey-lighten-4" density="comfortable">
+                <v-list-item
+                  v-for="j in jugadors"
+                  :key="j"
+                  class="rounded-lg mb-2 px-3 py-2"
+                  :class="j === hostId ? 'bg-top1' : 'bg-top2'"
+                >
+                  <v-list-item-content class="d-flex align-center justify-space-between">
+                    <span class="text-body-1 d-flex align-center">
+                      <v-icon
+                        v-if="j === hostId"
+                        color="deep-purple-accent-3"
+                        class="mr-2"
+                      >
+                        mdi-crown
+                      </v-icon>
+                      {{ j }}
+                    </span>
+                    <span v-if="j === userId" class="text-caption text-grey-lighten-1">(Tu)</span>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-card>
 
-          <p class="text-body-2 text-grey-darken-1 mb-4">
-            Jugadors connectats: <strong>{{ jugadors.length }}</strong>
-          </p>
+            <v-btn
+              v-if="userId === hostId"
+              color="deep-purple-accent-3"
+              variant="elevated"
+              class="main-btn mt-6"
+              size="large"
+              block
+              rounded
+              :disabled="jugadors.length < 2"
+              @click="iniciarPartida"
+            >
+              <v-icon start>mdi-play-circle</v-icon>
+              Iniciar partida
+            </v-btn>
 
-          <v-card
-            class="rounded-lg mb-4 pa-2"
-            elevation="4"
-            color="#f9f9ff"
-            style="border: 1px solid #ddd;"
-          >
-            <v-list density="compact">
-              <v-list-item
-                v-for="j in jugadors"
-                :key="j"
-                class="rounded-lg my-1"
-                :class="j === hostId ? 'bg-green-lighten-5' : ''"
-              >
-                <v-list-item-content class="d-flex align-center justify-space-between">
-                  <span class="text-body-1">
-                    <v-icon
-                      v-if="j === hostId"
-                      color="deep-purple-accent-4"
-                      class="mr-2"
-                    >
-                      mdi-crown
-                    </v-icon>
-                    {{ j }}
-                  </span>
-                  <span v-if="j === userId" class="text-caption text-grey">
-                    (Tu)
-                  </span>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
-          </v-card>
+            <v-btn
+              color="red-darken-2"
+              variant="outlined"
+              class="main-btn mt-4"
+              size="large"
+              block
+              rounded
+              @click="sortirManual"
+            >
+              <v-icon start>mdi-exit-to-app</v-icon>
+              Sortir de la sala
+            </v-btn>
 
-          <v-btn
-            v-if="userId === hostId"
-            color="deep-purple-accent-4"
-            variant="elevated"
-            class="mb-2"
-            size="large"
-            block
-            :disabled="jugadors.length < 2"
-            @click="iniciarPartida"
-          >
-            <v-icon start>mdi-play-circle</v-icon>
-            Iniciar partida
-          </v-btn>
-
-          <v-btn
-            color="error"
-            variant="outlined"
-            size="large"
-            block
-            @click="sortirManual"
-          >
-            <v-icon start>mdi-exit-to-app</v-icon>
-            Sortir de la sala
-          </v-btn>
-
-          <v-btn
-            color="grey-darken-1"
-            variant="text"
-            class="mt-3"
-            block
-            @click="tornarEnrere"
-          >
-            <v-icon start>mdi-arrow-left</v-icon>
-            Tornar enrere
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
-  </v-container>
+            <v-btn
+              color="grey-lighten-1"
+              variant="text"
+              size="large"
+              block
+              rounded
+              class="mt-4"
+              @click="tornarEnrere"
+            >
+              <v-icon start>mdi-arrow-left</v-icon>
+              Tornar enrere
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup>
@@ -176,13 +184,13 @@ async function crearSala() {
       connectToSession(`${exercici}-${data.sessionId}`, true);
     }
   } catch (err) {
-    alert("❌ Error en crear la sala");
+    alert("Error en crear la sala");
   }
 }
 
 function unirSala() {
   if (!codiSalaInput.value.trim()) {
-    alert("⚠️ Introdueix un codi de sala vàlid");
+    alert("Introdueix un codi de sala vàlid");
     return;
   }
   connectToSession(codiSalaInput.value.trim());
@@ -201,12 +209,11 @@ function connectToSession(sessionId, isHost = false) {
 
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    console.log("📨 Missatge:", msg);
 
     if (msg.type === "leaderboard") {
       jugadors.value = msg.leaderboard.map((p) => p.userId);
       if (!hostId.value && msg.leaderboard.length > 0) {
-        hostId.value = msg.leaderboard[0].userId; // primer usuari = host
+        hostId.value = msg.leaderboard[0].userId;
       }
     } else if (msg.error) {
       alert(msg.error);
@@ -214,7 +221,6 @@ function connectToSession(sessionId, isHost = false) {
   });
 
   socket.addEventListener("close", () => {
-    console.log("❌ Connexió tancada");
     aSala.value = false;
   });
 }
@@ -234,7 +240,6 @@ function sortirManual() {
 }
 
 function iniciarPartida() {
-  alert(`🎮 Iniciant partida de ${exercici}...`);
   router.push(`/joc-solo/${exercici}`);
 }
 
@@ -244,11 +249,33 @@ function tornarEnrere() {
 </script>
 
 <style scoped>
-.v-card-title {
-  font-family: "Poppins", sans-serif;
+.bg-glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
-.v-btn {
-  text-transform: none;
-  font-weight: 500;
+
+.bg-light-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.drop-title {
+  text-shadow: 0px 3px 10px rgb(0, 0, 0);
+}
+
+.main-btn {
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.main-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(123, 97, 255, 0.4);
+}
+
+.bg-top1 {
+  background: rgba(100, 255, 150, 0.08);
+}
+.bg-top2 {
+  background: rgba(255, 255, 255, 0.02);
 }
 </style>
