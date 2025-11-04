@@ -2,58 +2,57 @@
   <v-app>
     <v-main
       class="d-flex flex-column align-center justify-center text-center min-h-screen pa-8"
-      style="background: linear-gradient(135deg, #141e30, #243b55);"
+      style="background: linear-gradient(135deg, #1a2038, #2b3b63, #1a2038);"
     >
-      <v-container class="text-center text-white move-up">
+      <v-container class="text-center text-white move-up fade-in-container">
 
-        <h2 class="text-h3 font-weight-bold mb-4 drop-shadow-lg animate-fade">
+        <!-- Título del ejercicio -->
+        <h2 class="exercise-title mb-4">
           {{ exerciciLabel }}
         </h2>
 
-        <p class="text-h6 mb-12 text-grey-lighten-3 animate-fade-delay">
+        <!-- Subtítulo -->
+        <p class="subtitle mb-12">
           Vols jugar sol o multijugador?
         </p>
 
-        <v-row justify="center" align="center" class="gap-6 mt-n4">
-
-          <v-col cols="12" sm="5" md="3" class="d-flex justify-center">
+        <!-- Opciones -->
+        <v-row justify="center" align="center" class="gap-10 mt-n4">
+          <v-col cols="12" sm="6" md="4" lg="3" class="d-flex justify-center">
             <v-card
-              class="option-card pa-8 text-center solo-card"
-              elevation="10"
-              height="140"
-              width="240"
+              class="option-card solo-card d-flex flex-column align-center justify-center"
+              elevation="14"
+              height="200"
+              width="300"
               @click="jugarSol"
             >
-              <div class="text-h5 font-weight-bold text-white mb-2">
-                Mode Sol
-              </div>
-              <p class="text-body-2 text-grey-lighten-3">
+              <div class="option-title">Mode Sol</div>
+              <p class="option-desc">
                 Entrena al teu ritme i millora les teves marques.
               </p>
             </v-card>
           </v-col>
 
-          <v-col cols="12" sm="5" md="3" class="d-flex justify-center">
+          <v-col cols="12" sm="6" md="4" lg="3" class="d-flex justify-center">
             <v-card
-              class="option-card pa-8 text-center multi-card"
-              elevation="10"
-              height="140"
-              width="240"
+              class="option-card multi-card d-flex flex-column align-center justify-center"
+              elevation="14"
+              height="200"
+              width="300"
               @click="jugarMultijugador"
             >
-              <div class="text-h5 font-weight-bold text-white mb-2">
-                Multijugador
-              </div>
-              <p class="text-body-2 text-grey-lighten-3">
+              <div class="option-title">Multijugador</div>
+              <p class="option-desc">
                 Reta els teus amics i competeix en temps real.
               </p>
             </v-card>
           </v-col>
         </v-row>
 
-        <div class="d-flex justify-center">
+        <!-- Botón volver -->
+        <div class="text-center mt-12">
           <v-btn
-            class="mt-10 px-8 py-4 text-subtitle-1 font-weight-bold centered-btn"
+            class="back-btn text-subtitle-1 font-weight-bold"
             variant="outlined"
             color="white"
             @click="$router.push('/')"
@@ -77,7 +76,7 @@ const exercici = route.params.ejercicio
 const nombres = {
   flexiones: 'Flexions',
   sentadillas: 'Squats',
-  saltos: 'Saltos',
+  saltos: 'Salts',
   abdominales: 'Abdominals',
 }
 
@@ -102,54 +101,7 @@ const jugarMultijugador = () => {
 </script>
 
 <style scoped>
-.move-up {
-  transform: translateY(-160px);
-}
-
-.option-card {
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease-in-out;
-  color: white;
-  backdrop-filter: blur(8px);
-}
-
-.solo-card {
-  background: rgba(33, 150, 243, 0.25);
-  border: 1px solid rgba(33, 150, 243, 0.4);
-}
-.solo-card:hover {
-  transform: scale(1.05);
-  background: rgba(33, 150, 243, 0.45);
-  box-shadow: 0 8px 25px rgba(33, 150, 243, 0.6);
-}
-
-.multi-card {
-  background: rgba(156, 39, 176, 0.25);
-  border: 1px solid rgba(156, 39, 176, 0.4);
-}
-.multi-card:hover {
-  transform: scale(1.05);
-  background: rgba(156, 39, 176, 0.45);
-  box-shadow: 0 8px 25px rgba(156, 39, 176, 0.6);
-}
-
-.centered-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  letter-spacing: 0.5px;
-  text-align: center;
-}
-
-.drop-shadow-lg {
-  text-shadow: 0px 3px 6px rgba(0, 0, 0, 0.6);
-}
-
-.min-h-screen {
-  min-height: 100vh;
-}
-
+/* ======== ANIMACIONES ======== */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -160,12 +112,131 @@ const jugarMultijugador = () => {
     transform: translateY(0);
   }
 }
-
-.animate-fade {
-  animation: fadeInUp 0.6s ease forwards;
+.fade-in-container {
+  animation: fadeInUp 0.8s ease-out forwards;
 }
 
-.animate-fade-delay {
-  animation: fadeInUp 0.9s ease forwards;
+/* ======== TÍTULO ======== */
+.exercise-title {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.603);
+  background: linear-gradient(90deg, #9b6bff, #3b4ef6, #8851ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+  position: relative;
+}
+.exercise-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 120px;
+  height: 3px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 3px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
+  50% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
+}
+
+/* ======== SUBTÍTULO ======== */
+.subtitle {
+  font-size: 1.25rem;
+  color: #d1d5db;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ======== CARTAS ======== */
+.option-card {
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  color: white;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.option-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.option-desc {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 85%;
+}
+
+/* --- MODO SOLO --- */
+.solo-card {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+.solo-card:hover {
+  transform: scale(1.07);
+  background: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.7);
+}
+
+/* --- MULTIJUGADOR --- */
+.multi-card {
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
+.multi-card:hover {
+  transform: scale(1.07);
+  background: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.7);
+}
+
+/* ======== BOTÓN “TORNAR A L'INICI” ======== */
+.back-btn {
+  border: 2px solid rgb(255, 255, 255);
+  border-radius: 14px;
+  padding: 7px 36px;
+  transition: all 0.35s ease;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.back-btn:hover {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
+  box-shadow: 0 0 20px rgba(101, 40, 243, 0.8);
+  border-color: transparent;
+  transform: scale(1.05);
+}
+
+/* ======== POSICIONAMIENTO ======== */
+.move-up {
+  transform: translateY(-120px);
+}
+
+.min-h-screen {
+  min-height: 100vh;
 }
 </style>

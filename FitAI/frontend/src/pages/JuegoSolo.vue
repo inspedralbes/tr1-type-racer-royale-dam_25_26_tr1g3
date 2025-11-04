@@ -2,14 +2,19 @@
   <v-app>
     <v-main
       class="d-flex align-center justify-center pa-8"
-      style="background: linear-gradient(135deg, #1a1c2c, #302b63, #24243e); min-height: 100vh;"
+      style="background: linear-gradient(135deg, #1c1b29, #2e2a5c, #1f1c3a); min-height: 100vh;"
     >
-      <v-container class="rounded-xl pa-6 bg-white elevation-10" style="max-width: 1200px;">
+<v-container
+  class="rounded-2xl pa-12 elevation-12 bg-glass expanded-container"
+  style="max-width: 1400px; backdrop-filter: blur(20px);"
+>
+
         <v-row>
 
+          <!-- COLUMNA IZQUIERDA (CÁMARA Y CONTROLES) -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center">
             <v-card
-              class="rounded-xl overflow-hidden"
+              class="rounded-xl overflow-hidden shadow-card"
               elevation="8"
               width="100%"
               style="background-color: #000; position: relative;"
@@ -31,45 +36,72 @@
               ></canvas>
             </v-card>
 
-            <div class="mt-5 d-flex flex-wrap justify-center gap-3">
-              <v-btn color="deep-purple-accent-4" variant="elevated" size="large" @click="startCamera">
-                <v-icon start>mdi-video-outline</v-icon> Obrir càmera
-              </v-btn>
-              <v-btn color="red-darken-2" variant="outlined" size="large" @click="stopCamera">
-                <v-icon start>mdi-stop-circle-outline</v-icon> Aturar
-              </v-btn>
-              <v-btn color="green-accent-4" variant="elevated" size="large" @click="selectVideo">
-                <svg-icon type="mdi" :path="pathCarregar" class="mr-2" />Carregar vídeo
-              </v-btn>
-              
-              <input
-                ref="fileInput"
-                type="file"
-                accept="video/*"
-                @change="loadVideoFromFile"
-                style="display: none"
-              />
-            </div>
+            <!-- Botones -->
+            <div class="mt-5 d-flex flex-wrap justify-center gap-2 small-btn-group">
+  <v-btn
+    color="deep-purple-accent-4"
+    variant="elevated"
+    size="small"
+    rounded
+    class="control-btn-small"
+    @click="startCamera"
+  >
+    <v-icon start size="18">mdi-video-outline</v-icon>
+    Obrir càmera
+  </v-btn>
 
+  <v-btn
+    color="red-darken-2"
+    variant="outlined"
+    size="small"
+    rounded
+    class="control-btn-small"
+    @click="stopCamera"
+  >
+    <v-icon start size="18">mdi-stop-circle-outline</v-icon>
+    Aturar
+  </v-btn>
+
+  <v-btn
+    color="green-accent-4"
+    variant="elevated"
+    size="small"
+    rounded
+    class="control-btn-small"
+    @click="selectVideo"
+  >
+    <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="18" height="18" />Carregar vídeo
+  </v-btn>
+
+  <input
+    ref="fileInput"
+    type="file"
+    accept="video/*"
+    @change="loadVideoFromFile"
+    style="display: none"
+  />
+</div>
+
+
+            <!-- Contador -->
             <v-card
-              class="mt-6 py-4 px-6 text-center rounded-xl"
-              color="deep-purple-darken-2"
-              dark
-              elevation="8"
+              class="mt-8 py-5 px-6 text-center rounded-xl count-card"
+              color="deep-purple-darken-3"
+              elevation="10"
               style="width: 80%;"
             >
-              <h3 class="text-h5 font-weight-medium mb-1">Repeticions</h3>
+              <h3 class="text-h5 font-weight-medium mb-1 text-grey-lighten-3">Repeticions</h3>
               <h1 class="text-h2 font-weight-bold text-green-accent-2">{{ count }}</h1>
             </v-card>
           </v-col>
 
-
+          <!-- COLUMNA DERECHA (GIF + RANKING) -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center">
-            <h2 class="text-h4 font-weight-bold mb-4 text-deep-purple-darken-3">
-              Exercici: {{ exerciciLabel }}
+            <h2 class="text-h4 font-weight-bold mb-5 text-white drop-title">
+              Exercici: <span class="text-purple-lighten-3">{{ exerciciLabel }}</span>
             </h2>
 
-            <v-card class="rounded-xl overflow-hidden mb-4" elevation="8" width="100%">
+            <v-card class="rounded-xl overflow-hidden mb-4 shadow-card" elevation="8" width="100%">
               <img
                 :src="exerciciGif"
                 :alt="exerciciLabel"
@@ -79,28 +111,28 @@
               />
             </v-card>
 
-            <p class="text-body-1 text-grey-darken-1 mb-6">
+            <p class="text-body-1 text-grey-lighten-2 mb-6">
               Segueix l’exemple o utilitza el teu propi vídeo. <br />
               El sistema comptarà les repeticions automàticament.
             </p>
 
+            <!-- Clasificación -->
             <v-card
-              class="pa-4 rounded-xl mb-6"
+              class="pa-4 rounded-xl mb-6 bg-light-card"
               elevation="6"
               width="100%"
-              color="#f7f7fc"
-              style="border: 1px solid #e0e0e0;"
+              style="border: 1px solid rgba(255,255,255,0.1);"
             >
-              <h3 class="text-h5 font-weight-bold text-deep-purple-darken-3 mb-3">
+              <h3 class="text-h5 font-weight-bold text-purple-lighten-3 mb-3">
                 🏆 Record Personal
               </h3>
 
-              <v-list density="compact">
+              <v-list density="compact" class="text-grey-lighten-3">
                 <v-list-item
                   v-for="(user, index) in leaderboard"
                   :key="user.userId"
                   class="rounded-lg mb-1"
-                  :class="index === 0 ? 'bg-green-lighten-4' : index === 1 ? 'bg-amber-lighten-4' : ''"
+                  :class="index === 0 ? 'bg-top1' : index === 1 ? 'bg-top2' : 'bg-top3'"
                 >
                   <v-list-item-content class="text-body-1">
                     <v-icon small class="mr-2">
@@ -112,9 +144,17 @@
               </v-list>
             </v-card>
 
-            <!-- Botó per tornar -->
-            <v-btn color="deep-purple-darken-3" variant="flat" size="large" @click="tornar">
-              <v-icon start>mdi-arrow-left</v-icon> Tornar
+            <!-- Botón Volver -->
+            <v-btn
+              color="deep-purple-accent-3"
+              variant="elevated"
+              size="large"
+              rounded
+              class="return-btn"
+              @click="tornar"
+            >
+              <v-icon start>mdi-arrow-left</v-icon>
+              Tornar
             </v-btn>
           </v-col>
         </v-row>
@@ -173,9 +213,7 @@ let detecting = false
 const ws = ref(null)
 const userId = ref(`usuari_${Math.floor(Math.random() * 10000)}`)
 
-onMounted(() => {
-  connectWebSocket()
-})
+onMounted(() => connectWebSocket())
 
 async function startCamera() {
   try {
@@ -313,9 +351,76 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-h1,
-h2,
-h3 {
-  font-family: 'Poppins', sans-serif;
+.bg-glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+.shadow-card {
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.35);
+}
+
+.control-btn {
+  transition: all 0.3s ease;
+}
+.control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(120, 81, 169, 0.6);
+}
+
+.count-card {
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bg-top1 {
+  background: rgba(0, 255, 150, 0.08);
+}
+.bg-top2 {
+  background: rgba(255, 215, 0, 0.08);
+}
+.bg-top3 {
+  background: rgba(150, 150, 255, 0.05);
+}
+
+.return-btn {
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  transition: 0.3s ease;
+}
+.return-btn:hover {
+  background-color: #7b4efb !important;
+  transform: scale(1.05);
+}
+
+.drop-title {
+  text-shadow: 0px 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+.bg-light-card {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.small-btn-group {
+  gap: 12px; /* separa los botones horizontal y verticalmente */
+}
+
+.control-btn-small {
+  font-size: 0.85rem;
+  padding: 4px 10px !important;
+  min-width: 120px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  transition: all 0.25s ease-in-out;
+}
+
+.control-btn-small:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(130, 90, 255, 0.4);
+  background-color: rgba(130, 90, 255, 0.15) !important;
+}
+.small-btn-group v-btn {
+  min-width: 140px;
+}
+
 </style>
