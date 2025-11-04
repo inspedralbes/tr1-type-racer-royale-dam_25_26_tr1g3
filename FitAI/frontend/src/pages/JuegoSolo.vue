@@ -91,7 +91,7 @@
               style="border: 1px solid #e0e0e0;"
             >
               <h3 class="text-h5 font-weight-bold text-deep-purple-darken-3 mb-3">
-                🏆 Classificació
+                🏆 Record Personal
               </h3>
 
               <v-list density="compact">
@@ -136,8 +136,8 @@ const sessionId = route.params.sessionId
 
 const noms = {
   flexiones: 'Flexions',
-  sentadillas: 'Esquatx',
-  saltos: 'Saltar',
+  sentadillas: 'Esquats',
+  saltos: 'Salts',
   abdominales: 'Abdominals',
 }
 
