@@ -1,32 +1,38 @@
 <template>
   <v-app>
-<v-main
-  class="d-flex flex-column align-center justify-center min-h-screen pa-8 bg-fitai-bright"
->
+    <v-main
+      class="d-flex flex-column align-center pa-4 bg-fitai-bright"
+      style="min-height: 100vh"
+    >
+      <div class="header-content pt-4 pb-6 w-100">
+        <h1 class="nextrep-title mb-6">
+          <span class="next">Next</span><span class="rep">Rep</span>
+        </h1>
 
-      <!-- ======== TÍTULO PRINCIPAL ======== -->
-<h1 class="nextrep-title mb-8">
-  <span class="next">Next</span><span class="rep">Rep</span>
-</h1>
-
-
-      <!-- ======== BUSCADOR ======== -->
-      <div class="search-container">
-        <v-text-field
-          v-model="searchQuery"
-          placeholder="Buscar ejercicio..."
-          variant="outlined"
-          hide-details
-          clearable
-          class="search-bar"
-          prepend-inner-icon="mdi-magnify"
-          density="compact"
-        ></v-text-field>
+        <div class="d-flex justify-center px-4">
+          <v-text-field
+            v-model="searchQuery"
+            placeholder="Buscar ejercicio..."
+            variant="solo-filled"
+            hide-details
+            clearable
+            class="search-bar elevation-6"
+            prepend-inner-icon="mdi-magnify"
+            density="comfortable"
+            flat
+            :style="{ width: $vuetify.display.mobile ? '95%' : '500px' }"
+          ></v-text-field>
+        </div>
       </div>
 
-      <!-- ======== TARJETAS DE EJERCICIOS ======== -->
-      <v-container>
-        <v-row justify="center" align="center" class="ga-8">
+      <v-divider class="divider-glow mx-auto mb-8"></v-divider>
+
+      <v-container class="pa-0 pa-sm-4">
+        <v-row
+          justify="center"
+          align="stretch"
+          class="ga-4 ga-md-6"
+        >
           <v-col
             v-for="exercici in filteredExercicis"
             :key="exercici.nom"
@@ -36,45 +42,42 @@
             lg="3"
             class="d-flex justify-center"
           >
-            <v-hover v-slot="{ isHovering, props }">
-              <v-card
-                v-bind="props"
-                class="exercise-card overflow-hidden"
-                elevation="12"
-                @click="anarAExercici(exercici.nom)"
+            <v-card
+              class="exercise-card elevation-12"
+              @click="anarAExercici(exercici.nom)"
+            >
+              <v-img
+                :src="exercici.imatge"
+                :alt="exercici.label"
+                height="200"
+                cover
+                class="transition-img"
+              />
+
+              <v-overlay
+                contained
+                scrim="#1a2238"
+                class="d-none d-sm-flex align-center justify-center text-center pa-3"
+                activator="parent"
+                location="top"
               >
-                <v-img
-                  :src="exercici.imatge"
-                  :alt="exercici.label"
-                  height="260"
-                  cover
-                  class="transition-img"
-                />
+                <p class="text-white text-body-2 font-weight-light">
+                  {{ exercici.descripcio }}
+                </p>
+              </v-overlay>
 
-                <!-- Overlay descriptivo -->
-                <div v-if="isHovering" class="overlay-description">
-                  <p class="text-white text-center px-4">
-                    {{ exercici.descripcio }}
-                  </p>
-                </div>
-
-                <!-- Franja central semitransparente -->
-                <div
-                  class="exercise-label text-white font-weight-bold text-h5"
-                  :class="{ 'shine': isHovering }"
-                >
-                  {{ exercici.label }}
-                </div>
-              </v-card>
-            </v-hover>
+              <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-3">
+                {{ exercici.label }}
+              </div>
+            </v-card>
           </v-col>
         </v-row>
 
         <div
           v-if="filteredExercicis.length === 0"
-          class="text-white text-center mt-10"
+          class="text-white text-center mt-10 text-h6 font-weight-light"
         >
-          No s'han trobat exercicis amb aquest nom.
+          No s'han trobat exercicis amb aquest nom. 🤖
         </div>
       </v-container>
     </v-main>
@@ -129,231 +132,166 @@ const anarAExercici = (nom) => {
 </script>
 
 <style scoped>
+/* ==================================== */
 /* ======== FONDO NEÓN BRILLANTE ======== */
+/* ==================================== */
 .bg-fitai-bright {
   background:
-    radial-gradient(circle at 30% 20%, rgba(147, 51, 234, 0.25) 0%, transparent 45%),
-    radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.25) 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.25) 0%, transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(147, 51, 234, 0.25) 0%, transparent 45%),
     linear-gradient(135deg, #1a2238, #16213e 50%, #0f172a 100%);
   background-attachment: fixed;
   background-size: cover;
   animation: bgShine 18s ease-in-out infinite;
 }
 
-/* Animación sutil de respiración luminosa */
 @keyframes bgShine {
-  0% {
-    filter: brightness(1);
-    background-position: 0% 50%;
-  }
-  50% {
-    filter: brightness(1.25);
-    background-position: 100% 50%;
-  }
-  100% {
-    filter: brightness(1);
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-
+/* ==================================== */
 /* ======== TÍTULO NEXTREP ======== */
+/* ==================================== */
 .nextrep-title {
-  font-size: 4.5rem;
+  /* Tamaño de fuente más adaptado a móvil */
+  font-size: 3.5rem; /* Ajuste en móvil */
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   text-align: center;
-  position: relative;
   color: white;
-  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.85);
-  margin-bottom: 2.5rem;
-  animation: fadeIn 1.2s ease-in-out;
-  line-height: 1.1;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
+  line-height: 1;
   user-select: none;
 }
 
-/* Parte “Next” — blanco con sutil brillo azul */
-.next {
-  color: #ffffff;
-  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.6));
-  transition: filter 0.3s ease;
+/* Ajuste del título en escritorio */
+@media (min-width: 600px) {
+  .nextrep-title {
+    font-size: 4.5rem;
+    letter-spacing: 2px;
+  }
 }
 
-/* Parte “Rep” — degradado morado brillante animado */
+.next {
+  color: #ffffff;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
 .rep {
   background: linear-gradient(90deg, #9b6bff, #3b82f6, #9b6bff);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-style: italic;
-  position: relative;
   animation: gradientShift 5s ease infinite;
   text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-  transition: filter 0.3s ease;
 }
 
-/* Movimiento suave del degradado */
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-/* Línea luminosa debajo del título */
-.nextrep-title::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 49%;
-  width: 315px;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  border-radius: 4px;
-  transform: translateX(-50%);
-  box-shadow: 0 0 18px rgba(139, 92, 246, 0.7);
-  animation: pulseGlow 2.5s ease-in-out infinite;
+/* Línea luminosa decorativa (más sutil) */
+.divider-glow {
+    max-width: 85%;
+    height: 1px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, transparent 0%, #3b82f6, #8b5cf6, #3b82f6, transparent 100%);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+    opacity: 0.7;
+}
+@media (min-width: 600px) {
+    .divider-glow {
+        max-width: 600px;
+        height: 2px;
+    }
 }
 
-/* Animación del brillo de la línea */
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
-  50% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-}
 
-/* Animación de entrada */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ======== TARJETAS ======== */
+/* ==================================== */
+/* ======== TARJETAS (CARD) ======== */
+/* ==================================== */
 .exercise-card {
   width: 100%;
-  max-width: 340px;
-  height: 230px;
-  border-radius: 12px;
-  background: #1e1e2f;
+  max-width: 320px; /* Tamaño máximo más adecuado para móvil */
+  min-height: 250px;
+  border-radius: 16px; /* Bordes más redondeados */
+  background: rgba(30, 30, 47, 0.7); /* Fondo semi-transparente */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backdrop-filter: blur(8px); /* Efecto cristalizado (Glassmorphism) */
 }
 .exercise-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.8); /* Brillo intenso en hover */
 }
 
-/* Imagen */
+/* Imagen con zoom sutil en hover */
 .transition-img {
-  transition: transform 0.4s ease;
+  transition: transform 0.6s ease;
 }
 .exercise-card:hover .transition-img {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
-/* Overlay descriptivo */
-.overlay-description {
+/* Franja inferior para el nombre (siempre visible, reemplaza el label central) */
+.exercise-label-bottom {
   position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 10, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: opacity 0.4s ease;
-}
-
-/* Franja morada central */
-.exercise-label {
-  position: absolute;
-  top: 50%;
+  bottom: 0;
   left: 0;
   width: 100%;
-  transform: translateY(-50%);
-  background: rgba(139, 92, 246, 0.55);
-  text-align: center;
-  padding: 10px 0;
+  /* Fondo más vibrante y semitransparente */
+  background: rgba(139, 92, 246, 0.7);
+  backdrop-filter: blur(6px);
+  /* Brillo sutil */
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
   letter-spacing: 1px;
   text-transform: uppercase;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
-/* ======== BUSCADOR ======== */
-.search-container {
-  display: flex;
-  justify-content: center;
-  width: 53%;
-  margin-bottom: 2.5rem;
-}
+/* ==================================== */
+/* ======== BUSCADOR (SEARCH BAR) ======== */
+/* ==================================== */
 .search-bar {
-  width: 260px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  max-width: 600px; /* Limita el ancho del buscador en pantallas grandes */
+  border-radius: 12px !important;
   color: white;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
 }
+
+/* Estilo del campo de texto interno (Vuetify overides) */
 .search-bar .v-field__input {
   color: white !important;
-  font-size: 0.95rem;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  min-height: 34px !important;
+  font-size: 1rem;
 }
-.search-bar:hover {
-  background: rgba(255, 255, 255, 0.15);
+.search-bar .v-field__overlay {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transition: background-color 0.4s ease;
 }
+.search-bar:hover .v-field__overlay {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Estilo de la barra de búsqueda al estar enfocada */
 .search-bar:focus-within {
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.8) !important;
 }
 
-/* Efecto brillo */
-.shine {
-  position: relative;
-  overflow: hidden;
-}
-.shine::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -75%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    120deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0.3) 100%
-  );
-  transform: skewX(-20deg);
-  animation: shineMove 1s forwards;
-}
-@keyframes shineMove {
-  to {
-    left: 125%;
-  }
+/* Estilo de los iconos (lupa y limpiar) */
+.search-bar .v-icon {
+  color: #8b5cf6 !important; /* Color neón morado para los iconos */
 }
 
-/* ======== ANIMACIONES ======== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ======== OTROS ======== */
+/* ==================================== */
+/* ======== ANIMACIONES Y UTILS ======== */
+/* ==================================== */
 .min-h-screen {
   min-height: 100vh;
 }

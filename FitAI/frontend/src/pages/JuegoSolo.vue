@@ -2,20 +2,20 @@
   <v-app>
     <v-main
       class="d-flex align-center justify-center pa-8"
-      style="background: linear-gradient(135deg, #1c1b29, #2e2a5c, #1f1c3a); min-height: 100vh;"
+      style="background: linear-gradient(135deg, #0f0a1c, #261f4c, #130e2b); min-height: 100vh;"
     >
-<v-container
-  class="rounded-2xl pa-12 elevation-12 bg-glass expanded-container"
-  style="max-width: 1400px; backdrop-filter: blur(20px);"
->
+      <v-container
+        class="rounded-3xl pa-8 pa-md-12 elevation-20 bg-glass expanded-container"
+        style="max-width: 1400px; backdrop-filter: blur(25px); border: 2px solid rgba(255, 255, 255, 0.08);"
+      >
 
         <v-row>
 
-          <!-- COLUMNA IZQUIERDA (CÁMARA Y CONTROLES) -->
-          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center">
+          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
+            
             <v-card
-              class="rounded-xl overflow-hidden shadow-card"
-              elevation="8"
+              class="rounded-xl overflow-hidden shadow-card video-card"
+              elevation="12"
               width="100%"
               style="background-color: #000; position: relative;"
             >
@@ -36,70 +36,70 @@
               ></canvas>
             </v-card>
 
-            <!-- Botones -->
-            <div class="mt-5 d-flex flex-wrap justify-center gap-2 small-btn-group">
-  <v-btn
-    color="deep-purple-accent-4"
-    variant="elevated"
-    size="small"
-    rounded
-    class="control-btn-small"
-    @click="startCamera"
-  >
-    <v-icon start size="18">mdi-video-outline</v-icon>
-    Obrir càmera
-  </v-btn>
+            <div class="mt-6 d-flex flex-wrap justify-center gap-2 small-btn-group">
+              <v-btn
+                color="#8c58ff"
+                variant="flat"
+                size="small"
+                rounded="lg"
+                class="control-btn-small action-btn"
+                @click="startCamera"
+              >
+                <v-icon start size="18">mdi-video-outline</v-icon>
+                Obrir càmera
+              </v-btn>
 
-  <v-btn
-    color="red-darken-2"
-    variant="outlined"
-    size="small"
-    rounded
-    class="control-btn-small"
-    @click="stopCamera"
-  >
-    <v-icon start size="18">mdi-stop-circle-outline</v-icon>
-    Aturar
-  </v-btn>
+              <v-btn
+                color="red-lighten-1"
+                variant="outlined"
+                size="small"
+                rounded="lg"
+                class="control-btn-small"
+                @click="stopCamera"
+              >
+                <v-icon start size="18">mdi-stop-circle-outline</v-icon>
+                Aturar
+              </v-btn>
 
-  <v-btn
-    color="green-accent-4"
-    variant="elevated"
-    size="small"
-    rounded
-    class="control-btn-small"
-    @click="selectVideo"
-  >
-    <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="18" height="18" />Carregar vídeo
-  </v-btn>
+              <v-btn
+                color="teal-accent-4"
+                variant="flat"
+                size="small"
+                rounded="lg"
+                class="control-btn-small action-btn"
+                @click="selectVideo"
+              >
+                <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="18" height="18" />Carregar vídeo
+              </v-btn>
 
-  <input
-    ref="fileInput"
-    type="file"
-    accept="video/*"
-    @change="loadVideoFromFile"
-    style="display: none"
-  />
-</div>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="video/*"
+                @change="loadVideoFromFile"
+                style="display: none"
+              />
+            </div>
 
 
-            <!-- Contador -->
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
-              color="deep-purple-darken-3"
+              color="transparent"
               elevation="10"
-              style="width: 80%;"
+              style="width: 85%;"
             >
-              <h3 class="text-h5 font-weight-medium mb-1 text-grey-lighten-3">Repeticions</h3>
-              <h1 class="text-h2 font-weight-bold text-green-accent-2">{{ count }}</h1>
+              <h3 class="text-h6 font-weight-regular mb-1 text-grey-lighten-2">REPETICIONS</h3>
+              <h1 class="text-h1 font-weight-black text-cyan-lighten-2 counter-value">{{ count }}</h1>
             </v-card>
           </v-col>
 
-          <!-- COLUMNA DERECHA (GIF + RANKING) -->
-          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center">
-            <h2 class="text-h4 font-weight-bold mb-5 text-white drop-title">
-              Exercici: <span class="text-purple-lighten-3">{{ exerciciLabel }}</span>
+          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center order-md-2 order-1">
+            <h2 class="text-h4 font-weight-light mb-2 text-white drop-title">
+              EXERCICI
             </h2>
+             <h3 class="text-h3 font-weight-extrabold mb-5 text-purple-lighten-2 drop-title-strong">
+               {{ exerciciLabel.toUpperCase() }}
+             </h3>
 
             <v-card class="rounded-xl overflow-hidden mb-4 shadow-card" elevation="8" width="100%">
               <img
@@ -111,50 +111,53 @@
               />
             </v-card>
 
-            <p class="text-body-1 text-grey-lighten-2 mb-6">
-              Segueix l’exemple o utilitza el teu propi vídeo. <br />
-              El sistema comptarà les repeticions automàticament.
-            </p>
-
-            <!-- Clasificación -->
             <v-card
-              class="pa-4 rounded-xl mb-6 bg-light-card"
-              elevation="6"
+              class="pa-5 rounded-xl mb-6 bg-light-card"
+              elevation="8"
               width="100%"
-              style="border: 1px solid rgba(255,255,255,0.1);"
             >
-              <h3 class="text-h5 font-weight-bold text-purple-lighten-3 mb-3">
-                🏆 Record Personal
+              <h3 class="text-h5 font-weight-bold text-teal-accent-3 mb-4">
+                🏆 RECORD PERSONAL & CLASSIFICACIÓ
               </h3>
 
-              <v-list density="compact" class="text-grey-lighten-3">
+              <v-list density="compact" class="text-grey-lighten-3 bg-transparent ranking-list">
                 <v-list-item
                   v-for="(user, index) in leaderboard"
                   :key="user.userId"
-                  class="rounded-lg mb-1"
-                  :class="index === 0 ? 'bg-top1' : index === 1 ? 'bg-top2' : 'bg-top3'"
+                  class="rounded-lg mb-2 pa-2 list-item-glow"
+                  :class="index === 0 ? 'bg-top1' : index === 1 ? 'bg-top2' : index === 2 ? 'bg-top3' : 'bg-standard'"
+                  style="border: 1px solid rgba(255, 255, 255, 0.05);"
                 >
-                  <v-list-item-content class="text-body-1">
-                    <v-icon small class="mr-2">
-                      {{ index === 0 ? 'mdi-crown' : 'mdi-account' }}
-                    </v-icon>
-                    <strong>{{ index + 1 }}.</strong> {{ user.userId }} — {{ user.reps }} repeticions
-                  </v-list-item-content>
+                  <div class="d-flex justify-space-between align-center text-body-1 font-weight-medium">
+                    <div>
+                      <v-icon small class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
+                        {{ index === 0 ? 'mdi-trophy-variant' : 'mdi-account-circle' }}
+                      </v-icon>
+                      <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userId }}
+                    </div>
+                    <span class="font-weight-black" :class="index < 3 ? 'text-h6' : 'text-body-1'">
+                      {{ user.reps }} <span class="text-caption font-weight-light">reps</span>
+                    </span>
+                  </div>
                 </v-list-item>
               </v-list>
+              <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
+                  No hi ha dades a la classificació. Sigues el primer!
+              </div>
+
             </v-card>
 
-            <!-- Botón Volver -->
             <v-btn
-              color="deep-purple-accent-3"
-              variant="elevated"
+              color="purple-accent-3"
+              variant="flat"
               size="large"
-              rounded
+              rounded="lg"
               class="return-btn"
               @click="tornar"
+              elevation="6"
             >
               <v-icon start>mdi-arrow-left</v-icon>
-              Tornar
+              Tornar a la selecció
             </v-btn>
           </v-col>
         </v-row>
@@ -351,76 +354,117 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* GENERAL */
+.rounded-3xl {
+    border-radius: 30px !important;
+}
+
+/* BACKGROUNDS & GLASSMORPHISM */
 .bg-glass {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
 .shadow-card {
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease;
 }
-
-.control-btn {
-  transition: all 0.3s ease;
-}
-.control-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(120, 81, 169, 0.6);
-}
-
-.count-card {
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.bg-top1 {
-  background: rgba(0, 255, 150, 0.08);
-}
-.bg-top2 {
-  background: rgba(255, 215, 0, 0.08);
-}
-.bg-top3 {
-  background: rgba(150, 150, 255, 0.05);
-}
-
-.return-btn {
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  transition: 0.3s ease;
-}
-.return-btn:hover {
-  background-color: #7b4efb !important;
-  transform: scale(1.05);
-}
-
-.drop-title {
-  text-shadow: 0px 3px 8px rgba(0, 0, 0, 0.5);
+.shadow-card:hover {
+    transform: translateY(-2px);
 }
 
 .bg-light-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05); /* Ligeramente más opaco para ranking */
 }
 
+/* BOTONES */
 .small-btn-group {
-  gap: 12px; /* separa los botones horizontal y verticalmente */
+  gap: 12px;
 }
 
 .control-btn-small {
   font-size: 0.85rem;
-  padding: 4px 10px !important;
-  min-width: 120px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
+  padding: 4px 14px !important;
+  min-width: 130px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   transition: all 0.25s ease-in-out;
 }
 
-.control-btn-small:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(130, 90, 255, 0.4);
-  background-color: rgba(130, 90, 255, 0.15) !important;
+.action-btn {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
-.small-btn-group v-btn {
-  min-width: 140px;
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(130, 90, 255, 0.6);
+  filter: brightness(1.1); /* Brillo sutil */
+}
+
+/* TITLES */
+.drop-title {
+  text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);
+}
+.drop-title-strong {
+    text-shadow: 0px 4px 10px rgba(130, 90, 255, 0.8);
+}
+
+.info-text {
+    font-size: 0.95rem !important;
+}
+
+/* CONTADOR */
+.count-card {
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 15, 40, 0.7) !important; /* Fondo semitransparente oscuro para mejor contraste */
+}
+.counter-value {
+    letter-spacing: 3px;
+    text-shadow: 0px 0px 15px rgba(0, 255, 255, 0.8); /* Efecto neón */
+}
+
+
+/* CLASIFICACIÓN (LEADERBOARD) */
+.ranking-list {
+  background-color: transparent !important;
+}
+
+.list-item-glow {
+    transition: all 0.3s ease;
+}
+.list-item-glow:hover {
+    transform: translateX(4px);
+    box-shadow: 0 0 10px rgba(130, 90, 255, 0.2);
+}
+
+.bg-top1 {
+  background: rgba(255, 215, 0, 0.1) !important; /* Oro suave */
+  border-left: 5px solid #ffd700 !important;
+}
+.bg-top2 {
+  background: rgba(192, 192, 192, 0.1) !important; /* Plata suave */
+  border-left: 5px solid #c0c0c0 !important;
+}
+.bg-top3 {
+  background: rgba(176, 141, 87, 0.1) !important; /* Bronce suave */
+  border-left: 5px solid #b08d57 !important;
+}
+.bg-standard {
+     background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* BOTÓN VOLVER */
+.return-btn {
+  letter-spacing: 1px;
+  font-weight: 700;
+  transition: 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.return-btn:hover {
+  background-color: #a464f8 !important; /* Morado más claro */
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(164, 100, 248, 0.6);
 }
 
 </style>

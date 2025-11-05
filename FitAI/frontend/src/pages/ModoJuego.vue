@@ -1,13 +1,22 @@
 <template>
   <v-app>
-    <v-main
-      class="d-flex flex-column align-center justify-center text-center min-h-screen pa-8"
-      style="background: linear-gradient(135deg, #1a2038, #2b3b63, #1a2038);"
-    >
-      <v-container class="text-center text-white move-up fade-in-container">
+    <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
+      <v-container
+        class="text-center text-white pt-10 pb-16 px-4 fade-in-container position-relative"
+      >
+        <!-- ======== 1. BOTÓN DE NAVEGACIÓN (VOLVER) - AHORA RECTANGULAR ======== -->
+        <v-btn
+            class="top-left-back-btn rectangular-btn"
+            variant="flat"
+            size="large"
+            prepend-icon="mdi-arrow-left"
+            @click="$router.push('/')"
+        >
+          Tornar
+        </v-btn>
 
-        <!-- Título del ejercicio -->
-        <h2 class="exercise-title mb-4">
+        <!-- Título del ejercicio (Animado) -->
+        <h2 class="exercise-title mb-4 pt-4">
           {{ exerciciLabel }}
         </h2>
 
@@ -16,16 +25,18 @@
           Vols jugar sol o multijugador?
         </p>
 
-        <!-- Opciones -->
-        <v-row justify="center" align="center" class="gap-10 mt-n4">
-          <v-col cols="12" sm="6" md="4" lg="3" class="d-flex justify-center">
+        <!-- Opciones de Juego (Apiladas y Grandes) -->
+        <v-row justify="center" align="center" class="ga-6">
+          <!-- Tarjeta Modo Sol -->
+          <v-col cols="12" class="d-flex justify-center pa-2">
             <v-card
-              class="option-card solo-card d-flex flex-column align-center justify-center"
+              class="option-card solo-card"
               elevation="14"
-              height="200"
-              width="300"
               @click="jugarSol"
             >
+              <v-icon size="48" class="mb-3 text-blue-300 glow-icon"
+                >mdi-account-circle-outline</v-icon
+              >
               <div class="option-title">Mode Sol</div>
               <p class="option-desc">
                 Entrena al teu ritme i millora les teves marques.
@@ -33,14 +44,16 @@
             </v-card>
           </v-col>
 
-          <v-col cols="12" sm="6" md="4" lg="3" class="d-flex justify-center">
+          <!-- Tarjeta Multijugador -->
+          <v-col cols="12" class="d-flex justify-center pa-2">
             <v-card
-              class="option-card multi-card d-flex flex-column align-center justify-center"
+              class="option-card multi-card"
               elevation="14"
-              height="200"
-              width="300"
               @click="jugarMultijugador"
             >
+              <v-icon size="48" class="mb-3 text-purple-300 glow-icon"
+                >mdi-account-group-outline</v-icon
+              >
               <div class="option-title">Multijugador</div>
               <p class="option-desc">
                 Reta els teus amics i competeix en temps real.
@@ -49,27 +62,29 @@
           </v-col>
         </v-row>
 
-        <!-- Botón volver -->
-        <div class="text-center mt-12">
-          <v-btn
-            class="back-btn text-subtitle-1 font-weight-bold"
-            variant="outlined"
-            color="white"
-            @click="$router.push('/')"
-          >
-            Tornar a l'inici
-          </v-btn>
-        </div>
+        <!-- Mensaje de Error (si ocurre en la conexión) -->
+        <v-alert
+          v-if="errorMessage"
+          type="error"
+          variant="tonal"
+          class="mt-10 mx-auto"
+          max-width="400"
+          closable
+        >
+          {{ errorMessage }}
+        </v-alert>
       </v-container>
     </v-main>
   </v-app>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
+const errorMessage = ref(null) // Para manejar errores de la API
 
 const exercici = route.params.ejercicio
 
@@ -80,18 +95,25 @@ const nombres = {
   abdominales: 'Abdominals',
 }
 
-const exerciciLabel = nombres[exercici] || 'Exercici'
+const exerciciLabel = computed(() => nombres[exercici] || 'Exercici Desconegut')
 
 const jugarSol = async () => {
+  errorMessage.value = null // Limpiar error previo
   try {
+    // NOTA: Esta llamada fallará en el entorno de Canvas si el servidor 4000 no existe.
+    // Usamos console.error en lugar de alert()
     const res = await fetch('http://localhost:4000/create-session')
+    if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+    }
     const data = await res.json()
     router.push({
       name: 'JuegoSolo',
       params: { ejercicio: exercici, sessionId: data.sessionId },
     })
   } catch (err) {
-    alert('Error en crear la sessió: ' + err.message)
+    console.error('Error al intentar crear la sessió:', err.message)
+    errorMessage.value = `No s'ha pogut crear la sessió (Error de connexió). ${err.message}`
   }
 }
 
@@ -101,47 +123,74 @@ const jugarMultijugador = () => {
 </script>
 
 <style scoped>
-/* ======== ANIMACIONES ======== */
+/* ==================================== */
+/* ======== FONDO Y LAYOUT ======== */
+/* ==================================== */
+.bg-fitai-deep-space {
+  /* Fondo oscuro dinámico con brillo sutil */
+  background:
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
+    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+.fade-in-container {
+  animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
+}
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(25px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-.fade-in-container {
-  animation: fadeInUp 0.8s ease-out forwards;
+
+/* Clase de ayuda para posicionar el botón de volver */
+.position-relative {
+    position: relative;
 }
 
-/* ======== TÍTULO ======== */
+/* ==================================== */
+/* ======== TÍTULO Y TEXTOS ======== */
+/* ==================================== */
 .exercise-title {
-  font-size: 3rem;
+  /* Tamaño de fuente responsive */
+  font-size: 2.5rem;
   font-weight: 900;
-  letter-spacing: 1px;
-  color: #ffffff;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.603);
   background: linear-gradient(90deg, #9b6bff, #3b4ef6, #8851ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-size: 200% 200%;
   animation: gradientShift 6s ease infinite;
   position: relative;
+  line-height: 1.1;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
 }
+@media (min-width: 600px) {
+  .exercise-title {
+    font-size: 3.5rem;
+  }
+}
+
+/* Línea de brillo sutil debajo del título */
 .exercise-title::after {
   content: '';
   position: absolute;
   bottom: -10px;
   left: 50%;
-  width: 120px;
+  width: 150px;
   height: 3px;
   transform: translateX(-50%);
   background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   border-radius: 3px;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.9);
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
 
@@ -152,91 +201,112 @@ const jugarMultijugador = () => {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
-  50% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
+  0%, 100% { opacity: 0.7; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
+  50% { opacity: 1; box-shadow: 0 0 25px rgba(139, 92, 246, 0.9); }
 }
 
-/* ======== SUBTÍTULO ======== */
 .subtitle {
-  font-size: 1.25rem;
-  color: #d1d5db;
+  font-size: 1rem;
+  color: #a0a0b9;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
+@media (min-width: 600px) {
+  .subtitle {
+    font-size: 1.35rem;
+  }
+}
 
-/* ======== CARTAS ======== */
+/* ==================================== */
+/* ======== CARTAS DE OPCIÓN (GRANDES Y APILADAS) ======== */
+/* ==================================== */
 .option-card {
-  border-radius: 18px;
+  width: 100%;
+  /* Limita el ancho máximo para que no se estiren demasiado en escritorio/tablet */
+  max-width: 500px; 
+  /* Aumentamos la altura de la tarjeta */
+  height: 250px; 
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.35s ease;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   color: white;
-  backdrop-filter: blur(12px);
-  overflow: hidden;
+  backdrop-filter: blur(15px);
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 20px; /* Aumentamos el padding para más espacio */
 }
 
 .option-title {
-  font-size: 1.6rem;
+  /* Mantenemos tamaño grande en móvil y escritorio */
+  font-size: 1.75rem; 
   font-weight: 800;
   text-transform: uppercase;
   margin-bottom: 8px;
 }
 
 .option-desc {
+  /* Aumentamos el tamaño de la fuente para mejor legibilidad */
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.85);
-  max-width: 85%;
+  color: rgba(255, 255, 255, 0.75);
 }
 
-/* --- MODO SOLO --- */
+.glow-icon {
+  text-shadow: 0 0 10px currentColor; 
+}
+
+/* --- MODO SOLO (AZUL) --- */
 .solo-card {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.1); 
+  border: 3px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 .solo-card:hover {
-  transform: scale(1.07);
-  background: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.7);
+  transform: scale(1.05);
+  background: rgba(59, 130, 246, 0.2);
+  box-shadow:
+    0 0 25px rgba(59, 130, 246, 0.8),
+    0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
-/* --- MULTIJUGADOR --- */
+/* --- MULTIJUGADOR (MORADO) --- */
 .multi-card {
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1); 
+  border: 3px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 .multi-card:hover {
-  transform: scale(1.07);
-  background: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.7);
-}
-
-/* ======== BOTÓN “TORNAR A L'INICI” ======== */
-.back-btn {
-  border: 2px solid rgb(255, 255, 255);
-  border-radius: 14px;
-  padding: 7px 36px;
-  transition: all 0.35s ease;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-.back-btn:hover {
-  background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
-  box-shadow: 0 0 20px rgba(101, 40, 243, 0.8);
-  border-color: transparent;
   transform: scale(1.05);
+  background: rgba(139, 92, 246, 0.2);
+  box-shadow:
+    0 0 25px rgba(139, 92, 246, 0.8),
+    0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
-/* ======== POSICIONAMIENTO ======== */
-.move-up {
-  transform: translateY(-120px);
+/* ==================================== */
+/* ======== BOTÓN SUPERIOR IZQUIERDO (MÁS GRANDE) ======== */
+/* ==================================== */
+.top-left-back-btn {
+  /* [MODIFICAR COLOR Y TAMAÑO DEL BOTÓN DE VOLVER] */
+  position: absolute;
+  top: 15px; /* Ajuste la posición vertical */
+  left: 15px; /* Ajuste la posición horizontal */
+  z-index: 10;
+  color: white !important; /* Texto blanco para mejor contraste */
+  background: #8b5cf6 !important; /* Fondo morado neón para el botón rectangular */
+  border-radius: 8px; /* Bordes redondeados */
+  box-shadow: 0 0 15px rgba(139, 92, 246, 1); /* Brillo neón */
+  transition: all 0.3s ease;
+}
+.top-left-back-btn:hover {
+    transform: scale(1.05); /* Ligeramente más grande en hover */
+    box-shadow: 0 0 20px rgba(139, 92, 246, 1.2);
 }
 
-.min-h-screen {
-  min-height: 100vh;
+/* Eliminamos los estilos del botón de abajo */
+.fixed-bottom-button, .back-btn {
+    display: none !important;
 }
 </style>
