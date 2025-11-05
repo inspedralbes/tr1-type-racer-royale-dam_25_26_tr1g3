@@ -34,18 +34,12 @@
               elevation="14"
               @click="jugarSol"
             >
-<<<<<<< HEAD
-              <div class="text-h5 font-weight-bold text-white mb-2">
-                Solitari
-              </div>
-              <p class="text-body-2 text-grey-lighten-3">
-=======
+
               <v-icon size="48" class="mb-3 text-blue-300 glow-icon"
                 >mdi-account-circle-outline</v-icon
               >
               <div class="option-title">Mode Sol</div>
               <p class="option-desc">
->>>>>>> Kim
                 Entrena al teu ritme i millora les teves marques.
               </p>
             </v-card>

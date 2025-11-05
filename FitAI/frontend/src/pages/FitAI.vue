@@ -92,12 +92,7 @@ const router = useRouter()
 const searchQuery = ref('')
 
 const exercicis = [
-<<<<<<< HEAD
-  { nom: 'flexiones', label: 'Flexions', imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href },
-  { nom: 'sentadillas', label: 'Squats', imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href },
-  { nom: 'saltos', label: 'Salts', imatge: new URL('@/assets/saltos.jpg', import.meta.url).href },
-  { nom: 'abdominales', label: 'Abdominals', imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href },
-=======
+
   {
     nom: 'flexiones',
     label: 'Flexions',
@@ -122,7 +117,7 @@ const exercicis = [
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
   },
->>>>>>> Kim
+
 ]
 
 const filteredExercicis = computed(() =>
