@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.static('public'));
 
 const server = app.listen(port, () => {
-  console.log(`✅ Servidor executant-se a http://localhost:${port}`);
+  console.log(`Servidor executant-se a http://localhost:${port}`);
 });
 
 const wss = new WebSocketServer({ server });
@@ -50,12 +50,12 @@ function netejarSessio(sessionId) {
   const session = sessions[sessionId];
   if (session && Object.keys(session.participants).length === 0) {
     delete sessions[sessionId];
-    console.log(`🗑️ Sessió ${sessionId} eliminada (sense participants)`);
+    console.log(`Sessió ${sessionId} eliminada (sense participants)`);
   }
 }
 
 wss.on('connection', (ws) => {
-  console.log('👋 Nou client connectat');
+  console.log('Nou client connectat');
 
   let currentSessionId = null;
   let currentUserId = null;
@@ -63,26 +63,26 @@ wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
-      console.log('📨 Missatge rebut:', message);
+      console.log('Missatge rebut:', message);
 
       switch (message.type) {
         case 'join': {
           const { sessionId, userId } = message;
 
           if (!sessionId || !userId) {
-            return ws.send(JSON.stringify({ error: '❗ sessionId i userId requerits' }));
+            return ws.send(JSON.stringify({ error: 'sessionId i userId requerits' }));
           }
 
           if (!sessions[sessionId]) {
             sessions[sessionId] = { participants: {}, leaderboard: [] };
-            console.log(`🆕 Sessió creada: ${sessionId}`);
+            console.log(`Sessió creada: ${sessionId}`);
           }
 
           const session = sessions[sessionId];
           const numParticipants = Object.keys(session.participants).length;
 
           if (numParticipants >= 4) {
-            console.log(`⚠️ Sessió ${sessionId} plena (4 jugadors màxim)`);
+            console.log(`Sessió ${sessionId} plena (4 jugadors màxim)`);
             return ws.send(JSON.stringify({ 
               type: 'error', 
               message: 'La sessió està plena (màxim 4 jugadors).' 
@@ -114,7 +114,7 @@ wss.on('connection', (ws) => {
             message: 'T’has unit a la sessió correctament.'
           }));
 
-          console.log(`✅ Usuari ${userId} unit a la sessió ${sessionId} (${numParticipants + 1}/4 jugadors)`);
+          console.log(`Usuari ${userId} unit a la sessió ${sessionId} (${numParticipants + 1}/4 jugadors)`);
           break;
         }
 
@@ -145,7 +145,7 @@ wss.on('connection', (ws) => {
               leaderboard 
             });
             netejarSessio(currentSessionId);
-            console.log(`👋 Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
+            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
             currentSessionId = null;
             currentUserId = null;
           }
@@ -156,13 +156,13 @@ wss.on('connection', (ws) => {
           ws.send(JSON.stringify({ error: 'Tipus de missatge desconegut' }));
       }
     } catch (error) {
-      console.error('❌ Error processant missatge:', error);
+      console.error('Error processant missatge:', error);
       ws.send(JSON.stringify({ error: 'Missatge invàlid' }));
     }
   });
 
   ws.on('close', () => {
-    console.log('🔌 Client desconnectat');
+    console.log('Client desconnectat');
     if (currentSessionId && currentUserId) {
       delete sessions[currentSessionId].participants[currentUserId];
       const leaderboard = calcularLeaderboard(currentSessionId);
@@ -176,16 +176,15 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('error', (error) => {
-    console.error('⚠️ Error en WebSocket:', error);
+    console.error('Error en WebSocket:', error);
   });
 });
 
 app.get('/create-session', (req, res) => {
   const sessionId = uuidv4();
   sessions[sessionId] = { participants: {}, leaderboard: [] };
-  console.log(`🆕 Nova sessió creada: ${sessionId}`);
+  console.log(`Nova sessió creada: ${sessionId}`);
   res.json({ sessionId });
 });
 
-console.log("🚀 Servidor WebSocket llest per gestionar sessions d'entrenament en temps real");
-
+console.log("Servidor WebSocket llest per gestionar sessions d'entrenament en temps real");
