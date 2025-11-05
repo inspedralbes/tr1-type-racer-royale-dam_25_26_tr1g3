@@ -95,14 +95,14 @@ const nombres = {
   abdominales: 'Abdominals',
 }
 
-const exerciciLabel = computed(() => nombres[exercici] || 'Exercici Desconegut')
+const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
 
 const jugarSol = async () => {
   errorMessage.value = null // Limpiar error previo
   try {
     // NOTA: Esta llamada fallará en el entorno de Canvas si el servidor 4000 no existe.
     // Usamos console.error en lugar de alert()
-    const res = await fetch('http://localhost:4000/create-session')
+    const res = await fetch('/api/create-session')
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
     }

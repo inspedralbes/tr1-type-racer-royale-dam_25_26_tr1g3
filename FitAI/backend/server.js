@@ -2,21 +2,35 @@
 // Tecnologies: Node.js, Express, WebSockets (ws), uuid
 
 import express from 'express';
-import cors from 'cors';
+//import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
-const port = 4001;
-
-app.use(cors());
-app.use(express.static('public'));
+const port = 4000;
 
 const server = app.listen(port, () => {
   console.log(`Servidor executant-se a http://localhost:${port}`);
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
+
+// Controlem 'manualment' l'actualització de protocol
+server.on('upgrade', (request, socket, head) => {
+  // Extraiem la ruta de la petició
+  const pathname = request.url;
+
+  // Si la petició és a la nostra ruta de WebSockets, la processem
+  if (pathname === '/ws') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    // Si no, tanquem el socket
+    socket.destroy();
+  }
+});
+// --- Fi de la nova configuració ---
 
 const sessions = {};
 
@@ -196,4 +210,4 @@ app.get('/check-session/:sessionId', (req, res) => {
   }
 });
 
-console.log('Servidor WebSocket llest per gestionar sessions d\'entrenament en temps real');
+console.log('Servidor WebSocket llest per gestionar sessions (HTTP a :4000, WS a /ws)');
