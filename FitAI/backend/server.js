@@ -7,7 +7,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
-const port = 4000;
+const port = 4001;
 
 app.use(cors());
 app.use(express.static('public'));

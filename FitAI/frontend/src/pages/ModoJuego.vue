@@ -37,7 +37,7 @@
               <v-icon size="48" class="mb-3 text-blue-300 glow-icon"
                 >mdi-account-circle-outline</v-icon
               >
-              <div class="option-title">Mode Sol</div>
+              <div class="option-title">Mode Individual</div>
               <p class="option-desc">
                 Entrena al teu ritme i millora les teves marques.
               </p>

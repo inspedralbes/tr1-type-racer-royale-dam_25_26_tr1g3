@@ -394,8 +394,11 @@ function checkAbdominal(pose) {
   const nas = pose.keypoints.find((k) => k.name === 'nose')
   const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
   if (!nas || !maluc) return
+  
+  // Asegurarse de que los puntos clave tienen una puntuación de confianza suficiente
+  if (nas.score < 0.4 || maluc.score < 0.4) return;
 
-  // Usar solo la coordenada Y si se asume que la persona está de lado o vertical
+  // Usar solo la coordenada Y para la distancia vertical
   const distancia = Math.abs(nas.y - maluc.y)
   
   // Umbral de distancia para 'arriba' (cuerpo estirado, nariz lejos de la cadera)
@@ -403,12 +406,12 @@ function checkAbdominal(pose) {
   // Umbral de distancia para 'abajo' (cuerpo encogido, nariz cerca de la cadera)
   const UMBRAL_ABAJO = 100;
 
-  if (distancia < UMBRAL_ABAJO && !up) {
+  if (distancia < UMBRAL_ABAJO && !up) { // Si la distancia es pequeña y no estamos en la posición "abajo"
       // El cuerpo se ha contraído (posición 'abajo')
       up = true; 
   }
 
-  if (distancia > UMBRAL_ARRIBA && up) {
+  if (distancia > UMBRAL_ARRIBA && up) { // Si la distancia es grande y estábamos en la posición "abajo"
     // El cuerpo se ha estirado de nuevo (posición 'arriba'), completa la repetición
     count.value++
     up = false

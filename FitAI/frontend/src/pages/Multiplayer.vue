@@ -20,7 +20,7 @@
             </v-btn>
 
             <v-text-field label="Codi de sala" v-model="codiSalaInput" variant="solo-filled" clearable
-              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2"
+              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2 text-white"
               @input="codiSalaInput = codiSalaInput.toUpperCase().slice(0, 5)" />
 
             <v-btn class="neon-btn-green mt-2" variant="elevated" size="large" block @click="unirSala">
