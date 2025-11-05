@@ -168,6 +168,16 @@ import { useRoute, useRouter } from 'vue-router'
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
+// ===================================================================
+// CORRECCIÓ 1: IMPORTAR GIFS DIRECTAMENT
+// (Assegura't que les rutes relatives al teu directori 'src' són correctes)
+// ===================================================================
+import flexionesGif from '@/assets/flexiones.gif'
+import sentadillasGif from '@/assets/sentadillas.gif'
+import saltosGif from '@/assets/saltos.gif'
+import abdominalesGif from '@/assets/abdominales.gif'
+import defaultGif from '@/assets/ejercicio.gif'
+
 
 const pathCarregar = mdiFolderOutline
 
@@ -185,15 +195,19 @@ const noms = {
   abdominales: 'ABDOMINALS',
 }
 
+// ===================================================================
+// CORRECCIÓ 1 (part 2): FER SERVIR LES VARIABLES IMPORTADES
+// ===================================================================
 const gifs = {
-  flexiones: new URL('@/assets/flexiones.gif', import.meta.url).href,
-  sentadillas: new URL('@/assets/sentadillas.gif', import.meta.url).href,
-  saltos: new URL('@/assets/saltos.gif', import.meta.url).href,
-  abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
+  flexiones: flexionesGif,
+  sentadillas: sentadillasGif,
+  saltos: saltosGif,
+  abdominales: abdominalesGif,
 }
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || new URL('@/assets/ejercicio.gif', import.meta.url).href
+const exerciciGif = gifs[exercici] || defaultGif
+// ===================================================================
 
 const video = ref(null)
 const canvas = ref(null)
@@ -413,9 +427,6 @@ function checkAbdominal(pose) {
   }
 }
 
-// ===================================================================
-// AQUÍ ESTÀ LA FUNCIÓ CORREGIDA
-// ===================================================================
 function connectWebSocket() {
   // 1. Detecta si estem a http (ws:) o https (wss:)
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -437,7 +448,11 @@ function connectWebSocket() {
   };
   ws.value.onmessage = (event) => {
     const message = JSON.parse(event.data);
-    if (message.type === 'leaderboard') leaderboard.value = message.leaderbody;
+    
+    // ===================================================================
+    // CORRECCIÓ 2: TYPO (leaderbody -> leaderboard)
+    // ===================================================================
+    if (message.type === 'leaderboard') leaderboard.value = message.leaderboard;
   };
   ws.value.onclose = () => console.log('Desconnectat del servidor');
   ws.value.onerror = (err) => console.error('Error WebSocket:', err);
