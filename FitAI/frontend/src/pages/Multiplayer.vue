@@ -92,7 +92,12 @@ const route = useRoute();
 const router = useRouter();
 const exercici = route.params.ejercicio;
 
-const WS_URL = "ws://localhost:4000";
+// ===================================================================
+// CORRECCIÓ 1: URL del WebSocket (apunta a Nginx /ws)
+// ===================================================================
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsHost = window.location.host; // ex: localhost:8080
+const WS_URL = `${wsProtocol}//${wsHost}/ws`; // ex: ws://localhost:8080/ws
 
 let socket = null;
 const aSala = ref(false);
@@ -133,7 +138,10 @@ async function unirSala() {
   errorMsg.value = "";
 
   try {
-    const res = await fetch(`http://localhost:4000/check-session/${sessionId}`);
+    // ===================================================================
+    // CORRECCIÓ 2: URL del Fetch (apunta a Nginx /api)
+    // ===================================================================
+    const res = await fetch(`/api/check-session/${sessionId}`);
 
     if (!res.ok) {
       errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
@@ -149,7 +157,7 @@ async function unirSala() {
 }
 
 function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL);
+  socket = new WebSocket(WS_URL); // <-- Ara utilitza la URL corregida
 
   socket.addEventListener("open", () => {
     codiSala.value = sessionId;
@@ -163,7 +171,7 @@ function connectToSession(sessionId, isHost = false) {
 
     if (msg.type === "leaderboard") {
       jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderboard.length > 0) {
+      if (!hostId.value && msg.leaderbody.length > 0) {
         hostId.value = msg.leaderboard[0].userId;
       }
     }
@@ -194,7 +202,16 @@ function sortirManual() {
 }
 
 function iniciarPartida() {
-  router.push(`/joc-solo/${exercici}`);
+  // ===================================================================
+  // CORRECCIÓ 3: La navegació ha d'incloure el sessionId
+  // ===================================================================
+  router.push({
+    name: 'JuegoSolo', // (o el nom de la teva ruta del joc)
+    params: {
+      ejercicio: exercici,
+      sessionId: codiSala.value // <-- Aquest paràmetre faltava
+    }
+  });
 }
 
 function tornarEnrere() {
