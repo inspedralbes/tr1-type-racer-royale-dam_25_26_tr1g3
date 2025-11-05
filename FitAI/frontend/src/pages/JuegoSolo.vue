@@ -252,6 +252,7 @@ async function loadVideoFromFile(event) {
   if (!file) return
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
+  stopCamera() // Ensure any existing camera stream is stopped
   video.value.src = url
   await video.value.play()
   if (!detector) await initMoveNet()

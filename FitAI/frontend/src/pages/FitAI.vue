@@ -120,7 +120,7 @@ const exercicis = [
 
 const filteredExercicis = computed(() =>
   exercicis.filter((e) =>
-    (e.label + e.descripcio)
+    (e.label + ' ' + e.descripcio)
       .toLowerCase()
       .includes(searchQuery.value.trim().toLowerCase())
   )
