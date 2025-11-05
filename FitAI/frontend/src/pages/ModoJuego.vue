@@ -84,7 +84,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-const errorMessage = ref(null) // Para manejar errores de la API
+const errorMessage = ref(null)
 
 const exercici = route.params.ejercicio
 
@@ -98,10 +98,9 @@ const nombres = {
 const exerciciLabel = computed(() => nombres[exercici] || 'Exercici Desconegut')
 
 const jugarSol = async () => {
-  errorMessage.value = null // Limpiar error previo
+  errorMessage.value = null
   try {
-    // NOTA: Esta llamada fallará en el entorno de Canvas si el servidor 4000 no existe.
-    // Usamos console.error en lugar de alert()
+
     const res = await fetch('http://localhost:4000/create-session')
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -127,7 +126,7 @@ const jugarMultijugador = () => {
 /* ======== FONDO Y LAYOUT ======== */
 /* ==================================== */
 .bg-fitai-deep-space {
-  /* Fondo oscuro dinámico con brillo sutil */
+
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
@@ -150,7 +149,7 @@ const jugarMultijugador = () => {
   }
 }
 
-/* Clase de ayuda para posicionar el botón de volver */
+
 .position-relative {
     position: relative;
 }
@@ -159,7 +158,7 @@ const jugarMultijugador = () => {
 /* ======== TÍTULO Y TEXTOS ======== */
 /* ==================================== */
 .exercise-title {
-  /* Tamaño de fuente responsive */
+
   font-size: 2.5rem;
   font-weight: 900;
   letter-spacing: 2px;
@@ -179,7 +178,7 @@ const jugarMultijugador = () => {
   }
 }
 
-/* Línea de brillo sutil debajo del título */
+
 .exercise-title::after {
   content: '';
   position: absolute;
@@ -221,9 +220,9 @@ const jugarMultijugador = () => {
 /* ==================================== */
 .option-card {
   width: 100%;
-  /* Limita el ancho máximo para que no se estiren demasiado en escritorio/tablet */
+
   max-width: 500px; 
-  /* Aumentamos la altura de la tarjeta */
+
   height: 250px; 
   border-radius: 20px;
   cursor: pointer;
