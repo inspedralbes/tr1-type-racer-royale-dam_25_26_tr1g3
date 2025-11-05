@@ -83,16 +83,16 @@ wss.on('connection', (ws) => {
 
           if (numParticipants >= 4) {
             console.log(`Sessió ${sessionId} plena (4 jugadors màxim)`);
-            return ws.send(JSON.stringify({ 
-              type: 'error', 
-              message: 'La sessió està plena (màxim 4 jugadors).' 
+            return ws.send(JSON.stringify({
+              type: 'error',
+              message: 'La sessió està plena (màxim 4 jugadors).'
             }));
           }
 
           if (session.participants[userId]) {
-            return ws.send(JSON.stringify({ 
-              type: 'error', 
-              message: 'Usuari ja connectat en aquesta sessió.' 
+            return ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Usuari ja connectat en aquesta sessió.'
             }));
           }
 
@@ -101,10 +101,10 @@ wss.on('connection', (ws) => {
           currentUserId = userId;
 
           const leaderboard = calcularLeaderboard(sessionId);
-          broadcastToSession(sessionId, { 
-            type: 'leaderboard', 
-            sessionId, 
-            leaderboard 
+          broadcastToSession(sessionId, {
+            type: 'leaderboard',
+            sessionId,
+            leaderboard
           });
 
           ws.send(JSON.stringify({
@@ -126,10 +126,10 @@ wss.on('connection', (ws) => {
           ) {
             sessions[currentSessionId].participants[currentUserId].reps = message.reps || 0;
             const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, { 
-              type: 'leaderboard', 
-              sessionId: currentSessionId, 
-              leaderboard 
+            broadcastToSession(currentSessionId, {
+              type: 'leaderboard',
+              sessionId: currentSessionId,
+              leaderboard
             });
           }
           break;
@@ -139,10 +139,10 @@ wss.on('connection', (ws) => {
           if (currentSessionId && currentUserId) {
             delete sessions[currentSessionId].participants[currentUserId];
             const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, { 
-              type: 'leaderboard', 
-              sessionId: currentSessionId, 
-              leaderboard 
+            broadcastToSession(currentSessionId, {
+              type: 'leaderboard',
+              sessionId: currentSessionId,
+              leaderboard
             });
             netejarSessio(currentSessionId);
             console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
@@ -166,10 +166,10 @@ wss.on('connection', (ws) => {
     if (currentSessionId && currentUserId) {
       delete sessions[currentSessionId].participants[currentUserId];
       const leaderboard = calcularLeaderboard(currentSessionId);
-      broadcastToSession(currentSessionId, { 
-        type: 'leaderboard', 
-        sessionId: currentSessionId, 
-        leaderboard 
+      broadcastToSession(currentSessionId, {
+        type: 'leaderboard',
+        sessionId: currentSessionId,
+        leaderboard
       });
       netejarSessio(currentSessionId);
     }
@@ -187,4 +187,13 @@ app.get('/create-session', (req, res) => {
   res.json({ sessionId });
 });
 
-console.log("Servidor WebSocket llest per gestionar sessions d'entrenament en temps real");
+app.get('/check-session/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  if (sessions[sessionId]) {
+    return res.status(200).json({ exists: true });
+  } else {
+    return res.status(404).json({ exists: false });
+  }
+});
+
+console.log('Servidor WebSocket llest per gestionar sessions d\'entrenament en temps real');

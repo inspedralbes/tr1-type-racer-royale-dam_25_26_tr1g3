@@ -1,157 +1,85 @@
 <template>
   <v-app>
-    <v-main class="d-flex align-center justify-center pa-4 bg-fitai-deep-space">
-      <v-container
-        class="rounded-3xl pa-6 pa-sm-10 elevation-20 bg-glass expanded-container"
-        style="max-width: 600px; backdrop-filter: blur(20px); border: 2px solid rgba(255, 255, 255, 0.08);"
-      >
-        <v-row class="justify-center text-center">
-          <v-col cols="12">
-            <!-- Título del ejercicio (Animado Neón) -->
-            <h1 class="text-h4 font-weight-bold text-purple-lighten-4 mb-2 exercise-title">
-              🏋️ MULTIJUGADOR — {{ exerciciLabel }}
-            </h1>
-            <v-divider class="my-5" color="rgba(139, 92, 246, 0.3)"></v-divider>
-          </v-col>
+    <v-main class="d-flex flex-column align-center justify-center pa-8 bg-fitai-bright" style="min-height: 100vh">
+      <v-card class="pa-6 rounded-2xl elevation-12 glass-card" max-width="500">
+        <v-card-title class="text-h4 text-center font-weight-bold nextrep-title mb-4">
+          <span class="next">Multijugador —</span> <span class="rep">{{ exercici }}</span>
+        </v-card-title>
 
-          <!-- SIN SALA (Crear o Unirse) -->
-          <v-col cols="12" v-if="!aSala">
-            <v-btn
-              color="#8b5cf6"
-              variant="flat"
-              size="large"
-              class="main-btn mb-6 neonglow-purple"
-              block
-              rounded="lg"
-              elevation="6"
-              @click="crearSala"
-            >
+        <v-divider class="divider-glow mx-auto my-6"></v-divider>
+
+        <v-card-text>
+          <div v-if="!aSala" class="text-center">
+            <v-alert v-if="errorMsg" type="error" variant="tonal" class="mb-4 glass-alert">
+              {{ errorMsg }}
+            </v-alert>
+
+            <v-btn class="neon-btn mb-4" variant="elevated" size="large" block @click="crearSala">
               <v-icon start>mdi-plus-circle-outline</v-icon>
               Crear nova sala
             </v-btn>
 
-            <v-text-field
-              label="Codi de sala"
-              v-model="codiSalaInput"
-              variant="outlined"
-              color="#3b82f6"
-              prepend-inner-icon="mdi-key"
-              clearable
-              hide-details
-              class="mb-5 rounded-lg text-white"
-              style="border-color: rgba(59, 130, 246, 0.5);"
-              bg-color="rgba(255, 255, 255, 0.05)"
-            />
+            <v-text-field label="Codi de sala" v-model="codiSalaInput" variant="solo-filled" clearable
+              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2"
+              @input="codiSalaInput = codiSalaInput.toUpperCase().slice(0, 5)" />
 
-            <v-btn
-              color="#3b82f6"
-              variant="flat"
-              size="large"
-              class="main-btn mb-8 neonglow-blue"
-              block
-              rounded="lg"
-              elevation="6"
-              @click="unirSala"
-            >
+            <v-btn class="neon-btn-green mt-2" variant="elevated" size="large" block @click="unirSala">
               <v-icon start>mdi-login</v-icon>
               Unir-se a una sala
             </v-btn>
 
-            <v-btn
-              color="grey-lighten-1"
-              variant="text"
-              size="large"
-              block
-              rounded
-              class="back-btn-subtle"
-              @click="tornarEnrere"
-            >
+            <v-btn variant="text" class="mt-4 text-white" block @click="tornarEnrere">
               <v-icon start>mdi-arrow-left</v-icon>
               Tornar enrere
             </v-btn>
-          </v-col>
+          </div>
 
-          <!-- EN SALA (Lista de Jugadores) -->
-          <v-col cols="12" v-else>
-            <v-card
-              class="rounded-xl pa-6 text-center bg-light-card room-card"
-              elevation="6"
-            >
-              <h2 class="text-h5 font-weight-bold text-purple-lighten-2 mb-2">
-                SALA: <span class="text-teal-accent-3 code-text">{{ codiSala }}</span>
-              </h2>
-              <p class="text-body-2 text-grey-lighten-3 mb-5">
-                Jugadors connectats: <strong>{{ jugadors.length }}</strong>
-              </p>
+          <div v-else class="text-center text-white">
+            <p class="text-h6 font-weight-medium mb-1">
+              Sala: <strong class="rep">{{ codiSala }}</strong>
+            </p>
 
-              <v-list class="text-grey-lighten-4 bg-transparent player-list" density="comfortable">
-                <v-list-item
-                  v-for="j in jugadors"
-                  :key="j"
-                  class="rounded-lg mb-2 px-3 py-2 list-item-glow"
-                  :class="j === hostId ? 'bg-host' : 'bg-player'"
-                  style="border: 1px solid rgba(255, 255, 255, 0.08);"
-                >
-                  <v-list-item-content class="d-flex align-center justify-space-between">
-                    <span class="text-body-1 d-flex align-center font-weight-medium">
-                      <v-icon
-                        v-if="j === hostId"
-                        color="yellow-accent-4"
-                        class="mr-2"
-                        size="small"
-                      >
+            <p class="text-body-2 text-grey-lighten-2 mb-4">
+              Jugadors connectats: <strong>{{ jugadors.length }}</strong>
+            </p>
+
+            <v-card class="rounded-xl mb-4 pa-2 elevation-6 glass-list">
+              <v-list density="compact">
+                <v-list-item v-for="j in jugadors" :key="j" class="rounded-lg my-1"
+                  :class="j === hostId ? 'bg-host' : 'bg-player'">
+                  <v-list-item-content class="d-flex align-center justify-space-between text-white">
+                    <span class="text-body-1">
+                      <v-icon v-if="j === hostId" color="#8b5cf6" class="mr-2">
                         mdi-crown
                       </v-icon>
                       {{ j }}
                     </span>
-                    <span v-if="j === userId" class="text-caption text-teal-accent-3">(Tu)</span>
+                    <span v-if="j === userId" class="text-caption text-grey-lighten-1">
+                      (Tu)
+                    </span>
                   </v-list-item-content>
                 </v-list-item>
               </v-list>
             </v-card>
 
-            <v-btn
-              v-if="userId === hostId"
-              color="#8b5cf6"
-              variant="flat"
-              class="main-btn mt-6 neonglow-purple"
-              size="large"
-              block
-              rounded="lg"
-              elevation="6"
-              :disabled="jugadors.length < 2"
-              @click="iniciarPartida"
-            >
+            <v-btn v-if="userId === hostId" class="neon-btn mb-3" variant="elevated" size="large" block
+              :disabled="jugadors.length < 2" @click="iniciarPartida">
               <v-icon start>mdi-play-circle</v-icon>
-              Iniciar partida ({{ jugadors.length }}/2)
+              Iniciar partida
             </v-btn>
-             <v-alert
-               v-else-if="userId !== hostId"
-               type="info"
-               variant="tonal"
-               class="mt-6 text-body-2"
-               density="compact"
-               color="#3b82f6"
-             >
-               Esperant que l'amfitrió ({{ hostId.substring(0, 10) }}...) iniciï la partida.
-             </v-alert>
 
-
-            <v-btn
-              color="red-darken-1"
-              variant="outlined"
-              class="main-btn mt-4 exit-btn"
-              size="large"
-              block
-              rounded="lg"
-              @click="sortirManual"
-            >
+            <v-btn class="neon-btn-red mb-2" variant="outlined" size="large" block @click="sortirManual">
               <v-icon start>mdi-exit-to-app</v-icon>
               Sortir de la sala
             </v-btn>
-          </v-col>
-        </v-row>
-      </v-container>
+
+            <v-btn variant="text" class="mt-3 text-white" block @click="tornarEnrere">
+              <v-icon start>mdi-arrow-left</v-icon>
+              Tornar enrere
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
     </v-main>
   </v-app>
 </template>
@@ -173,37 +101,57 @@ const codiSalaInput = ref("");
 const jugadors = ref([]);
 const hostId = ref("");
 const userId = crypto.randomUUID();
+const errorMsg = ref("");
 
 onBeforeUnmount(() => {
   sortirSala();
   if (socket) socket.close();
 });
 
+function generarCodiSala() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let codi = "";
+  for (let i = 0; i < 5; i++) {
+    codi += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return codi;
+}
+
 async function crearSala() {
   try {
-    const res = await fetch("http://localhost:4000/create-session");
-    const data = await res.json();
-    if (data.sessionId) {
-      connectToSession(`${exercici}-${data.sessionId}`, true);
-    }
+    const codi = generarCodiSala();
+    const sessionId = `${exercici}-${codi}`;
+    connectToSession(sessionId, true);
   } catch (err) {
-    alert("Error en crear la sala");
+    errorMsg.value = "Error en crear la sala.";
   }
 }
 
-function unirSala() {
-  if (!codiSalaInput.value.trim()) {
-    alert("Introdueix un codi de sala vàlid");
-    return;
+async function unirSala() {
+  if (!codiSalaInput.value.trim()) return;
+  const sessionId = `${exercici}-${codiSalaInput.value.trim().toUpperCase()}`;
+  errorMsg.value = "";
+
+  try {
+    const res = await fetch(`http://localhost:4000/check-session/${sessionId}`);
+
+    if (!res.ok) {
+      errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
+      sortirSala();
+      return;
+    }
+
+    connectToSession(sessionId);
+  } catch (err) {
+    errorMsg.value = "Error en la connexió amb el servidor.";
+    sortirSala();
   }
-  connectToSession(codiSalaInput.value.trim());
 }
 
 function connectToSession(sessionId, isHost = false) {
   socket = new WebSocket(WS_URL);
 
   socket.addEventListener("open", () => {
-    console.log("🔌 Connectat al servidor WS");
     codiSala.value = sessionId;
     aSala.value = true;
     hostId.value = isHost ? userId : "";
@@ -218,8 +166,6 @@ function connectToSession(sessionId, isHost = false) {
       if (!hostId.value && msg.leaderboard.length > 0) {
         hostId.value = msg.leaderboard[0].userId;
       }
-    } else if (msg.error) {
-      alert(msg.error);
     }
   });
 
@@ -229,13 +175,18 @@ function connectToSession(sessionId, isHost = false) {
 }
 
 function sortirSala() {
-  if (socket && aSala.value) {
-    socket.send(JSON.stringify({ type: "leave" }));
-    socket.close();
+  if (socket) {
+    try {
+      socket.send(JSON.stringify({ type: "leave" }));
+      socket.close();
+    } catch (e) { }
+    socket = null;
   }
+
   aSala.value = false;
   codiSala.value = "";
   jugadors.value = [];
+  hostId.value = "";
 }
 
 function sortirManual() {
@@ -252,136 +203,147 @@ function tornarEnrere() {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== FONDO Y LAYOUT (DEEP SPACE) ======== */
-/* ==================================== */
-.bg-fitai-deep-space {
-  /* Fondo oscuro dinámico con brillo sutil */
+.bg-fitai-bright {
   background:
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
-    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
-    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
+    radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.25) 0%, transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(147, 51, 234, 0.25) 0%, transparent 45%),
+    linear-gradient(135deg, #1a2238, #16213e 50%, #0f172a 100%);
   background-attachment: fixed;
   background-size: cover;
+  animation: bgShine 18s ease-in-out infinite;
 }
 
-.bg-glass {
-  /* Contenedor principal glassy */
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+@keyframes bgShine {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.nextrep-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
+  user-select: none;
+}
+
+.next {
+  color: #ffffff;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+.rep {
+  background: linear-gradient(90deg, #9b6bff, #3b82f6, #9b6bff);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-style: italic;
+  animation: gradientShift 5s ease infinite;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.divider-glow {
+  max-width: 85%;
+  height: 2px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent 0%, #3b82f6, #8b5cf6, #3b82f6, transparent 100%);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  opacity: 0.7;
+}
+
+.glass-card {
+  background: rgba(30, 30, 47, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  color: white;
+}
+
+.glass-list {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(6px);
+}
+
+.bg-host {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.bg-player {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.neon-btn {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
   transition: all 0.3s ease;
 }
 
-/* ==================================== */
-/* ======== TÍTULO (NEON ANIMADO) ======== */
-/* ==================================== */
-.exercise-title {
-  font-size: 1.5rem; /* Ajuste para móvil */
-  font-weight: 900;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa); /* Mezcla de colores neón */
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-size: 200% 200%;
-  animation: gradientShift 6s ease infinite;
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-@media (min-width: 600px) {
-  .exercise-title {
-    font-size: 1.8rem;
-  }
-}
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.neon-btn:hover {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.9);
+  transform: scale(1.03);
 }
 
-/* ==================================== */
-/* ======== BOTONES DE ACCIÓN (NEON GLOW) ======== */
-/* ==================================== */
-.main-btn {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+.neon-btn-green {
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+  transition: all 0.3s ease;
 }
 
-.main-btn:disabled {
-    opacity: 0.6;
-    box-shadow: none !important;
+.neon-btn-green:hover {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.9);
+  transform: scale(1.03);
 }
 
-/* Neón Morado (Crear Sala / Iniciar) */
-.neonglow-purple {
-    background: #8b5cf6 !important;
-}
-.neonglow-purple:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 1), 0 8px 15px rgba(0, 0, 0, 0.5);
+.neon-btn-red {
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ef4444;
+  transition: all 0.3s ease;
 }
 
-/* Neón Azul (Unirse a Sala) */
-.neonglow-blue {
-    background: #3b82f6 !important;
-}
-.neonglow-blue:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 0 20px rgba(59, 130, 246, 1), 0 8px 15px rgba(0, 0, 0, 0.5);
+.neon-btn-red:hover {
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
 }
 
-.exit-btn {
-    border-color: rgba(239, 68, 68, 0.5) !important;
-    color: #ef4444 !important;
-    font-weight: 500;
-}
-.exit-btn:hover {
-    background-color: rgba(239, 68, 68, 0.1) !important;
-    transform: none;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+.search-bar .v-field__input {
+  color: white !important;
 }
 
-.back-btn-subtle {
-    color: #a0a0b9 !important;
-}
-.back-btn-subtle:hover {
-    color: white !important;
-    background-color: rgba(255, 255, 255, 0.05) !important;
+.search-bar .v-field__overlay {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transition: background-color 0.4s ease;
 }
 
-
-/* ==================================== */
-/* ======== EN SALA CARD (GLASSY) ======== */
-/* ==================================== */
-.room-card {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 2px solid rgba(139, 92, 246, 0.2) !important;
-}
-.code-text {
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(0, 255, 170, 0.8);
+.search-bar:hover .v-field__overlay {
+  background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* LISTA DE JUGADORES */
-.player-list {
-    background-color: transparent !important;
-}
-.bg-host {
-    background: rgba(255, 215, 0, 0.15) !important; /* Oro más opaco para el host */
-    border-left: 4px solid #ffd700 !important;
-}
-.bg-player {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-left: 4px solid transparent !important;
-}
-.list-item-glow {
-    transition: all 0.3s ease;
-}
-.list-item-glow:hover {
-    transform: translateX(4px);
-    background: rgba(139, 92, 246, 0.1) !important;
+.search-bar .v-icon {
+  color: #8b5cf6 !important;
 }
 </style>
