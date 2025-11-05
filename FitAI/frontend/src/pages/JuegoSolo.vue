@@ -1,18 +1,26 @@
 <template>
   <v-app>
-    <v-main
-      class="d-flex align-center justify-center pa-8"
-      style="background: linear-gradient(135deg, #0f0a1c, #261f4c, #130e2b); min-height: 100vh;"
-    >
+    <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
       <v-container
-        class="rounded-3xl pa-8 pa-md-12 elevation-20 bg-glass expanded-container"
-        style="max-width: 1400px; backdrop-filter: blur(25px); border: 2px solid rgba(255, 255, 255, 0.08);"
+        class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
+        style="max-width: 1400px;"
       >
+        <!-- ======== 1. BOTÓN DE NAVEGACIÓN (VOLVER) ======== -->
+        <v-btn
+          class="top-left-back-btn rectangular-btn"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-arrow-left"
+          @click="tornar"
+        >
+          Tornar
+        </v-btn>
 
-        <v-row>
-
+        <v-row class="mt-16 mt-md-0">
+          <!-- COLUMNA IZQUIERDA (CÁMARA Y CONTROLES) -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
             
+            <!-- Visor de Vídeo/Cámara -->
             <v-card
               class="rounded-xl overflow-hidden shadow-card video-card"
               elevation="12"
@@ -36,40 +44,41 @@
               ></canvas>
             </v-card>
 
+            <!-- Botones de Control -->
             <div class="mt-6 d-flex flex-wrap justify-center gap-2 small-btn-group">
               <v-btn
-                color="#8c58ff"
+                color="#8b5cf6"
                 variant="flat"
-                size="small"
+                size="large"
                 rounded="lg"
-                class="control-btn-small action-btn"
+                class="control-btn-large action-btn"
                 @click="startCamera"
               >
-                <v-icon start size="18">mdi-video-outline</v-icon>
-                Obrir càmera
+                <v-icon start>mdi-video-outline</v-icon>
+                Càmera
               </v-btn>
 
               <v-btn
-                color="red-lighten-1"
+                color="red-darken-1"
                 variant="outlined"
-                size="small"
+                size="large"
                 rounded="lg"
-                class="control-btn-small"
+                class="control-btn-large"
                 @click="stopCamera"
               >
-                <v-icon start size="18">mdi-stop-circle-outline</v-icon>
+                <v-icon start>mdi-stop-circle-outline</v-icon>
                 Aturar
               </v-btn>
 
               <v-btn
-                color="teal-accent-4"
+                color="#3b82f6"
                 variant="flat"
-                size="small"
+                size="large"
                 rounded="lg"
-                class="control-btn-small action-btn"
+                class="control-btn-large action-btn"
                 @click="selectVideo"
               >
-                <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="18" height="18" />Carregar vídeo
+                <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="22" height="22" />Vídeo
               </v-btn>
 
               <input
@@ -81,43 +90,49 @@
               />
             </div>
 
-
+            <!-- Contador de Repeticiones (Estilo Neón) -->
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
               color="transparent"
               elevation="10"
-              style="width: 85%;"
+              style="width: 85%; border: 2px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); background: rgba(0, 0, 0, 0.3);"
             >
-              <h3 class="text-h6 font-weight-regular mb-1 text-grey-lighten-2">REPETICIONS</h3>
+              <h3 class="text-h6 font-weight-regular mb-2 text-grey-lighten-2">REPETICIONS</h3>
               <h1 class="text-h1 font-weight-black text-cyan-lighten-2 counter-value">{{ count }}</h1>
             </v-card>
           </v-col>
 
-          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center order-md-2 order-1">
-            <h2 class="text-h4 font-weight-light mb-2 text-white drop-title">
-              EXERCICI
+          <!-- COLUMNA DERECHA (TÍTULO, GIF + RANKING) -->
+          <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center order-md-2 order-1 mb-10">
+            
+            <!-- Título del ejercicio (Animado) -->
+            <h2 class="exercise-title mb-8">
+              {{ exerciciLabel }}
             </h2>
-             <h3 class="text-h3 font-weight-extrabold mb-5 text-purple-lighten-2 drop-title-strong">
-               {{ exerciciLabel.toUpperCase() }}
-             </h3>
 
-            <v-card class="rounded-xl overflow-hidden mb-4 shadow-card" elevation="8" width="100%">
+            <v-card class="rounded-xl overflow-hidden shadow-card" elevation="8" width="100%" max-width="450">
               <img
                 :src="exerciciGif"
                 :alt="exerciciLabel"
                 class="rounded-lg"
                 width="100%"
-                style="object-fit: cover;"
+                style="object-fit: cover; max-height: 400px;"
               />
             </v-card>
 
+            <p class="text-body-1 text-grey-lighten-3 mb-6 font-italic info-text">
+              Segueix l’exemple o utilitza la teva pròpia càmera.
+            </p>
+
+            <!-- Clasificación (Estilo Glassy) -->
             <v-card
-              class="pa-5 rounded-xl mb-6 bg-light-card"
+              class="pa-4 pa-sm-5 rounded-xl mb-6 bg-light-card leaderboard-card"
               elevation="8"
               width="100%"
+              max-width="450"
             >
-              <h3 class="text-h5 font-weight-bold text-teal-accent-3 mb-4">
-                🏆 RECORD PERSONAL & CLASSIFICACIÓ
+              <h3 class="text-h6 font-weight-bold text-teal-accent-3 mb-4 ranking-title">
+                🏆 CLASSIFICACIÓ
               </h3>
 
               <v-list density="compact" class="text-grey-lighten-3 bg-transparent ranking-list">
@@ -130,35 +145,21 @@
                 >
                   <div class="d-flex justify-space-between align-center text-body-1 font-weight-medium">
                     <div>
-                      <v-icon small class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
+                      <v-icon size="small" class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
                         {{ index === 0 ? 'mdi-trophy-variant' : 'mdi-account-circle' }}
                       </v-icon>
                       <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userId }}
                     </div>
-                    <span class="font-weight-black" :class="index < 3 ? 'text-h6' : 'text-body-1'">
+                    <span class="font-weight-black" :class="index < 3 ? 'text-h6 text-teal-accent-3' : 'text-body-1'">
                       {{ user.reps }} <span class="text-caption font-weight-light">reps</span>
                     </span>
                   </div>
                 </v-list-item>
               </v-list>
-              <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
-                  No hi ha dades a la classificació. Sigues el primer!
+               <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
+                  No hi ha dades a la classificació. Comença a entrenar!
               </div>
-
             </v-card>
-
-            <v-btn
-              color="purple-accent-3"
-              variant="flat"
-              size="large"
-              rounded="lg"
-              class="return-btn"
-              @click="tornar"
-              elevation="6"
-            >
-              <v-icon start>mdi-arrow-left</v-icon>
-              Tornar a la selecció
-            </v-btn>
           </v-col>
         </v-row>
       </v-container>
@@ -186,10 +187,10 @@ const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 
 const noms = {
-  flexiones: 'Flexions',
-  sentadillas: 'Esquats',
-  saltos: 'Salts',
-  abdominales: 'Abdominals',
+  flexiones: 'FLEXIONS',
+  sentadillas: 'ESQUATS',
+  saltos: 'SALTS',
+  abdominales: 'ABDOMINALS',
 }
 
 const gifs = {
@@ -199,7 +200,7 @@ const gifs = {
   abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
 }
 
-const exerciciLabel = noms[exercici] || 'Exercici'
+const exerciciLabel = noms[exercici] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || new URL('@/assets/ejercicio.gif', import.meta.url).href
 
 const video = ref(null)
@@ -220,6 +221,16 @@ onMounted(() => connectWebSocket())
 
 async function startCamera() {
   try {
+    // Asegurar que el canvas y el video tienen las dimensiones correctas antes de la detección
+    if (video.value.offsetWidth && video.value.offsetHeight) {
+      canvas.value.width = video.value.offsetWidth;
+      canvas.value.height = video.value.offsetHeight;
+    } else {
+      // Fallback si no hay dimensiones disponibles inmediatamente
+      canvas.value.width = 640;
+      canvas.value.height = 480;
+    }
+
     streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     video.value.srcObject = streamRef
     await video.value.play()
@@ -229,7 +240,9 @@ async function startCamera() {
       detectPose()
     }
   } catch (e) {
-    alert('No es pot obrir la càmera: ' + e.message)
+    console.error('No es pot obrir la càmera:', e.message)
+    // Usar un modal o tarjeta de error en lugar de alert()
+    // Aquí solo logueamos el error para no interrumpir el iFrame
   }
 }
 
@@ -239,6 +252,8 @@ function stopCamera() {
     video.value.srcObject = null
     streamRef = null
     detecting = false
+    const ctx = canvas.value.getContext('2d');
+    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
   }
 }
 
@@ -250,9 +265,22 @@ function selectVideo() {
 async function loadVideoFromFile(event) {
   const file = event.target.files[0]
   if (!file) return
+  
+  // Limpiar canvas antes de cargar el video
+  const ctx = canvas.value.getContext('2d');
+  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
+  stopCamera() // Ensure any existing camera stream is stopped
   video.value.src = url
+  
+  // Establecer dimensiones del canvas para coincidir con el video
+  video.value.onloadedmetadata = () => {
+    canvas.value.width = video.value.videoWidth;
+    canvas.value.height = video.value.videoHeight;
+  };
+  
   await video.value.play()
   if (!detector) await initMoveNet()
   detecting = true
@@ -260,6 +288,8 @@ async function loadVideoFromFile(event) {
 }
 
 async function initMoveNet() {
+  // Asegurar que tfjs está listo
+  await tf.ready()
   detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
     modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
   })
@@ -268,21 +298,41 @@ async function initMoveNet() {
 async function detectPose() {
   const ctx = canvas.value.getContext('2d')
   async function poseDetectionFrame() {
-    if (!detecting) return
-    const poses = await detector.estimatePoses(video.value)
+    if (!detecting || video.value.paused || video.value.ended) return
+    
+    // Asegurar que el canvas tiene las dimensiones correctas
+    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+        canvas.value.width = video.value.videoWidth || 640;
+        canvas.value.height = video.value.videoHeight || 480;
+    }
+
+    const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
+
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
       checkMoviment(poses[0])
     }
     requestAnimationFrame(poseDetectionFrame)
   }
-  poseDetectionFrame()
+  requestAnimationFrame(poseDetectionFrame)
 }
 
 async function detectVideoFrame() {
   const ctx = canvas.value.getContext('2d')
   async function frameLoop() {
-    if (!detecting || video.value.paused || video.value.ended) return
+    if (!detecting || video.value.paused || video.value.ended) {
+        if (video.value.ended) {
+             detecting = false; // Detener la detección si el video termina
+        }
+        return
+    }
+
+    // Asegurar que el canvas tiene las dimensiones correctas
+    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+        canvas.value.width = video.value.videoWidth || 640;
+        canvas.value.height = video.value.videoHeight || 480;
+    }
+    
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
@@ -290,25 +340,54 @@ async function detectVideoFrame() {
     }
     requestAnimationFrame(frameLoop)
   }
-  frameLoop()
+  requestAnimationFrame(frameLoop)
 }
 
 function drawPose(ctx, pose) {
+  // Escalar los puntos clave para que coincidan con las dimensiones del canvas
+  const scaleX = canvas.value.width / video.value.videoWidth;
+  const scaleY = canvas.value.height / video.value.videoHeight;
+
   ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
+  
+  // Dibujar puntos clave
   for (const kp of pose.keypoints) {
     if (kp.score > 0.4) {
       ctx.beginPath()
-      ctx.arc(kp.x, kp.y, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = '#76ff03'
-      ctx.shadowBlur = 10
-      ctx.shadowColor = '#00e676'
+      ctx.arc(kp.x * scaleX, kp.y * scaleY, 6, 0, 2 * Math.PI) // Punto más grande
+      ctx.fillStyle = '#00ffaa' // Neón verde/cian
+      ctx.shadowBlur = 12
+      ctx.shadowColor = '#00ffaa'
       ctx.fill()
     }
   }
+
+  // Dibujar esqueletos (conexiones entre puntos)
+  const connections = poseDetection.getSkeleton(pose);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#8b5cf6'; // Morado neón para las líneas
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#8b5cf6';
+  
+  connections.forEach(([i, j]) => {
+    const kp1 = pose.keypoints[i];
+    const kp2 = pose.keypoints[j];
+
+    if (kp1.score > 0.4 && kp2.score > 0.4) {
+      ctx.beginPath();
+      ctx.moveTo(kp1.x * scaleX, kp1.y * scaleY);
+      ctx.lineTo(kp2.x * scaleX, kp2.y * scaleY);
+      ctx.stroke();
+    }
+  });
+
+  ctx.shadowBlur = 0; // Resetear sombra
 }
+
 
 function checkMoviment(pose) {
   if (exercici === 'abdominales') checkAbdominal(pose)
+  // Implementación de otros ejercicios aquí (flexiones, sentadillas, etc.)
 }
 
 function checkAbdominal(pose) {
@@ -316,9 +395,21 @@ function checkAbdominal(pose) {
   const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
   if (!nas || !maluc) return
 
-  const distancia = nas.y - maluc.y
-  if (distancia < 100 && !up) up = true
-  if (distancia > 150 && up) {
+  // Usar solo la coordenada Y si se asume que la persona está de lado o vertical
+  const distancia = Math.abs(nas.y - maluc.y)
+  
+  // Umbral de distancia para 'arriba' (cuerpo estirado, nariz lejos de la cadera)
+  const UMBRAL_ARRIBA = 150; 
+  // Umbral de distancia para 'abajo' (cuerpo encogido, nariz cerca de la cadera)
+  const UMBRAL_ABAJO = 100;
+
+  if (distancia < UMBRAL_ABAJO && !up) {
+      // El cuerpo se ha contraído (posición 'abajo')
+      up = true; 
+  }
+
+  if (distancia > UMBRAL_ARRIBA && up) {
+    // El cuerpo se ha estirado de nuevo (posición 'arriba'), completa la repetición
     count.value++
     up = false
     if (ws.value?.readyState === WebSocket.OPEN) {
@@ -342,10 +433,12 @@ function connectWebSocket() {
 }
 
 function tornar() {
+  stopCamera();
   router.back()
 }
 
 onBeforeUnmount(() => {
+  stopCamera();
   if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({ type: 'leave' }))
     ws.value.close()
@@ -354,41 +447,142 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* GENERAL */
-.rounded-3xl {
-    border-radius: 30px !important;
+/* ==================================== */
+/* ======== FONDO Y LAYOUT ======== */
+/* ==================================== */
+.bg-fitai-deep-space {
+  /* Fondo oscuro dinámico con brillo sutil */
+  background:
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
+    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  min-height: 100vh;
 }
 
-/* BACKGROUNDS & GLASSMORPHISM */
-.bg-glass {
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+.fade-in-container {
+  animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.position-relative {
+    position: relative;
 }
 
+/* ==================================== */
+/* ======== BOTÓN SUPERIOR IZQUIERDO (MÁS GRANDE Y NEÓN) ======== */
+/* ==================================== */
+.top-left-back-btn {
+  position: absolute;
+  top: 15px; 
+  left: 15px; 
+  z-index: 10;
+  color: white !important; 
+  background: #8b5cf6 !important; 
+  border-radius: 8px !important; 
+  font-weight: 700 !important;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 1); 
+  transition: all 0.3s ease;
+  min-width: 120px;
+
+  /* Asegurar que no se solape con el título */
+  margin-top: 10px;
+}
+.top-left-back-btn:hover {
+    transform: scale(1.05); 
+    box-shadow: 0 0 20px rgba(139, 92, 246, 1.2);
+}
+
+/* ==================================== */
+/* ======== TÍTULO EXERCICI (ANIMADO) ======== */
+/* ==================================== */
+.exercise-title {
+  /* Tamaño de fuente responsive */
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa); /* Mezcla de colores neón */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+  position: relative;
+  line-height: 1.1;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+@media (min-width: 600px) {
+  .exercise-title {
+    font-size: 3rem;
+  }
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+
+/* ==================================== */
+/* ======== CÁMARA Y CONTADOR ======== */
+/* ==================================== */
 .shadow-card {
-  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.6);
   transition: transform 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05); /* Added subtle border */
 }
 .shadow-card:hover {
     transform: translateY(-2px);
 }
 
-.bg-light-card {
-  background: rgba(255, 255, 255, 0.05); /* Ligeramente más opaco para ranking */
+/* CONTADOR (Deep Space Glass) */
+.count-card {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+.counter-value {
+    letter-spacing: 3px;
+    /* Ajuste de color a azul neón para mejor armonía con el tema */
+    text-shadow: 0px 0px 18px rgba(59, 130, 246, 0.9); 
+    font-size: 4rem !important;
+}
+@media (min-width: 600px) {
+  .counter-value {
+    font-size: 5rem !important;
+  }
 }
 
-/* BOTONES */
+/* ==================================== */
+/* ======== BOTONES DE ACCIÓN (Grandes/Responsive) ======== */
+/* ==================================== */
 .small-btn-group {
   gap: 12px;
 }
-
-.control-btn-small {
-  font-size: 0.85rem;
-  padding: 4px 14px !important;
-  min-width: 130px;
+.control-btn-large {
+  font-size: 1rem;
+  padding: 8px 16px !important;
+  min-width: 140px;
   font-weight: 700;
   letter-spacing: 0.5px;
   transition: all 0.25s ease-in-out;
+  border-radius: 8px !important;
+}
+
+/* Ajuste para móviles para evitar que los botones se salgan de la pantalla */
+@media (max-width: 450px) {
+  .control-btn-large {
+    min-width: 120px;
+    font-size: 0.9rem;
+    padding: 6px 12px !important;
+  }
 }
 
 .action-btn {
@@ -398,73 +592,45 @@ onBeforeUnmount(() => {
 .action-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(130, 90, 255, 0.6);
-  filter: brightness(1.1); /* Brillo sutil */
-}
-
-/* TITLES */
-.drop-title {
-  text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);
-}
-.drop-title-strong {
-    text-shadow: 0px 4px 10px rgba(130, 90, 255, 0.8);
-}
-
-.info-text {
-    font-size: 0.95rem !important;
-}
-
-/* CONTADOR */
-.count-card {
-  backdrop-filter: blur(8px);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  background: rgba(20, 15, 40, 0.7) !important; /* Fondo semitransparente oscuro para mejor contraste */
-}
-.counter-value {
-    letter-spacing: 3px;
-    text-shadow: 0px 0px 15px rgba(0, 255, 255, 0.8); /* Efecto neón */
+  filter: brightness(1.1); 
 }
 
 
-/* CLASIFICACIÓN (LEADERBOARD) */
-.ranking-list {
-  background-color: transparent !important;
+/* ==================================== */
+/* ======== CLASIFICACIÓN (LEADERBOARD) ======== */
+/* ==================================== */
+.leaderboard-card {
+  background: rgba(255, 255, 255, 0.05); 
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.ranking-title {
+    /* Sombra más definida para el título del ranking */
+    text-shadow: 0 0 8px rgba(0, 255, 170, 0.7); 
+}
+
+.bg-top1 {
+  background: rgba(255, 215, 0, 0.15) !important; 
+  border-left: 5px solid #ffd700 !important;
+}
+.bg-top2 {
+  background: rgba(192, 192, 192, 0.15) !important; 
+  border-left: 5px solid #c0c0c0 !important;
+}
+.bg-top3 {
+  background: rgba(176, 141, 87, 0.15) !important; 
+  border-left: 5px solid #b08d57 !important;
+}
+.bg-standard {
+     /* Fondo ligeramente más sutil para los no-ganadores */
+     background: rgba(255, 255, 255, 0.03) !important;
+}
 .list-item-glow {
     transition: all 0.3s ease;
 }
 .list-item-glow:hover {
     transform: translateX(4px);
-    box-shadow: 0 0 10px rgba(130, 90, 255, 0.2);
-}
-
-.bg-top1 {
-  background: rgba(255, 215, 0, 0.1) !important; /* Oro suave */
-  border-left: 5px solid #ffd700 !important;
-}
-.bg-top2 {
-  background: rgba(192, 192, 192, 0.1) !important; /* Plata suave */
-  border-left: 5px solid #c0c0c0 !important;
-}
-.bg-top3 {
-  background: rgba(176, 141, 87, 0.1) !important; /* Bronce suave */
-  border-left: 5px solid #b08d57 !important;
-}
-.bg-standard {
-     background: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* BOTÓN VOLVER */
-.return-btn {
-  letter-spacing: 1px;
-  font-weight: 700;
-  transition: 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-.return-btn:hover {
-  background-color: #a464f8 !important; /* Morado más claro */
-  transform: scale(1.03);
-  box-shadow: 0 6px 18px rgba(164, 100, 248, 0.6);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
 }
 
 </style>

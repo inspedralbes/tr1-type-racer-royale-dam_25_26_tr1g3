@@ -188,4 +188,3 @@ app.get('/create-session', (req, res) => {
 });
 
 console.log("Servidor WebSocket llest per gestionar sessions d'entrenament en temps real");
-
