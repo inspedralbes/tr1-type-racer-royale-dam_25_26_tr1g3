@@ -9,7 +9,7 @@
           <span class="next">Next</span><span class="rep">Rep</span>
         </h1>
 
-        <div class="d-flex justify-center px-4">
+        <div class="d-flex justify-center px-4 mb-4">
           <v-text-field
             v-model="searchQuery"
             placeholder="Buscar ejercicio..."
@@ -22,6 +22,38 @@
             flat
             :style="{ width: $vuetify.display.mobile ? '95%' : '500px' }"
           ></v-text-field>
+        </div>
+
+        <div class="d-flex justify-center px-4">
+          <v-chip-group
+            v-model="selectedCategory"
+            selected-class="selected-chip"
+            mandatory
+            center-active
+            class="chip-group-glow"
+          >
+            <v-chip
+              color="white"
+              variant="flat"
+              :value="null"
+              size="large"
+              class="category-chip"
+            >
+              Todos
+            </v-chip>
+
+            <v-chip
+              v-for="category in categories"
+              :key="category.value"
+              color="white"
+              variant="flat"
+              :value="category.value"
+              size="large"
+              class="category-chip"
+            >
+              {{ category.label }}
+            </v-chip>
+          </v-chip-group>
         </div>
       </div>
 
@@ -90,41 +122,65 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const searchQuery = ref('')
+const selectedCategory = ref(null) // 🆕 Nueva variable para la categoría seleccionada (null = Todos)
 
+// 🆕 Definición de categorías
+const categories = ref([
+  { label: 'Tren Superior', value: 'superior' },
+  { label: 'Tren Inferior', value: 'inferior' },
+  { label: 'Core', value: 'core' },
+])
+
+// 1. Ampliamos los ejercicios con una categoría
 const exercicis = [
   {
     nom: 'Flexions',
     label: 'Flexions',
     imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
     descripcio: 'Treballa pit, braços i espatlles amb aquest exercici clàssic.',
+    categoria: 'superior', // 🆕 Categoría añadida
   },
   {
     nom: 'Squats',
     label: 'Squats',
     imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
     descripcio: 'Enforteix cames i glutis amb moviment controlat i profund.',
+    categoria: 'inferior', // 🆕 Categoría añadida
   },
   {
     nom: 'Salts',
     label: 'Salts',
     imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
     descripcio: 'Millora la potència explosiva i la coordinació.',
+    categoria: 'inferior', // 🆕 Categoría añadida
   },
   {
     nom: 'Abdominals',
     label: 'Abdominals',
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
+    categoria: 'core', // 🆕 Categoría añadida
   },
 ]
 
-const filteredExercicis = computed(() =>
-  exercicis.filter((e) =>
-    (e.label + ' ' + e.descripcio)
+// 2. Modificamos el filtro para incluir la categoría
+const filteredExercicis = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return exercicis.filter((e) => {
+    // 1. Filtrar por categoría
+    const matchesCategory =
+      selectedCategory.value === null || e.categoria === selectedCategory.value
+
+    // 2. Filtrar por búsqueda
+    const matchesQuery = (e.label + ' ' + e.descripcio)
       .toLowerCase()
-      .includes(searchQuery.value.trim().toLowerCase())
-  )
-)
+      .includes(query)
+
+    // El ejercicio debe coincidir con AMBOS filtros
+    return matchesCategory && matchesQuery
+  })
+})
 
 const anarAExercici = (nom) => {
   router.push({ name: 'ModoJuego', params: { ejercicio: nom } })
@@ -295,4 +351,47 @@ const anarAExercici = (nom) => {
 .min-h-screen {
   min-height: 100vh;
 }
+
+
+/* ==================================== */
+/* ======== NUEVOS ESTILOS CHIPS ======== */
+/* ==================================== */
+
+/* Contenedor de chips con scroll horizontal */
+.chip-group-glow {
+  max-width: 100%;
+  overflow-x: auto; /* Permite scroll en móvil */
+  padding-bottom: 8px; /* Espacio para la barra de scroll */
+}
+
+/* Estilo general de los chips */
+.category-chip {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+/* Estilo del chip seleccionado (selected-chip) */
+.selected-chip {
+  background: linear-gradient(
+    90deg,
+    #3b82f6,
+    #8b5cf6
+  ) !important; /* Degradado neón */
+  color: white !important;
+  font-weight: bold !important;
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.8) !important; /* Resplandor neón */
+  border-color: #8b5cf6 !important;
+}
+
+/* Estilo al pasar el ratón por un chip (no seleccionado) */
+.category-chip:not(.selected-chip):hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px);
+}
+
 </style>
