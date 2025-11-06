@@ -188,20 +188,20 @@ const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 
 const noms = {
-  flexiones: 'FLEXIONS',
-  sentadillas: 'ESQUATS',
-  saltos: 'SALTS',
-  abdominales: 'ABDOMINALS',
+  Flexions: 'FLEXIONS',
+  Squats: 'ESQUATS',
+  Salts: 'SALTS',
+  Abdominals: 'ABDOMINALS',
 }
 
 // ===================================================================
 // CORRECCIÓ 1 (part 2): FER SERVIR LES VARIABLES IMPORTADES
 // ===================================================================
 const gifs = {
-  flexiones: flexionesGif,
-  sentadillas: sentadillasGif,
-  saltos: saltosGif,
-  abdominales: abdominalesGif,
+  Flexions: flexionesGif,
+  Squats: sentadillasGif,
+  Salts: saltosGif,
+  Abdominals: abdominalesGif,
 }
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'

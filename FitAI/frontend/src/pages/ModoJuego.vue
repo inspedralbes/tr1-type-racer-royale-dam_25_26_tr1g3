@@ -89,10 +89,10 @@ const errorMessage = ref(null)
 const exercici = route.params.ejercicio
 
 const nombres = {
-  flexiones: 'Flexions',
-  sentadillas: 'Squats',
-  saltos: 'Salts',
-  abdominales: 'Abdominals',
+  Flexions: 'Flexions',
+  Squats: 'Squats',
+  Salts: 'Salts',
+  Abdominals: 'Abdominals',
 }
 
 const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
