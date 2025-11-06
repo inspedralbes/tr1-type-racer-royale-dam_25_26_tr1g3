@@ -109,7 +109,7 @@
           v-if="filteredExercicis.length === 0"
           class="text-white text-center mt-10 text-h6 font-weight-light"
         >
-          No s'han trobat exercicis amb aquest nom. 🤖
+          No s'han trobat exercicis amb aquest nom. hola 🤖
         </div>
       </v-container>
     </v-main>
