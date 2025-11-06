@@ -171,7 +171,7 @@ function connectToSession(sessionId, isHost = false) {
 
     if (msg.type === "leaderboard") {
       jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderbody.length > 0) {
+      if (!hostId.value && msg.leaderboard.length > 0) { 
         hostId.value = msg.leaderboard[0].userId;
       }
     }

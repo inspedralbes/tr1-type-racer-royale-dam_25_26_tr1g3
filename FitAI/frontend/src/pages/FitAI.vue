@@ -93,25 +93,25 @@ const searchQuery = ref('')
 
 const exercicis = [
   {
-    nom: 'Flexions',
+    nom: 'flexiones',
     label: 'Flexions',
     imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
     descripcio: 'Treballa pit, braços i espatlles amb aquest exercici clàssic.',
   },
   {
-    nom: 'Squats',
+    nom: 'sentadillas',
     label: 'Squats',
     imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
     descripcio: 'Enforteix cames i glutis amb moviment controlat i profund.',
   },
   {
-    nom: 'Salts',
+    nom: 'saltos',
     label: 'Salts',
     imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
     descripcio: 'Millora la potència explosiva i la coordinació.',
   },
   {
-    nom: 'Abdominals',
+    nom: 'abdominales',
     label: 'Abdominals',
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',

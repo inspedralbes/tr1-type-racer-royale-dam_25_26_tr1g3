@@ -176,7 +176,6 @@ import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
-import defaultGif from '@/assets/ejercicio.gif'
 
 
 const pathCarregar = mdiFolderOutline
@@ -206,7 +205,7 @@ const gifs = {
 }
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || defaultGif
+const exerciciGif = gifs[exercici] || ''
 // ===================================================================
 
 const video = ref(null)
