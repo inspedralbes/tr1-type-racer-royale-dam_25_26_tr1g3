@@ -87,17 +87,16 @@
 <script setup>
 import { ref, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/authStore'; 
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore(); 
 const exercici = route.params.ejercicio;
 
-// ===================================================================
-// CORRECCIÓ 1: URL del WebSocket (apunta a Nginx /ws)
-// ===================================================================
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsHost = window.location.host; // ex: localhost:8080
-const WS_URL = `${wsProtocol}//${wsHost}/ws`; // ex: ws://localhost:8080/ws
+const wsHost = window.location.host; 
+const WS_URL = `${wsProtocol}//${wsHost}/ws`; 
 
 let socket = null;
 const aSala = ref(false);
@@ -105,8 +104,9 @@ const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
 const hostId = ref("");
-const userId = crypto.randomUUID();
 const errorMsg = ref("");
+
+const userId = authStore.userName; 
 
 onBeforeUnmount(() => {
   sortirSala();
@@ -138,9 +138,6 @@ async function unirSala() {
   errorMsg.value = "";
 
   try {
-    // ===================================================================
-    // CORRECCIÓ 2: URL del Fetch (apunta a Nginx /api)
-    // ===================================================================
     const res = await fetch(`/api/check-session/${sessionId}`);
 
     if (!res.ok) {
@@ -157,7 +154,7 @@ async function unirSala() {
 }
 
 function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL); // <-- Ara utilitza la URL corregida
+  socket = new WebSocket(WS_URL); 
 
   socket.addEventListener("open", () => {
     codiSala.value = sessionId;
@@ -202,14 +199,11 @@ function sortirManual() {
 }
 
 function iniciarPartida() {
-  // ===================================================================
-  // CORRECCIÓ 3: La navegació ha d'incloure el sessionId
-  // ===================================================================
   router.push({
-    name: 'JuegoSolo', // (o el nom de la teva ruta del joc)
+    name: 'JuegoSolo',
     params: {
       ejercicio: exercici,
-      sessionId: codiSala.value // <-- Aquest paràmetre faltava
+      sessionId: codiSala.value
     }
   });
 }
