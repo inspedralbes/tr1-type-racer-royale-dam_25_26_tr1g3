@@ -15,22 +15,18 @@ const server = app.listen(port, () => {
 
 const wss = new WebSocketServer({ noServer: true });
 
-// Controlem 'manualment' l'actualització de protocol
 server.on('upgrade', (request, socket, head) => {
-  // Extraiem la ruta de la petició
   const pathname = request.url;
 
-  // Si la petició és a la nostra ruta de WebSockets, la processem
   if (pathname === '/ws') {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
     });
   } else {
-    // Si no, tanquem el socket
     socket.destroy();
   }
 });
-// --- Fi de la nova configuració ---
+
 
 const sessions = {};
 
