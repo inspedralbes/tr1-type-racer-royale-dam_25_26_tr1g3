@@ -206,6 +206,7 @@ const gifs = {
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || ''
+
 // ===================================================================
 
 const video = ref(null)
