@@ -109,7 +109,6 @@ import { useAuthStore } from '@/stores/authStore'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// --- Estat del formulari ---
 const nom = ref('')
 const email = ref('')
 const password = ref('')
@@ -119,19 +118,15 @@ const showPasswordConfirm = ref(false)
 const loading = ref(false)
 const errorMessage = ref(null)
 
-// --- Regles de validació ---
 const rules = {
   required: value => !!value || 'Aquest camp és obligatori.',
   email: value => /.+@.+\..+/.test(value) || 'L\'email ha de ser vàlid.',
   passwordMatch: value => value === password.value || 'Les contrasenyes no coincideixen.'
 }
 
-// --- Gestor del Registre ---
 const handleRegister = async () => {
-  // 1. Netejar errors previs
   errorMessage.value = null
 
-  // 2. Validació client (frontend)
   if (!nom.value || !email.value || !password.value || !passwordConfirm.value) {
     errorMessage.value = 'Si us plau, omple tots els camps.'
     return
@@ -141,24 +136,19 @@ const handleRegister = async () => {
     return
   }
 
-  // 3. Iniciar càrrega
   loading.value = true
 
   try {
-    // 4. Cridar a l'acció de la store (que crida a /api/register)
     await authStore.register(nom.value, email.value, password.value);
     
-    // 5. Èxit! Redirigir al Login perquè l'usuari pugui entrar
     router.push({ name: 'Login' });
 
   } catch (error) {
-    // 6. Error (ex: "Aquest email ja està registrat")
     loading.value = false;
     errorMessage.value = error.message; 
   }
 }
 
-// --- Anar a Login ---
 const goToLogin = () => {
   router.push({ name: 'Login' })
 }
