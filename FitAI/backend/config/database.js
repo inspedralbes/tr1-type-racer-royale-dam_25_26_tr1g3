@@ -1,18 +1,14 @@
-require('dotenv').config();
+import mysql from 'mysql2/promise';
+import 'dotenv/config';
 
-const mysql = require('mysql2/promise');
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'nodeuser',
+  password: process.env.DB_PASSWORD || 'nodepass',
+  database: process.env.DB_NAME || 'entrenador_virtual',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
-const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-};
-
-const pool = mysql.createPool(dbConfig);
-
-module.exports = pool;
+export default pool;
