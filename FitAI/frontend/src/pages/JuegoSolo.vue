@@ -168,15 +168,6 @@ import { useRoute, useRouter } from 'vue-router'
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
-// ===================================================================
-// CORRECCIÓ 1: IMPORTAR GIFS DIRECTAMENT
-// (Assegura't que les rutes relatives al teu directori 'src' són correctes)
-// ===================================================================
-import flexionesGif from '@/assets/flexiones.gif'
-import sentadillasGif from '@/assets/sentadillas.gif'
-import saltosGif from '@/assets/saltos.gif'
-import abdominalesGif from '@/assets/abdominales.gif'
-
 
 const pathCarregar = mdiFolderOutline
 
@@ -188,26 +179,21 @@ const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 
 const noms = {
-  Flexions: 'FLEXIONS',
-  Squats: 'ESQUATS',
-  Salts: 'SALTS',
-  Abdominals: 'ABDOMINALS',
+ flexiones: 'FLEXIONS',
+ sentadillas: 'ESQUATS',
+ saltos: 'SALTS',
+ abdominales: 'ABDOMINALS',
 }
 
-// ===================================================================
-// CORRECCIÓ 1 (part 2): FER SERVIR LES VARIABLES IMPORTADES
-// ===================================================================
 const gifs = {
-  Flexions: flexionesGif,
-  Squats: sentadillasGif,
-  Salts: saltosGif,
-  Abdominals: abdominalesGif,
+ flexiones: new URL('@/assets/flexiones.gif', import.meta.url).href,
+ sentadillas: new URL('@/assets/sentadillas.gif', import.meta.url).href,
+ saltos: new URL('@/assets/saltos.gif', import.meta.url).href,
+ abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
 }
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || ''
-
-// ===================================================================
+const exerciciGif = gifs[exercici] || new URL('@/assets/ejercicio.gif', import.meta.url).href
 
 const video = ref(null)
 const canvas = ref(null)
@@ -226,249 +212,259 @@ const userId = ref(`usuari_${Math.floor(Math.random() * 10000)}`)
 onMounted(() => connectWebSocket())
 
 async function startCamera() {
-  try {
-    // Asegurar que el canvas y el video tienen las dimensiones correctas antes de la detección
-    if (video.value.offsetWidth && video.value.offsetHeight) {
-      canvas.value.width = video.value.offsetWidth;
-      canvas.value.height = video.value.offsetHeight;
-    } else {
-      // Fallback si no hay dimensiones disponibles inmediatamente
-      canvas.value.width = 640;
-      canvas.value.height = 480;
-    }
+ try {
+ if (video.value.offsetWidth && video.value.offsetHeight) {
+ canvas.value.width = video.value.offsetWidth;
+ canvas.value.height = video.value.offsetHeight;
+ } else {
+ canvas.value.width = 640;
+ canvas.value.height = 480;
+ }
 
-    streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    video.value.srcObject = streamRef
-    await video.value.play()
-    if (!detector) await initMoveNet()
-    if (!detecting) {
-      detecting = true
-      detectPose()
-    }
-  } catch (e) {
-    console.error('No es pot obrir la càmera:', e.message)
-    // Usar un modal o tarjeta de error en lugar de alert()
-    // Aquí solo logueamos el error para no interrumpir el iFrame
-  }
+ streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+ video.value.srcObject = streamRef
+ await video.value.play()
+ if (!detector) await initMoveNet()
+ if (!detecting) {
+ detecting = true
+ detectPose()
+ }
+ } catch (e) {
+ console.error('No es pot obrir la càmera:', e.message)
+ }
 }
 
 function stopCamera() {
-  if (streamRef) {
-    streamRef.getTracks().forEach((t) => t.stop())
-    video.value.srcObject = null
-    streamRef = null
-    detecting = false
-    const ctx = canvas.value.getContext('2d');
-    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-  }
+ if (streamRef) {
+ streamRef.getTracks().forEach((t) => t.stop())
+ video.value.srcObject = null
+ streamRef = null
+ detecting = false
+ const ctx = canvas.value.getContext('2d');
+ ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+ }
 }
 
 function selectVideo() {
-  stopCamera()
-  fileInput.value?.click()
+ stopCamera()
+ fileInput.value?.click()
 }
 
 async function loadVideoFromFile(event) {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  // Limpiar canvas antes de cargar el video
-  const ctx = canvas.value.getContext('2d');
-  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+ const file = event.target.files[0]
+ if (!file) return
+ 
+ const ctx = canvas.value.getContext('2d');
+ ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
-  const url = URL.createObjectURL(file)
-  video.value.srcObject = null
-  stopCamera() // Ensure any existing camera stream is stopped
-  video.value.src = url
-  
-  // Establecer dimensiones del canvas para coincidir con el video
-  video.value.onloadedmetadata = () => {
-    canvas.value.width = video.value.videoWidth;
-    canvas.value.height = video.value.videoHeight;
-  };
-  
-  await video.value.play()
-  if (!detector) await initMoveNet()
-  detecting = true
-  detectVideoFrame()
+ const url = URL.createObjectURL(file)
+ video.value.srcObject = null
+ stopCamera()
+ video.value.src = url
+ 
+ video.value.onloadedmetadata = () => {
+ canvas.value.width = video.value.videoWidth;
+ canvas.value.height = video.value.videoHeight;
+ };
+ 
+ await video.value.play()
+ if (!detector) await initMoveNet()
+ detecting = true
+ detectVideoFrame()
 }
 
 async function initMoveNet() {
-  // Asegurar que tfjs está listo
-  await tf.ready()
-  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-  })
+ await tf.ready()
+ detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
+ modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+ })
 }
 
 async function detectPose() {
-  const ctx = canvas.value.getContext('2d')
-  async function poseDetectionFrame() {
-    if (!detecting || video.value.paused || video.value.ended) return
-    
-    // Asegurar que el canvas tiene las dimensiones correctas
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
-    }
+ const ctx = canvas.value.getContext('2d')
+ async function poseDetectionFrame() {
+ if (!detecting || video.value.paused || video.value.ended) return
+ 
+ if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+ canvas.value.width = video.value.videoWidth || 640;
+ canvas.value.height = video.value.videoHeight || 480;
+ }
 
-    const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
+ const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
 
-    if (poses.length > 0) {
-      drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
-    }
-    requestAnimationFrame(poseDetectionFrame)
-  }
-  requestAnimationFrame(poseDetectionFrame)
+ if (poses.length > 0) {
+ drawPose(ctx, poses[0])
+ checkMoviment(poses[0])
+ }
+ requestAnimationFrame(poseDetectionFrame)
+ }
+ requestAnimationFrame(poseDetectionFrame)
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value.getContext('2d')
-  async function frameLoop() {
-    if (!detecting || video.value.paused || video.value.ended) {
-        if (video.value.ended) {
-             detecting = false; // Detener la detección si el video termina
-        }
-        return
-    }
+ const ctx = canvas.value.getContext('2d')
+ async function frameLoop() {
+ if (!detecting || video.value.paused || video.value.ended) {
+ if (video.value.ended) {
+ detecting = false;
+ }
+ return
+ }
 
-    // Asegurar que el canvas tiene las dimensiones correctas
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
-    }
-    
-    const poses = await detector.estimatePoses(video.value)
-    if (poses.length > 0) {
-      drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
-    }
-    requestAnimationFrame(frameLoop)
-  }
-  requestAnimationFrame(frameLoop)
+ if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+ canvas.value.width = video.value.videoWidth || 640;
+ canvas.value.height = video.value.videoHeight || 480;
+ }
+ 
+ const poses = await detector.estimatePoses(video.value)
+ if (poses.length > 0) {
+ drawPose(ctx, poses[0])
+ checkMoviment(poses[0])
+ }
+ requestAnimationFrame(frameLoop)
+ }
+ requestAnimationFrame(frameLoop)
 }
 
 function drawPose(ctx, pose) {
-  // Escalar los puntos clave para que coincidan con las dimensiones del canvas
-  const scaleX = canvas.value.width / video.value.videoWidth;
-  const scaleY = canvas.value.height / video.value.videoHeight;
+ const videoElement = video.value;
+ const canvasElement = canvas.value;
 
-  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
-  
-  // Dibujar puntos clave
-  for (const kp of pose.keypoints) {
-    if (kp.score > 0.4) {
-      ctx.beginPath()
-      ctx.arc(kp.x * scaleX, kp.y * scaleY, 6, 0, 2 * Math.PI) // Punto más grande
-      ctx.fillStyle = '#00ffaa' // Neón verde/cian
-      ctx.shadowBlur = 12
-      ctx.shadowColor = '#00ffaa'
-      ctx.fill()
-    }
-  }
+ if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
 
-  // Dibujar esqueletos (conexiones entre puntos)
-  const connections = poseDetection.getSkeleton(pose);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#8b5cf6'; // Morado neón para las líneas
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#8b5cf6';
-  
-  connections.forEach(([i, j]) => {
-    const kp1 = pose.keypoints[i];
-    const kp2 = pose.keypoints[j];
+ const videoDisplayedWidth = videoElement.offsetWidth;
+ const videoDisplayedHeight = videoElement.offsetHeight;
 
-    if (kp1.score > 0.4 && kp2.score > 0.4) {
-      ctx.beginPath();
-      ctx.moveTo(kp1.x * scaleX, kp1.y * scaleY);
-      ctx.lineTo(kp2.x * scaleX, kp2.y * scaleY);
-      ctx.stroke();
-    }
-  });
+ if (canvasElement.width !== videoDisplayedWidth || canvasElement.height !== videoDisplayedHeight) {
+ canvasElement.width = videoDisplayedWidth;
+ canvasElement.height = videoDisplayedHeight;
+ }
 
-  ctx.shadowBlur = 0; // Resetear sombra
+ const videoNaturalWidth = videoElement.videoWidth;
+ const videoNaturalHeight = videoElement.videoHeight;
+ 
+ ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+ const videoAspectRatio = videoNaturalWidth / videoNaturalHeight;
+ const canvasAspectRatio = videoDisplayedWidth / videoDisplayedHeight;
+ 
+ let scaleFactor;
+ let offsetX = 0;
+ let offsetY = 0;
+
+ if (videoAspectRatio > canvasAspectRatio) {
+ scaleFactor = videoDisplayedHeight / videoNaturalHeight;
+ offsetX = (videoDisplayedWidth - videoNaturalWidth * scaleFactor) / 2;
+ } else {
+ scaleFactor = videoDisplayedWidth / videoNaturalWidth;
+ offsetY = (videoDisplayedHeight - videoNaturalHeight * scaleFactor) / 2;
+ }
+
+ const transformPoint = (kp) => {
+ if (!kp) return null;
+ return {
+ x: kp.x * scaleFactor + offsetX,
+ y: kp.y * scaleFactor + offsetY
+ };
+ };
+ 
+ ctx.fillStyle = '#00ffaa';
+ ctx.shadowBlur = 12;
+ ctx.shadowColor = '#00ffaa';
+ 
+ for (const kp of pose.keypoints) {
+ if (kp.score > 0.4) {
+ const transformed = transformPoint(kp);
+ ctx.beginPath();
+ ctx.arc(transformed.x, transformed.y, 6, 0, 2 * Math.PI);
+ ctx.fill();
+ }
+ }
+
+ const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
+ ctx.lineWidth = 2;
+ ctx.strokeStyle = '#8b5cf6';
+ ctx.shadowBlur = 8;
+ ctx.shadowColor = '#8b5cf6';
+ 
+ for (const [i, j] of connections) {
+ const kp1 = pose.keypoints[i];
+ const kp2 = pose.keypoints[j];
+
+ if (kp1.score > 0.4 && kp2.score > 0.4) {
+ const p1 = transformPoint(kp1);
+ const p2 = transformPoint(kp2);
+ ctx.beginPath();
+ ctx.moveTo(p1.x, p1.y);
+ ctx.lineTo(p2.x, p2.y);
+ ctx.stroke();
+ }
+ }
+
+ ctx.shadowBlur = 0;
 }
 
-
 function checkMoviment(pose) {
-  if (exercici === 'abdominales') checkAbdominal(pose)
-  // Implementación de otros ejercicios aquí (flexiones, sentadillas, etc.)
+ if (exercici === 'abdominales') checkAbdominal(pose)
 }
 
 function checkAbdominal(pose) {
-  const nas = pose.keypoints.find((k) => k.name === 'nose')
-  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
-  if (!nas || !maluc) return
-  
-  // Asegurarse de que los puntos clave tienen una puntuación de confianza suficiente
-  if (nas.score < 0.4 || maluc.score < 0.4) return;
+ const nas = pose.keypoints.find((k) => k.name === 'nose')
+ const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+ if (!nas || !maluc) return
 
-  // Usar solo la coordenada Y para la distancia vertical
-  const distancia = Math.abs(nas.y - maluc.y)
-  
-  // Umbral de distancia para 'arriba' (cuerpo estirado, nariz lejos de la cadera)
-  const UMBRAL_ARRIBA = 150; 
-  // Umbral de distancia para 'abajo' (cuerpo encogido, nariz cerca de la cadera)
-  const UMBRAL_ABAJO = 100;
+ const distancia = Math.abs(nas.y - maluc.y)
+ const UMBRAL_ARRIBA = 150; 
+ const UMBRAL_ABAJO = 100;
 
-  if (distancia < UMBRAL_ABAJO && !up) { // Si la distancia es pequeña y no estamos en la posición "abajo"
-      // El cuerpo se ha contraído (posición 'abajo')
-      up = true; 
-  }
+ if (distancia < UMBRAL_ABAJO && !up) {
+ up = true; 
+ }
 
-  if (distancia > UMBRAL_ARRIBA && up) { // Si la distancia es grande y estábamos en la posición "abajo"
-    // El cuerpo se ha estirado de nuevo (posición 'arriba'), completa la repetición
-    count.value++
-    up = false
-    if (ws.value?.readyState === WebSocket.OPEN) {
-      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
-    }
-  }
+ if (distancia > UMBRAL_ARRIBA && up) {
+ count.value++
+ up = false
+ if (ws.value?.readyState === WebSocket.OPEN) {
+ ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+ }
+ }
 }
 
+// VERSIÓ CORREGIDA DE connectWebSocket
 function connectWebSocket() {
-  // 1. Detecta si estem a http (ws:) o https (wss:)
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+ const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+ const wsHost = window.location.host;
+ const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+ 
+ console.log(`Connectant a WebSocket a: ${wsUrl}`);
 
-  // 2. Agafa el host actual (p.ex., "localhost:8080")
-  const wsHost = window.location.host;
+ ws.value = new WebSocket(wsUrl); 
 
-  // 3. Construeix la URL del proxy de WebSocket
-  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
-  
-  console.log(`Connectant a WebSocket a: ${wsUrl}`); // Línia de depuració
-
-  // 4. Connecta't a la URL correcta
-  ws.value = new WebSocket(wsUrl); 
-
-  ws.value.onopen = () => {
-    console.log('Connectat al servidor WebSocket');
-    ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }));
-  };
-  ws.value.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    
-    // ===================================================================
-    // CORRECCIÓ 2: TYPO (leaderbody -> leaderboard)
-    // ===================================================================
-    if (message.type === 'leaderboard') leaderboard.value = message.leaderboard;
-  };
-  ws.value.onclose = () => console.log('Desconnectat del servidor');
-  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
+ ws.value.onopen = () => {
+ console.log('Connectat al servidor WebSocket');
+ ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }));
+ };
+ ws.value.onmessage = (event) => {
+ const message = JSON.parse(event.data);
+ if (message.type === 'leaderboard') {
+ leaderboard.value = message.leaderboard;
+ }
+ };
+ ws.value.onclose = () => console.log('Desconnectat del servidor');
+ ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
 function tornar() {
-  stopCamera();
-  router.back()
+ stopCamera();
+ router.back()
 }
 
 onBeforeUnmount(() => {
-  stopCamera();
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({ type: 'leave' }))
-    ws.value.close()
-  }
+ stopCamera();
+ if (ws.value?.readyState === WebSocket.OPEN) {
+ ws.value.send(JSON.stringify({ type: 'leave' }))
+ ws.value.close()
+ }
 })
 </script>
 
