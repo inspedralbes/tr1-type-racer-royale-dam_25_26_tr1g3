@@ -7,6 +7,7 @@ import JuegoSolo from '@/pages/JuegoSolo.vue'
 import Multiplayer from '@/pages/Multiplayer.vue'
 import Login from '@/pages/Login.vue' 
 import Register from '@/pages/Register.vue'
+import JuegoMultiplayer from '../pages/JuegoMultiplayer.vue'
 
 const routes = [
   { 
@@ -44,6 +45,7 @@ const routes = [
     component: Multiplayer, 
     meta: { requiresAuth: true }
   },
+  { path: '/juego-multi/:ejercicio/:sessionId', name: 'JuegoMultiplayer', component: JuegoMultiplayer },
 ]
 
 const router = createRouter({
