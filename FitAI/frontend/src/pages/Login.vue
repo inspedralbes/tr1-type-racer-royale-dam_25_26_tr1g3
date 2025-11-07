@@ -1,13 +1,14 @@
 <template>
   <v-app>
-    <v-main class="d-flex flex-column align-center justify-center pa-8 bg-fitai-bright" style="min-height: 100vh">
+    <v-main class="d-flex flex-column align-center justify-center pa-8 bg-fitai-deep-space" style="min-height: 100vh">
       
-      <v-card class="pa-6 rounded-2xl elevation-12 glass-card" max-width="450" width="100%">
-        <v-card-title class="text-h4 text-center font-weight-bold nextrep-title mb-4">
+      <v-card class="pa-6 rounded-xl elevation-12 glass-card-futuristic fade-in-container" max-width="450" width="100%">
+        
+        <v-card-title class="text-h4 text-center font-weight-bold nextrep-title-login mb-4">
           <span class="next">Next</span><span class="rep">Rep</span>
         </v-card-title>
         
-        <h2 class="text-h6 text-center text-grey-lighten-2 font-weight-regular mb-6">
+        <h2 class="text-h6 text-center text-purple-lighten-4 font-weight-regular mb-6">
           Inicia sessió per continuar
         </h2>
 
@@ -32,8 +33,9 @@
               prepend-inner-icon="mdi-account-outline"
               variant="solo-filled"
               density="comfortable"
-              class="mb-4"
+              class="mb-4 custom-input"
               :rules="[rules.required]"
+              flat
             ></v-text-field>
 
             <v-text-field
@@ -45,15 +47,16 @@
               @click:append-inner="showPassword = !showPassword"
               variant="solo-filled"
               density="comfortable"
-              class="mb-2"
+              class="mb-2 custom-input"
               :rules="[rules.required]"
+              flat
             ></v-text-field>
 
             <v-btn
               :loading="loading"
               :disabled="loading"
               type="submit"
-              class="neon-btn mt-6"
+              class="neon-btn-primary mt-6"
               variant="elevated"
               size="large"
               block
@@ -63,7 +66,7 @@
 
             <v-btn 
               variant="text" 
-              class="mt-4 text-white" 
+              class="mt-4 neon-btn-secondary" 
               block 
               @click="goToRegister"
             >
@@ -112,6 +115,7 @@ const handleLogin = async () => {
 
   } catch (error) {
     loading.value = false;
+    // Asumiendo que `error.message` contiene el mensaje de error de Firebase/Auth
     errorMessage.value = error.message; 
     password.value = '';
   }
@@ -121,3 +125,166 @@ const goToRegister = () => {
     router.push({ name: 'Register' });
 }
 </script>
+
+<style scoped>
+/* ==================================== */
+/* ======== FONDO Y ANIMACIÓN ======== */
+/* ==================================== */
+.bg-fitai-deep-space {
+  /* Fondo oscuro similar al ejemplo */
+  background:
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
+    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+.fade-in-container {
+  /* Animación de entrada suave */
+  animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ==================================== */
+/* ======== TARJETA (GLASS CARDS) ======== */
+/* ==================================== */
+.glass-card-futuristic {
+  background: rgba(30, 30, 47, 0.7); /* Fondo oscuro semitransparente */
+  border: 1px solid rgba(139, 92, 246, 0.3); /* Borde morado sutil */
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  backdrop-filter: blur(10px); /* Efecto glassmorphism */
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ==================================== */
+/* ======== TÍTULO NEXTREP ======== */
+/* ==================================== */
+.nextrep-title-login {
+  font-size: 3rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
+  user-select: none;
+}
+
+.next {
+  color: #ffffff;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8)); /* Brillo azul */
+}
+
+.rep {
+  background: linear-gradient(90deg, #9b6bff, #3b82f6); /* Degradado Morado/Azul */
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-style: italic;
+  animation: gradientShift 5s ease infinite;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Línea luminosa decorativa */
+.divider-glow {
+    height: 2px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, transparent 0%, #3b82f6, #8b5cf6, #3b82f6, transparent 100%);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+    opacity: 0.8;
+}
+
+/* ==================================== */
+/* ======== CAMPOS DE TEXTO ======== */
+/* ==================================== */
+.custom-input {
+    /* Elimina el padding de v-text-field que puede interferir */
+    padding: 0 !important;
+}
+
+/* Sobrescribe el estilo interno de Vuetify para el campo de texto */
+.custom-input :deep(.v-field) {
+    background-color: rgba(0, 0, 0, 0.3) !important; /* Fondo del campo más oscuro */
+    color: white !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Estilo del texto y la etiqueta */
+.custom-input :deep(.v-field__input),
+.custom-input :deep(.v-label) {
+    color: #e0f7fa !important; /* Texto claro */
+    opacity: 1 !important;
+}
+
+/* Estilo del icono interno */
+.custom-input :deep(.v-input__prepend-inner .v-icon) {
+    color: #8b5cf6 !important; /* Icono neón morado */
+}
+
+/* Estado de enfoque */
+.custom-input:focus-within :deep(.v-field) {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.7) !important; /* Borde azul brillante al enfocar */
+    border-color: #3b82f6;
+}
+
+/* ==================================== */
+/* ======== BOTONES NEÓN ======== */
+/* ==================================== */
+
+/* Botón de Acceso (Primario) */
+.neon-btn-primary {
+    background: linear-gradient(90deg, #8b5cf6, #3b82f6) !important; /* Degradado Morado a Azul */
+    color: white !important;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-radius: 10px !important;
+    transition: all 0.4s ease;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8); /* Brillo inicial */
+}
+
+.neon-btn-primary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(90deg, #a78bfa, #60a5fa) !important; 
+    box-shadow: 0 0 25px rgba(139, 92, 246, 1.2), 0 5px 20px rgba(0, 0, 0, 0.5); /* Brillo más intenso en hover */
+}
+
+/* Botón de Registro (Secundario/Texto) */
+.neon-btn-secondary {
+    color: #9b6bff !important; /* Color morado neón para el texto */
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.neon-btn-secondary:hover {
+    color: #3b82f6 !important; /* Cambia a azul neón en hover */
+    text-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+    background-color: transparent !important;
+}
+
+/* Estilo para la alerta de error */
+.glass-alert {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    border-left: 5px solid #ff5252 !important;
+    color: white !important;
+    backdrop-filter: blur(5px);
+}
+</style>
