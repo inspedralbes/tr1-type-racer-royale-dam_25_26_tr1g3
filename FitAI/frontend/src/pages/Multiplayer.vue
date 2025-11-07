@@ -20,7 +20,7 @@
             </v-btn>
 
             <v-text-field label="Codi de sala" v-model="codiSalaInput" variant="solo-filled" clearable
-              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2"
+              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2 text-white"
               @input="codiSalaInput = codiSalaInput.toUpperCase().slice(0, 5)" />
 
             <v-btn class="neon-btn-green mt-2" variant="elevated" size="large" block @click="unirSala">
@@ -87,12 +87,16 @@
 <script setup>
 import { ref, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/authStore'; 
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore(); 
 const exercici = route.params.ejercicio;
 
-const WS_URL = "ws://localhost:4000";
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsHost = window.location.host; 
+const WS_URL = `${wsProtocol}//${wsHost}/ws`; 
 
 let socket = null;
 const aSala = ref(false);
@@ -100,8 +104,9 @@ const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
 const hostId = ref("");
-const userId = crypto.randomUUID();
 const errorMsg = ref("");
+
+const userId = authStore.userName; 
 
 onBeforeUnmount(() => {
   sortirSala();
@@ -133,7 +138,7 @@ async function unirSala() {
   errorMsg.value = "";
 
   try {
-    const res = await fetch(`http://localhost:4000/check-session/${sessionId}`);
+    const res = await fetch(`/api/check-session/${sessionId}`);
 
     if (!res.ok) {
       errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
@@ -149,7 +154,7 @@ async function unirSala() {
 }
 
 function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL);
+  socket = new WebSocket(WS_URL); 
 
   socket.addEventListener("open", () => {
     codiSala.value = sessionId;
@@ -163,7 +168,7 @@ function connectToSession(sessionId, isHost = false) {
 
     if (msg.type === "leaderboard") {
       jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderboard.length > 0) {
+      if (!hostId.value && msg.leaderboard.length > 0) { 
         hostId.value = msg.leaderboard[0].userId;
       }
     }

@@ -61,6 +61,29 @@ export default defineConfig({
     ],
   },
   server: {
+    // Aquest és el port del teu frontend (npm run dev)
     port: 3000,
+
+    // ==========================================================
+    // SECCIÓ AFEGIDA: PROXY
+    // ==========================================================
+    proxy: {
+      // Totes les peticions a /api (ex: /api/create-session)
+      '/api': {
+        // es redirigiran al teu backend (node server.js)
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        // reescriu la ruta de '/api/create-session' a '/create-session'
+        rewrite: (path) => path.replace(/^\/api/, ''), 
+      },
+      // Totes les peticions a /ws (WebSockets)
+      '/ws': {
+        // es redirigiran al teu backend
+        target: 'http://localhost:4000',
+        ws: true, // Activa el proxy per a WebSockets
+        changeOrigin: true,
+      },
+    },
+    // ==========================================================
   },
 })

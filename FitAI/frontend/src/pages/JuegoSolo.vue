@@ -5,7 +5,6 @@
         class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
         style="max-width: 1400px;"
       >
-        <!-- ======== 1. BOTÓN DE NAVEGACIÓN (VOLVER) ======== -->
         <v-btn
           class="top-left-back-btn rectangular-btn"
           variant="flat"
@@ -17,10 +16,8 @@
         </v-btn>
 
         <v-row class="mt-16 mt-md-0">
-          <!-- COLUMNA IZQUIERDA (CÁMARA Y CONTROLES) -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
             
-            <!-- Visor de Vídeo/Cámara -->
             <v-card
               class="rounded-xl overflow-hidden shadow-card video-card"
               elevation="12"
@@ -44,7 +41,6 @@
               ></canvas>
             </v-card>
 
-            <!-- Botones de Control -->
             <div class="mt-6 d-flex flex-wrap justify-center gap-2 small-btn-group">
               <v-btn
                 color="#8b5cf6"
@@ -90,7 +86,6 @@
               />
             </div>
 
-            <!-- Contador de Repeticiones (Estilo Neón) -->
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
               color="transparent"
@@ -102,10 +97,8 @@
             </v-card>
           </v-col>
 
-          <!-- COLUMNA DERECHA (TÍTULO, GIF + RANKING) -->
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center order-md-2 order-1 mb-10">
             
-            <!-- Título del ejercicio (Animado) -->
             <h2 class="exercise-title mb-8">
               {{ exerciciLabel }}
             </h2>
@@ -124,7 +117,6 @@
               Segueix l’exemple o utilitza la teva pròpia càmera.
             </p>
 
-            <!-- Clasificación (Estilo Glassy) -->
             <v-card
               class="pa-4 pa-sm-5 rounded-xl mb-6 bg-light-card leaderboard-card"
               elevation="8"
@@ -176,6 +168,15 @@ import { useRoute, useRouter } from 'vue-router'
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
+// ===================================================================
+// CORRECCIÓ 1: IMPORTAR GIFS DIRECTAMENT
+// (Assegura't que les rutes relatives al teu directori 'src' són correctes)
+// ===================================================================
+import flexionesGif from '@/assets/flexiones.gif'
+import sentadillasGif from '@/assets/sentadillas.gif'
+import saltosGif from '@/assets/saltos.gif'
+import abdominalesGif from '@/assets/abdominales.gif'
+
 
 const pathCarregar = mdiFolderOutline
 
@@ -187,21 +188,26 @@ const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 
 const noms = {
-  flexiones: 'FLEXIONS',
-  sentadillas: 'ESQUATS',
-  saltos: 'SALTS',
-  abdominales: 'ABDOMINALS',
+  Flexions: 'FLEXIONS',
+  Squats: 'ESQUATS',
+  Salts: 'SALTS',
+  Abdominals: 'ABDOMINALS',
 }
 
+// ===================================================================
+// CORRECCIÓ 1 (part 2): FER SERVIR LES VARIABLES IMPORTADES
+// ===================================================================
 const gifs = {
-  flexiones: new URL('@/assets/flexiones.gif', import.meta.url).href,
-  sentadillas: new URL('@/assets/sentadillas.gif', import.meta.url).href,
-  saltos: new URL('@/assets/saltos.gif', import.meta.url).href,
-  abdominales: new URL('@/assets/abdominales.gif', import.meta.url).href,
+  Flexions: flexionesGif,
+  Squats: sentadillasGif,
+  Salts: saltosGif,
+  Abdominals: abdominalesGif,
 }
 
 const exerciciLabel = noms[exercici] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || new URL('@/assets/ejercicio.gif', import.meta.url).href
+const exerciciGif = gifs[exercici] || ''
+
+// ===================================================================
 
 const video = ref(null)
 const canvas = ref(null)
@@ -394,8 +400,11 @@ function checkAbdominal(pose) {
   const nas = pose.keypoints.find((k) => k.name === 'nose')
   const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
   if (!nas || !maluc) return
+  
+  // Asegurarse de que los puntos clave tienen una puntuación de confianza suficiente
+  if (nas.score < 0.4 || maluc.score < 0.4) return;
 
-  // Usar solo la coordenada Y si se asume que la persona está de lado o vertical
+  // Usar solo la coordenada Y para la distancia vertical
   const distancia = Math.abs(nas.y - maluc.y)
   
   // Umbral de distancia para 'arriba' (cuerpo estirado, nariz lejos de la cadera)
@@ -403,12 +412,12 @@ function checkAbdominal(pose) {
   // Umbral de distancia para 'abajo' (cuerpo encogido, nariz cerca de la cadera)
   const UMBRAL_ABAJO = 100;
 
-  if (distancia < UMBRAL_ABAJO && !up) {
+  if (distancia < UMBRAL_ABAJO && !up) { // Si la distancia es pequeña y no estamos en la posición "abajo"
       // El cuerpo se ha contraído (posición 'abajo')
       up = true; 
   }
 
-  if (distancia > UMBRAL_ARRIBA && up) {
+  if (distancia > UMBRAL_ARRIBA && up) { // Si la distancia es grande y estábamos en la posición "abajo"
     // El cuerpo se ha estirado de nuevo (posición 'arriba'), completa la repetición
     count.value++
     up = false
@@ -419,17 +428,34 @@ function checkAbdominal(pose) {
 }
 
 function connectWebSocket() {
-  ws.value = new WebSocket('ws://localhost:4000')
+  // 1. Detecta si estem a http (ws:) o https (wss:)
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  // 2. Agafa el host actual (p.ex., "localhost:8080")
+  const wsHost = window.location.host;
+
+  // 3. Construeix la URL del proxy de WebSocket
+  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+  
+  console.log(`Connectant a WebSocket a: ${wsUrl}`); // Línia de depuració
+
+  // 4. Connecta't a la URL correcta
+  ws.value = new WebSocket(wsUrl); 
+
   ws.value.onopen = () => {
-    console.log('Connectat al servidor WebSocket')
-    ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }))
-  }
+    console.log('Connectat al servidor WebSocket');
+    ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }));
+  };
   ws.value.onmessage = (event) => {
-    const message = JSON.parse(event.data)
-    if (message.type === 'leaderboard') leaderboard.value = message.leaderboard
-  }
-  ws.value.onclose = () => console.log('Desconnectat del servidor')
-  ws.value.onerror = (err) => console.error('Error WebSocket:', err)
+    const message = JSON.parse(event.data);
+    
+    // ===================================================================
+    // CORRECCIÓ 2: TYPO (leaderbody -> leaderboard)
+    // ===================================================================
+    if (message.type === 'leaderboard') leaderboard.value = message.leaderboard;
+  };
+  ws.value.onclose = () => console.log('Desconnectat del servidor');
+  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
 function tornar() {
