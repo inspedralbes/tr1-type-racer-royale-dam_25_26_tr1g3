@@ -167,6 +167,10 @@ function connectToSession(sessionId, isHost = false) {
         hostId.value = msg.leaderboard[0].userId;
       }
     }
+
+    if (msg.type === "start") {
+      router.push(`/juego-multi/${exercici}/${msg.sessionId}`);
+    }
   });
 
   socket.addEventListener("close", () => {
@@ -194,7 +198,12 @@ function sortirManual() {
 }
 
 function iniciarPartida() {
-  router.push(`/joc-solo/${exercici}`);
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "start",
+      sessionId: codiSala.value,
+    }));
+  }
 }
 
 function tornarEnrere() {

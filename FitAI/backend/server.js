@@ -118,6 +118,20 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        case 'start': {
+          const { sessionId } = message;
+          if (!sessionId || !sessions[sessionId]) return;
+
+          console.log(`Partida iniciada a la sessió ${sessionId}`);
+
+          broadcastToSession(sessionId, {
+            type: 'start',
+            sessionId
+          });
+          break;
+        }
+
+
         case 'update': {
           if (
             currentSessionId &&
