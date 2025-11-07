@@ -80,17 +80,104 @@
           No s'han trobat exercicis amb aquest nom. 🤖
         </div>
       </v-container>
-    </v-main>
+
+      <v-divider class="divider-glow mx-auto my-8"></v-divider>
+
+      <v-container
+        class="pa-0 pa-sm-4 mb-10"
+        :style="{ width: $vuetify.display.mobile ? '100%' : '800px' }"
+      >
+        <h2 class="text-h4 text-center mb-6 text-white ranking-title">
+          🏆 Clasificación Global
+        </h2>
+        <v-data-table
+          :headers="rankingHeaders"
+          :items="sortedRanking"
+          :items-per-page="-1"
+          class="elevation-12 ranking-table"
+          density="comfortable"
+          hide-default-footer
+          :mobile="$vuetify.display.mobile"
+          :no-data-text="'Cargando clasificación...'"
+        >
+          <template #item.pos="{ index }">
+            <span :class="['font-weight-bold', getRankClass(index)]">{{ index + 1 }}</span>
+          </template>
+          <template #item.puntos="{ value }">
+            <span class="font-weight-bold text-blue-lighten-2">{{ value.toLocaleString() }}</span>
+          </template>
+        </v-data-table>
+        <p class="text-caption text-center mt-4 text-white text-opacity-75">
+            *La clasificación se actualiza en tiempo real al cargar los datos de la base de datos.
+        </p>
+      </v-container>
+      </v-main>
   </v-app>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue' // onMounted se mantiene para el placeholder
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const searchQuery = ref('')
 
+// --- LÓGICA DE CLASIFICACIÓN ---
+
+const rankingHeaders = [
+  { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
+  { title: 'Jugador', key: 'jugador', align: 'start' },
+  { title: 'Puntos', key: 'puntos', align: 'end' },
+]
+
+// **Este array es donde debes cargar los datos de tu base de datos.**
+// La estructura de cada elemento debe ser: { jugador: 'Nombre', puntos: 12345 }
+const rankingData = ref([])
+
+// Función de ejemplo para cargar los datos de tu base de datos
+const loadRankingData = async () => {
+    // Ejemplo de cómo cargarías los datos (DEBES REEMPLAZAR ESTO)
+    try {
+        // const response = await fetch('/api/ranking-global');
+        // const data = await response.json();
+        
+        // Simulación de datos cargados para que veas el formato (borrar cuando uses tu DB)
+        const mockDataFromDB = [
+            { jugador: 'NeoFitMaster', puntos: 15400 },
+            { jugador: 'CyberLifter', puntos: 12100 },
+            { jugador: 'Atheos', puntos: 9850 },
+            { jugador: 'RepsPro', puntos: 7320 },
+            { jugador: 'IronLegs', puntos: 6990 },
+        ];
+        
+        rankingData.value = mockDataFromDB; // Asigna los datos a la variable reactiva
+    } catch (error) {
+        console.error('Error al cargar la clasificación:', error);
+    }
+}
+
+// Clasificación ordenada por puntos (máximo primero)
+const sortedRanking = computed(() => {
+  // Crea una copia para no mutar el original antes de ordenar
+  return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
+})
+
+// Clases para resaltar las primeras posiciones
+const getRankClass = (index) => {
+  if (index === 0) return 'text-amber-lighten-2 text-h5' // Oro
+  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' // Plata
+  if (index === 2) return 'text-brown-lighten-2' // Bronce
+  return 'text-white'
+}
+
+// Llama a la función para cargar los datos cuando el componente se monta
+onMounted(() => {
+    // LLAMA AQUÍ A TU FUNCIÓN REAL DE CARGA DE DATOS
+    loadRankingData(); 
+})
+
+
+// --- DATOS Y LÓGICA DE EJERCICIOS (existente) ---
 const exercicis = [
 
   {
@@ -103,7 +190,7 @@ const exercicis = [
     nom: 'Squats',
     label: 'Squats',
     imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
-    descripcio: 'Enforteix cames i glutis amb moviment controlat i profund.',
+    descripcio: 'Enforteix cames i glutis amb moviment controlat y profund.',
   },
   {
     nom: 'Salts',
@@ -112,7 +199,7 @@ const exercicis = [
     descripcio: 'Millora la potència explosiva i la coordinació.',
   },
   {
-    nom: 'Abdominles',
+    nom: 'Abdominals',
     label: 'Abdominals',
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
@@ -289,6 +376,75 @@ const anarAExercici = (nom) => {
 /* Estilo de los iconos (lupa y limpiar) */
 .search-bar .v-icon {
   color: #8b5cf6 !important; /* Color neón morado para los iconos */
+}
+
+/* ==================================== */
+/* ======== RANKING TABLE ======== */
+/* ==================================== */
+
+.ranking-title {
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+    letter-spacing: 1.5px;
+}
+
+.ranking-table {
+    border-radius: 12px;
+    background-color: rgba(30, 30, 47, 0.9) !important; /* Fondo más oscuro */
+    color: white !important;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* Encabezados de la tabla */
+.ranking-table :deep(th) {
+    background-color: rgba(139, 92, 246, 0.2) !important;
+    color: #ffffff !important;
+    font-weight: bold !important;
+    letter-spacing: 1px;
+}
+
+/* Filas de la tabla */
+.ranking-table :deep(tr) {
+    transition: background-color 0.3s ease;
+}
+
+/* Efecto hover en filas */
+.ranking-table :deep(tr:hover) {
+    background-color: rgba(59, 130, 246, 0.15) !important; /* Azul neón suave en hover */
+}
+
+/* Separación entre filas */
+.ranking-table :deep(td) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    color: white;
+}
+
+/* Estilo para las primeras posiciones */
+.text-amber-lighten-2 {
+    color: #ffb74d !important; /* Dorado */
+    text-shadow: 0 0 8px #ffb74d;
+}
+.text-blue-grey-lighten-2 {
+    color: #b0bec5 !important; /* Plateado */
+    text-shadow: 0 0 6px #b0bec5;
+}
+.text-brown-lighten-2 {
+    color: #a1887f !important; /* Bronce */
+    text-shadow: 0 0 5px #a1887f;
+}
+
+/* Estilo para el campo de puntos (destacado) */
+.text-blue-lighten-2 {
+    color: #81d4fa !important;
+    text-shadow: 0 0 6px #81d4fa;
+}
+
+/* Asegura que el texto de las primeras posiciones tenga el tamaño definido en el script */
+.ranking-table :deep(tr:nth-child(1) .v-data-table__td:first-child span) {
+    font-size: 1.5rem; /* Ajuste para el primero */
+}
+.ranking-table :deep(tr:nth-child(2) .v-data-table__td:first-child span) {
+    font-size: 1.25rem; /* Ajuste para el segundo */
 }
 
 /* ==================================== */
