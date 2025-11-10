@@ -1,18 +1,15 @@
 <template>
   <v-app>
     <v-main
-      class="d-flex flex-column align-center pa-4 bg-fitai-bright"
-      style="min-height: 100vh"
+      class="d-flex flex-column align-center pa-4 bg-fitai-bright min-h-screen"
     >
       <div class="header-content pt-4 pb-6 w-100">
-        <h1 class="nextrep-title mb-6">
-          <span class="next">Next</span><span class="rep">Rep</span>
-        </h1>
+        <h1 class="nextrep-title mb-6"><span class="next">Next</span><span class="rep">Rep</span></h1>
 
         <div class="d-flex justify-center px-4">
           <v-text-field
             v-model="searchQuery"
-            placeholder="Buscar ejercicio..."
+            placeholder="Buscar exercici..."
             variant="solo-filled"
             hide-details
             clearable
@@ -21,8 +18,7 @@
             density="comfortable"
             flat
             :style="{ width: $vuetify.display.mobile ? '95%' : '500px' }"
-          ></v-text-field>
-        </div>
+          ></v-text-field></div>
       </div>
 
       <v-divider class="divider-glow mx-auto mb-8"></v-divider>
@@ -42,10 +38,8 @@
             lg="3"
             class="d-flex justify-center"
           >
-            <v-card
-              class="exercise-card elevation-12"
-              @click="anarAExercici(exercici.nom)"
-            >
+            <v-card class="exercise-card elevation-12" @click="anarAExercici(exercici.nom)">
+              
               <v-img
                 :src="exercici.imatge"
                 :alt="exercici.label"
@@ -53,11 +47,10 @@
                 cover
                 class="transition-img"
               />
-
               <v-overlay
                 contained
                 scrim="#1a2238"
-                class="d-none d-sm-flex align-center justify-center text-center pa-3"
+                class="d-flex align-center justify-center text-center pa-3"
                 activator="parent"
                 location="top"
               >
@@ -65,7 +58,6 @@
                   {{ exercici.descripcio }}
                 </p>
               </v-overlay>
-
               <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-3">
                 {{ exercici.label }}
               </div>
@@ -80,25 +72,23 @@
           No s'han trobat exercicis amb aquest nom. 🤖
         </div>
       </v-container>
-
       <v-divider class="divider-glow mx-auto my-8"></v-divider>
-
       <v-container
         class="pa-0 pa-sm-4 mb-10"
         :style="{ width: $vuetify.display.mobile ? '100%' : '800px' }"
       >
         <h2 class="text-h4 text-center mb-6 text-white ranking-title">
-          🏆 Clasificación Global
+          🏆 Classificació Global
         </h2>
         <v-data-table
-          :headers="rankingHeaders"
-          :items="sortedRanking"
+          :headers="rankingHeaders" :items="sortedRanking"
           :items-per-page="-1"
           class="elevation-12 ranking-table"
           density="comfortable"
           hide-default-footer
           :mobile="$vuetify.display.mobile"
-          :no-data-text="'Cargando clasificación...'"
+          :loading="rankingLoading"
+          :no-data-text="'No hi ha dades al rànquing.'"
         >
           <template #item.pos="{ index }">
             <span :class="['font-weight-bold', getRankClass(index)]">{{ index + 1 }}</span>
@@ -108,113 +98,100 @@
           </template>
         </v-data-table>
         <p class="text-caption text-center mt-4 text-white text-opacity-75">
-            *La clasificación se actualiza en tiempo real al cargar los datos de la base de datos.
+            *La classificació mostra els 10 millors jugadors per repeticions totals.
         </p>
       </v-container>
-      </v-main>
+    </v-main>
   </v-app>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue' // onMounted se mantiene para el placeholder
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const searchQuery = ref('')
 
-// --- LÓGICA DE CLASIFICACIÓN ---
-
+// --- LÒGICA DE CLASSIFICACIÓ (CORREGIDA) ---
 const rankingHeaders = [
-  { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
-  { title: 'Jugador', key: 'jugador', align: 'start' },
-  { title: 'Puntos', key: 'puntos', align: 'end' },
+  { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
+  { title: 'Jugador', key: 'jugador', align: 'start' },
+  { title: 'Punts', key: 'puntos', align: 'end' },
 ]
 
-// **Este array es donde debes cargar los datos de tu base de datos.**
-// La estructura de cada elemento debe ser: { jugador: 'Nombre', puntos: 12345 }
 const rankingData = ref([])
+const rankingLoading = ref(true)
 
-// Función de ejemplo para cargar los datos de tu base de datos
 const loadRankingData = async () => {
-    // Ejemplo de cómo cargarías los datos (DEBES REEMPLAZAR ESTO)
-    try {
-        // const response = await fetch('/api/ranking-global');
-        // const data = await response.json();
-        
-        // Simulación de datos cargados para que veas el formato (borrar cuando uses tu DB)
-        const mockDataFromDB = [
-            { jugador: 'NeoFitMaster', puntos: 15400 },
-            { jugador: 'CyberLifter', puntos: 12100 },
-            { jugador: 'Atheos', puntos: 9850 },
-            { jugador: 'RepsPro', puntos: 7320 },
-            { jugador: 'IronLegs', puntos: 6990 },
-        ];
-        
-        rankingData.value = mockDataFromDB; // Asigna los datos a la variable reactiva
-    } catch (error) {
-        console.error('Error al cargar la clasificación:', error);
+    rankingLoading.value = true;
+    try {
+         const response = await fetch('/api/ranking-global');
+        if (!response.ok) throw new Error('No es pot carregar el ranking');
+         const data = await response.json();
+         rankingData.value = data;
+    } catch (error) {
+        console.error('Error al carregar la classificació:', error);
+        rankingData.value = []; // Posa-ho buit si hi ha un error
+    } finally {
+        rankingLoading.value = false;
     }
 }
 
-// Clasificación ordenada por puntos (máximo primero)
 const sortedRanking = computed(() => {
-  // Crea una copia para no mutar el original antes de ordenar
-  return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
+  // El servidor ja ho dóna ordenat, però per si de cas
+  return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
 })
 
-// Clases para resaltar las primeras posiciones
 const getRankClass = (index) => {
-  if (index === 0) return 'text-amber-lighten-2 text-h5' // Oro
-  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' // Plata
-  if (index === 2) return 'text-brown-lighten-2' // Bronce
-  return 'text-white'
+  if (index === 0) return 'text-amber-lighten-2 text-h5'
+  if (index === 1) return 'text-blue-grey-lighten-2 text-h6'
+  if (index === 2) return 'text-brown-lighten-2'
+  return 'text-white'
 }
 
-// Llama a la función para cargar los datos cuando el componente se monta
 onMounted(() => {
-    // LLAMA AQUÍ A TU FUNCIÓN REAL DE CARGA DE DATOS
-    loadRankingData(); 
+    loadRankingData(); 
 })
 
 
-// --- DATOS Y LÓGICA DE EJERCICIOS (existente) ---
+// --- DATOS Y LÓGICA DE EJERCICIOS (Sense canvis) ---
 const exercicis = [
-  {
-    nom: 'Flexions',
-    label: 'Flexions',
-    imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
-    descripcio: 'Treballa pit, braços i espatlles amb aquest exercici clàssic.',
-  },
-  {
-    nom: 'Squats',
-    label: 'Squats',
-    imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
-    descripcio: 'Enforteix cames i glutis amb moviment controlat y profund.',
-  },
-  {
-    nom: 'Salts',
-    label: 'Salts',
-    imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
-    descripcio: 'Millora la potència explosiva i la coordinació.',
-  },
-  {
-    nom: 'Abdominals',
-    label: 'Abdominals',
-    imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
-    descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
-  },
+  {
+    nom: 'Flexions',
+    label: 'Flexions',
+    imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
+    descripcio: 'Treballa pit, braços i espatlles.',
+  },
+  {
+    nom: 'Squats',
+    label: 'Squats',
+    imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
+    descripcio: 'Enforteix cames i glutis.',
+  },
+  {
+    nom: 'Salts',
+    label: 'Salts',
+    imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
+    descripcio: 'Millora la potència explosiva.',
+  },
+  {
+    nom: 'Abdominals',
+    label: 'Abdominals',
+    imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
+    descripcio: 'Tonifica el teu nucli.',
+  },
 ]
 
 const filteredExercicis = computed(() =>
-  exercicis.filter((e) =>
-    (e.label + ' ' + e.descripcio)
-      .toLowerCase()
-      .includes(searchQuery.value.trim().toLowerCase())
-  )
+  exercicis.filter((e) =>
+    (e.label + ' ' + e.descripcio)
+      .toLowerCase()
+      .includes(searchQuery.value.trim().toLowerCase())
+  )
 )
 
 const anarAExercici = (nom) => {
-  router.push({ name: 'ModoJuego', params: { ejercicio: nom } })
+  router.push({ name: 'ModoJuego', params: { ejercicio: nom } })
 }
 </script>
 

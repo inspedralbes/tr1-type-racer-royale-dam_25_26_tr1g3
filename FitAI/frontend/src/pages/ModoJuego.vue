@@ -78,6 +78,7 @@
   </v-app>
 </template>
 
+
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -89,38 +90,36 @@ const errorMessage = ref(null)
 const exercici = route.params.ejercicio
 
 const nombres = {
-  Flexions: 'Flexions',
-  Squats: 'Squats',
-  Salts: 'Salts',
-  Abdominals: 'Abdominals',
+  Flexions: 'Flexions',
+  Squats: 'Squats',
+  Salts: 'Salts',
+  Abdominals: 'Abdominals',
 }
 
 const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
 
 const jugarSol = async () => {
-  errorMessage.value = null
-  try {
-
-    // NOTA: Esta llamada fallará en el entorno de Canvas si el servidor 4000 no existe.
-    // Usamos console.error en lugar de alert()
-    const res = await fetch('/api/create-session')
-
-    if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    const data = await res.json()
-    router.push({
-      name: 'JuegoSolo',
-      params: { ejercicio: exercici, sessionId: data.sessionId },
-    })
-  } catch (err) {
-    console.error('Error al intentar crear la sessió:', err.message)
-    errorMessage.value = `No s'ha pogut crear la sessió (Error de connexió). ${err.message}`
-  }
+  errorMessage.value = null
+  try {
+    // Aquesta API només genera un ID únic (UUID)
+    const res = await fetch('/api/create-session')
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
+    const data = await res.json()
+    
+    // CORREGIT: Redirigeix al nou component 'Joc.vue'
+    router.push({
+      name: 'Joc', 
+      params: { ejercicio: exercici, sessionId: data.sessionId },
+    })
+  } catch (err) {
+    console.error('Error al intentar crear la sessió solo:', err.message)
+    errorMessage.value = `No s'ha pogut crear la sessió (Error de connexió). ${err.message}`
+  }
 }
 
 const jugarMultijugador = () => {
-  router.push({ name: 'Multiplayer', params: { ejercicio: exercici } })
+  router.push({ name: 'Multiplayer', params: { ejercicio: exercici } })
 }
 </script>
 

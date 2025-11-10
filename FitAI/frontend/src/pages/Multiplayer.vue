@@ -3,7 +3,7 @@
     <v-main class="d-flex flex-column align-center justify-center pa-8 bg-fitai-bright" style="min-height: 100vh">
       <v-card class="pa-6 rounded-2xl elevation-12 glass-card" max-width="500">
         <v-card-title class="text-h4 text-center font-weight-bold nextrep-title mb-4">
-          <span class="next">Multijugador —</span> <span class="rep">{{ exercici }}</span>
+          <span class="next">Multijugador —</span> <span class="rep">{{ exerciciLabel }}</span>
         </v-card-title>
 
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
@@ -38,23 +38,22 @@
             <p class="text-h6 font-weight-medium mb-1">
               Sala: <strong class="rep">{{ codiSala }}</strong>
             </p>
-
             <p class="text-body-2 text-grey-lighten-2 mb-4">
               Jugadors connectats: <strong>{{ jugadors.length }}</strong>
             </p>
 
             <v-card class="rounded-xl mb-4 pa-2 elevation-6 glass-list">
               <v-list density="compact">
-                <v-list-item v-for="j in jugadors" :key="j" class="rounded-lg my-1"
-                  :class="j === hostId ? 'bg-host' : 'bg-player'">
+                <v-list-item v-for="j in jugadors" :key="j.userId" class="rounded-lg my-1"
+                  :class="j.userId === hostId ? 'bg-host' : 'bg-player'">
                   <v-list-item-content class="d-flex align-center justify-space-between text-white">
                     <span class="text-body-1">
-                      <v-icon v-if="j === hostId" color="#8b5cf6" class="mr-2">
+                      <v-icon v-if="j.userId === hostId" color="#8b5cf6" class="mr-2">
                         mdi-crown
                       </v-icon>
-                      {{ j }}
+                                            {{ j.userName }} 
                     </span>
-                    <span v-if="j === userId" class="text-caption text-grey-lighten-1">
+                    <span v-if="j.userId === userId" class="text-caption text-grey-lighten-1">
                       (Tu)
                     </span>
                   </v-list-item-content>
@@ -63,8 +62,7 @@
             </v-card>
 
             <v-btn v-if="userId === hostId" class="neon-btn mb-3" variant="elevated" size="large" block
-              :disabled="jugadors.length < 2" @click="iniciarPartida">
-              <v-icon start>mdi-play-circle</v-icon>
+              :disabled="jugadors.length < 1" @click="iniciarPartida">               <v-icon start>mdi-play-circle</v-icon>
               Iniciar partida
             </v-btn>
 
@@ -85,134 +83,155 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount } from "vue";
+import { ref, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from '@/stores/authStore'; 
+import { useAuthStore } from '@/stores/authStore';
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore(); 
-const exercici = route.params.ejercicio;
+const authStore = useAuthStore();
+const exercici = route.params.ejercicio; // Només el nom (Ex: "Flexions")
 
+const noms = {
+  Flexions: 'Flexions',
+  Squats: 'Squats',
+  Salts: 'Salts',
+  Abdominals: 'Abdominals',
+}
+const exerciciLabel = computed(() => noms[exercici] || 'Exercici');
+
+// URL del WebSocket (corregida)
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsHost = window.location.host; 
-const WS_URL = `${wsProtocol}//${wsHost}/ws`; 
+const wsHost = window.location.host;
+const WS_URL = `${wsProtocol}//${wsHost}/ws`;
 
 let socket = null;
 const aSala = ref(false);
-const codiSala = ref("");
+const codiSala = ref(""); // Aquest serà el sessionId (Ex: "Flexions-ABCDE")
 const codiSalaInput = ref("");
-const jugadors = ref([]);
-const hostId = ref("");
+const jugadors = ref([]); // Ara serà un array d'objectes { userId, userName }
+const hostId = ref(null); // Serà un ID numèric
 const errorMsg = ref("");
 
-const userId = authStore.userName; 
+// --- CORRECCIÓ D'IDENTITAT ---
+const userId = authStore.userId; // ID numèric de l'usuari
+const userName = authStore.userName; // Nom de l'usuari
 
 onBeforeUnmount(() => {
-  sortirSala();
-  if (socket) socket.close();
+  sortirSala();
+  if (socket) socket.close();
 });
 
 function generarCodiSala() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let codi = "";
-  for (let i = 0; i < 5; i++) {
-    codi += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return codi;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let codi = "";
+  for (let i = 0; i < 5; i++) {
+    codi += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return codi;
 }
 
 async function crearSala() {
-  try {
-    const codi = generarCodiSala();
-    const sessionId = `${exercici}-${codi}`;
-    connectToSession(sessionId, true);
-  } catch (err) {
-    errorMsg.value = "Error en crear la sala.";
-  }
+  try {
+    const codi = generarCodiSala();
+    // El sessionId es compon de l'exercici + el codi
+    const sessionId = `${exercici}-${codi}`;
+    connectToSession(sessionId, true);
+  } catch (err) {
+    errorMsg.value = "Error en crear la sala.";
+  }
 }
 
 async function unirSala() {
-  if (!codiSalaInput.value.trim()) return;
-  const sessionId = `${exercici}-${codiSalaInput.value.trim().toUpperCase()}`;
-  errorMsg.value = "";
+  if (!codiSalaInput.value.trim()) return;
+  // Construeix el sessionId complet
+  const sessionId = `${exercici}-${codiSalaInput.value.trim().toUpperCase()}`;
+  errorMsg.value = "";
 
-  try {
-    const res = await fetch(`/api/check-session/${sessionId}`);
-
-    if (!res.ok) {
-      errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
-      sortirSala();
-      return;
-    }
-
-    connectToSession(sessionId);
-  } catch (err) {
-    errorMsg.value = "Error en la connexió amb el servidor.";
-    sortirSala();
-  }
+  try {
+    // Comprovem si la sessió existeix al servidor (en memòria)
+    const res = await fetch(`/api/check-session/${sessionId}`);
+    if (!res.ok) {
+      errorMsg.value = "Sala no trobada. Comprova el codi.";
+      sortirSala();
+      return;
+    }
+    connectToSession(sessionId, false);
+  } catch (err) {
+    errorMsg.value = "Error en la connexió amb el servidor.";
+    sortirSala();
+  }
 }
 
 function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL); 
+  socket = new WebSocket(WS_URL);
 
-  socket.addEventListener("open", () => {
-    codiSala.value = sessionId;
-    aSala.value = true;
-    hostId.value = isHost ? userId : "";
-    socket.send(JSON.stringify({ type: "join", sessionId, userId }));
-  });
+  socket.addEventListener("open", () => {
+    codiSala.value = sessionId;
+    aSala.value = true;
+    hostId.value = isHost ? userId : null; // Posa l'ID numèric
+    
+    // Envia l'usuari real
+    socket.send(JSON.stringify({ 
+        type: "join", 
+        sessionId, 
+        userId: userId, 
+        userName: userName,
+        exercici: exercici // Envia l'exercici
+    }));
+  });
 
-  socket.addEventListener("message", (event) => {
-    const msg = JSON.parse(event.data);
+  socket.addEventListener("message", (event) => {
+    const msg = JSON.parse(event.data);
 
-    if (msg.type === "leaderboard") {
-      jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderboard.length > 0) { 
-        hostId.value = msg.leaderboard[0].userId;
-      }
-    }
+    if (msg.type === "leaderboard") {
+      jugadors.value = msg.leaderboard; // Ara rep [{ userId, userName, reps }, ...]
+      if (!hostId.value && msg.leaderboard.length > 0) {
+        // El primer jugador de la llista (el creador) és el host
+        hostId.value = msg.leaderboard[0].userId; 
+      }
+    }
 
-    if (msg.type === "start") {
-      router.push(`/juego-multi/${exercici}/${msg.sessionId}`);
-    }
-  });
+    if (msg.type === "start") {
+      // CORREGIT: Redirigeix a la nova ruta 'Joc.vue'
+      router.push(`/joc/${exercici}/${msg.sessionId}`);
+    }
+  });
 
-  socket.addEventListener("close", () => {
-    aSala.value = false;
-  });
+  socket.addEventListener("close", () => {
+    aSala.value = false;
+  });
 }
 
 function sortirSala() {
-  if (socket) {
-    try {
-      socket.send(JSON.stringify({ type: "leave" }));
-      socket.close();
-    } catch (e) { }
-    socket = null;
-  }
-
-  aSala.value = false;
-  codiSala.value = "";
-  jugadors.value = [];
-  hostId.value = "";
+  if (socket) {
+    try {
+      socket.send(JSON.stringify({ type: "leave" }));
+      socket.close();
+    } catch (e) { /* Ignora errors si ja està tancat */ }
+    socket = null;
+  }
+  aSala.value = false;
+  codiSala.value = "";
+  jugadors.value = [];
+  hostId.value = null;
 }
 
 function sortirManual() {
-  sortirSala();
+  sortirSala();
 }
 
 function iniciarPartida() {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: "start",
-      sessionId: codiSala.value,
-    }));
-  }
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "start",
+      sessionId: codiSala.value,
+    }));
+  }
 }
 
 function tornarEnrere() {
-  router.back();
+  router.back();
 }
 </script>
 
