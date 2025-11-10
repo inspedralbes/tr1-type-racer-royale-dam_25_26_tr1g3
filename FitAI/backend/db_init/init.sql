@@ -8,14 +8,19 @@ CREATE TABLE IF NOT EXISTS usuaris (
     data_registre TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 
+-- ✅ TAULA SALES CORREGIDA
+-- 
 CREATE TABLE IF NOT EXISTS sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     creador_id INT NOT NULL,
     codi_acces CHAR(6) NOT NULL UNIQUE,
+    exercici VARCHAR(100) NOT NULL, -- <-- AQUESTA ÉS LA LÍNIA QUE CAL AFEGIR
     estat ENUM('esperant', 'en_curs', 'finalitzada') NOT NULL DEFAULT 'esperant',
     data_creacio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (creador_id) REFERENCES usuaris(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 CREATE TABLE IF NOT EXISTS participacions (
     usuari_id INT NOT NULL,

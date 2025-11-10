@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import pool from './config/database.js'; // Assegura't que la connexió a la DB funciona
+import pool from './config/database.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -40,8 +40,10 @@ server.on('upgrade', (request, socket, head) => {
 // Objecte en memòria per les sessions ACTIVES
 const sessions = {};
 
-// --- NOVES FUNCIONS DE BASE DE DADES ---
+// --- FUNCIONS DE BASE DE DADES (CORREGIDES) ---
 
+// ⚠️ RECORDA EXECUTAR AIXÒ A LA TEVA DB 1 VEGADA:
+// ALTER TABLE sales ADD COLUMN exercici VARCHAR(100) NOT NULL AFTER codi_acces;
 async function guardarResultats(sessionId) {
     const session = sessions[sessionId];
     if (!session || !session.leaderboard || session.leaderboard.length === 0 || !session.creadorId) {
@@ -50,7 +52,6 @@ async function guardarResultats(sessionId) {
     }
 
     const { exercici, creadorId, leaderboard } = session;
-    // El codi d'accés només existeix per a sales "multi". Per a "solo" (UUID), no el guardem.
     const codiPartit = sessionId.split('-');
     const codiAcces = (codiPartit.length > 1 && codiPartit[0].toLowerCase() === exercici.toLowerCase()) ? codiPartit[1] : uuidv4().substring(0, 5);
 
@@ -59,7 +60,7 @@ async function guardarResultats(sessionId) {
         client = await pool.getConnection();
         await client.beginTransaction();
 
-        // 1. Crear la sala a la DB
+        // 1. Crear la sala a la DB (El teu codi ja incloïa 'exercici', la DB ha d'estar actualitzada)
         const [salaResult] = await client.execute(
             'INSERT INTO sales (creador_id, codi_acces, exercici, estat) VALUES (?, ?, ?, ?)',
             [creadorId, codiAcces, exercici, 'finalitzada']
@@ -70,15 +71,15 @@ async function guardarResultats(sessionId) {
         const usuarisUpdates = [];
 
         for (const jugador of leaderboard) {
-            // 2. Afegir cada participació
+            // ✅ CORRECCIÓ 3: S'ha afegit 'exercici' al INSERT de participacions
             participacionsInserts.push(
                 client.execute(
-                    'INSERT INTO participacions (usuari_id, sala_id, repeticions) VALUES (?, ?, ?)',
-                    [jugador.userId, sala_id, jugador.reps]
+                    'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?)',
+                    [jugador.userId, sala_id, exercici, jugador.reps]
                 )
             );
 
-            // 3. Actualitzar els totals de cada usuari (només si ha fet repeticions)
+            // 3. Actualitzar els totals de cada usuari
             if (jugador.reps > 0) {
                 usuarisUpdates.push(
                     client.execute(
@@ -119,8 +120,8 @@ function calcularLeaderboard(sessionId) {
     
     const leaderboard = Object.entries(session.participants)
         .map(([userId, data]) => ({
-            userId: parseInt(userId, 10), // Guardem ID numèric
-            userName: data.userName,     // Guardem Nom
+            userId: parseInt(userId, 10),
+            userName: data.userName,
             reps: data.reps
         }))
         .sort((a, b) => b.reps - a.reps);
@@ -142,7 +143,7 @@ function broadcastToSession(sessionId, message) {
 wss.on('connection', (ws) => {
     console.log('Nou client WebSocket connectat');
     let currentSessionId = null;
-    let currentUserId = null; // Ara serà l'ID numèric
+    let currentUserId = null;
 
     function handleLeave() {
         if (currentSessionId && currentUserId && sessions[currentSessionId]?.participants[currentUserId]) {
@@ -158,7 +159,6 @@ wss.on('connection', (ws) => {
                     sessionId: oldSessionId,
                     leaderboard
                 });
-                // Neteja la sessió (i la desa a la DB) si està buida
                 netejarSessio(oldSessionId).catch(err => console.error("Error en netejarSessio:", err));
             }
             
@@ -174,30 +174,32 @@ wss.on('connection', (ws) => {
 
             switch (message.type) {
                 case 'join': {
-                    // ARA REBEM ID NUMÈRIC I NOM
-                    const { sessionId, userId, userName } = message;
+                    const { sessionId, userId, userName, exercici: exerciciClient } = message; // S'ha afegit exerciciClient
 
                     if (!sessionId || !userId || !userName) {
                         return ws.send(JSON.stringify({ error: 'sessionId, userId i userName requerits' }));
                     }
 
-                    // Extreure l'exercici del sessionId (p.ex., "Flexions-ABCDE" o "uuid...")
-                    // Per a sessions "solo" (UUID), no tenim l'exercici al nom.
+                    // A les sales "solo" (UUID), l'exercici no està al sessionId, l'agafem del client.
+                    // El teu frontend (Joc.vue) ja l'envia.
                     let exercici;
                     const parts = sessionId.split('-');
-                    // Comprova si la primera part coincideix amb un exercici conegut
                     const exercicisConecuts = ['flexions', 'squats', 'salts', 'abdominals'];
+                    
                     if (exercicisConecuts.includes(parts[0].toLowerCase())) {
                         exercici = parts[0];
                     } else {
-                        // Per a "solo" (UUID), agafem l'exercici de la ruta (que no tenim aquí... Hauríem de passar-lo)
-                        // SOLUCIÓ: El frontend (Joc.vue) el passarà al missatge 'join'
-                        exercici = message.exercici; 
+                        // Per a "solo" (UUID), agafem l'exercici del missatge 'join'
+                        exercici = exerciciClient; 
+                    }
+
+                    if (!exercici) {
+                         return ws.send(JSON.stringify({ error: 'Exercici no especificat per a aquesta sessió.' }));
                     }
 
                     if (!sessions[sessionId]) {
                         sessions[sessionId] = {
-                            exercici: exercici.toLowerCase(), // Guardem l'exercici
+                            exercici: exercici.toLowerCase(),
                             creadorId: userId,
                             participants: {},
                             leaderboard: []
@@ -212,10 +214,9 @@ wss.on('connection', (ws) => {
                         return ws.send(JSON.stringify({ type: 'error', message: 'La sessió està plena (màxim 4 jugadors).' }));
                     }
 
-                    // Fem servir l'ID numèric com a clau
                     session.participants[userId] = { ws, reps: 0, userName: userName };
                     currentSessionId = sessionId;
-                    currentUserId = userId; // ID numèric
+                    currentUserId = userId;
 
                     const leaderboard = calcularLeaderboard(sessionId);
                     broadcastToSession(sessionId, { type: 'leaderboard', sessionId, leaderboard });
@@ -230,13 +231,16 @@ wss.on('connection', (ws) => {
                     break;
                 }
 
-                case 'update': {
+                // ✅ CORRECCIÓ 1: S'ha canviat 'update' per 'rep_completed'
+                case 'rep_completed': { 
                     if (
                         currentSessionId &&
                         currentUserId &&
                         sessions[currentSessionId]?.participants[currentUserId]
                     ) {
-                        sessions[currentSessionId].participants[currentUserId].reps = message.reps || 0;
+                        // Incrementa el comptador al servidor
+                        sessions[currentSessionId].participants[currentUserId].reps += 1;
+                        
                         const leaderboard = calcularLeaderboard(currentSessionId);
                         broadcastToSession(currentSessionId, { type: 'leaderboard', sessionId: currentSessionId, leaderboard });
                     }
@@ -264,10 +268,9 @@ wss.on('connection', (ws) => {
     });
 });
 
-// --- RUTAS API (MODIFICADES I NOVES) ---
+// --- RUTAS API (Sense canvis, però s'inclouen) ---
 
 app.post('/api/register', async (req, res) => {
-    // ... (El teu codi de registre existent està bé)
     const { nom, email, password } = req.body;
     if (!nom || !email || !password) {
         return res.status(400).json({ message: 'Tots els camps són obligatoris' });
@@ -290,7 +293,6 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    // ... (El teu codi de login existent està bé)
     const { email: loginInput, password } = req.body;
     if (!loginInput || !password) {
         return res.status(400).json({ message: 'Usuari/Email i contrasenya obligatoris' });
@@ -309,7 +311,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Credencials incorrectes' });
         }
         req.session.user = {
-            id: user.id, // <--- GUARDEM L'ID NUMÈRIC
+            id: user.id,
             nom: user.nom,
             email: user.email,
         };
@@ -321,7 +323,6 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-    // ... (El teu codi /api/me està bé)
     if (req.session.user) {
         res.json(req.session.user);
     } else {
@@ -330,7 +331,6 @@ app.get('/api/me', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-    // ... (El teu codi /api/logout està bé)
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ message: 'No s\'ha pogut tancar la sessió' });
@@ -340,10 +340,8 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
-// Aquesta ruta es manté per al "Mode Individual"
 app.get('/api/create-session', (req, res) => {
-    const sessionId = uuidv4(); // Genera un ID únic per a la partida "solo"
-    // No creem la sessió aquí, es crearà al 'join' del WebSocket
+    const sessionId = uuidv4();
     console.log(`Nova sessió de sala "solo" generada: ${sessionId}`);
     res.json({ sessionId });
 });
@@ -353,12 +351,10 @@ app.get('/api/check-session/:sessionId', (req, res) => {
     if (sessions[sessionId]) {
         return res.status(200).json({ exists: true });
     } else {
-        // PERMILLORA: Podríem comprovar si la sala existeix a la DB (però ja està finalitzada)
         return res.status(404).json({ exists: false });
     }
 });
 
-// --- NOVA RUTA PEL RÀNQUING GLOBAL ---
 app.get('/api/ranking-global', async (req, res) => {
     try {
         const [rows] = await pool.execute(
