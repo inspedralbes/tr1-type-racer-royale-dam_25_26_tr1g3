@@ -100,18 +100,20 @@ const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
 const jugarSol = async () => {
   errorMessage.value = null
   try {
-
-    // NOTA: Esta llamada fallará en el entorno de Canvas si el servidor 4000 no existe.
-    // Usamos console.error en lugar de alert()
-    const res = await fetch('/api/create-session')
+    // Utilitzem la nova API per crear una sala a la BBDD
+    const res = await fetch('/api/sala/crear', { method: 'POST' })
 
     if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      const errorData = await res.json();
+      throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
     }
+    
     const data = await res.json()
+    
+    // Naveguem a JuegoSolo amb el 'codi_acces' rebut de la BBDD
     router.push({
       name: 'JuegoSolo',
-      params: { ejercicio: exercici, sessionId: data.sessionId },
+      params: { ejercicio: exercici, codi_acces: data.codi_acces },
     })
   } catch (err) {
     console.error('Error al intentar crear la sessió:', err.message)

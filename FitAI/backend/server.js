@@ -1,15 +1,15 @@
 import express from 'express';
-import session from 'express-session';        
-import { WebSocketServer, WebSocket } from 'ws'; 
-import { v4 as uuidv4 } from 'uuid';           
-import 'dotenv/config';                        
-import bcrypt from 'bcryptjs';                
-import pool from './config/database.js';                 
+import session from 'express-session';
+import { WebSocketServer, WebSocket } from 'ws';
+// import { v4 as uuidv4 } from 'uuid'; // Ja no el necessitem per a les sales
+import 'dotenv/config';
+import bcrypt from 'bcryptjs';
+import pool from './config/database.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(express.json()); 
+app.use(express.json());
 app.use(session({
   secret: 'un-secret-molt-molt-segur-canvia-aixo',
   resave: false,
@@ -38,20 +38,12 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
-const sessions = {};
+// Aquest objecte 'sessions' ara només emmagatzema connexions WS actives,
+// no és la font de veritat de l'estat de la sala.
+const sessions = {}; // Estructura: sessions[codi_acces] = { sala_id, participants: { userId: { ws, userName, reps } } }
 
-function calcularLeaderboard(sessionId) {
-  const session = sessions[sessionId];
-  if (!session) return [];
-  const leaderboard = Object.entries(session.participants)
-    .map(([userId, data]) => ({ userId, reps: data.reps }))
-    .sort((a, b) => b.reps - a.reps);
-  session.leaderboard = leaderboard;
-  return leaderboard;
-}
-
-function broadcastToSession(sessionId, message) {
-  const session = sessions[sessionId];
+function broadcastToSession(codi_acces, message) {
+  const session = sessions[codi_acces];
   if (!session) return;
   Object.values(session.participants).forEach(({ ws }) => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -60,120 +52,163 @@ function broadcastToSession(sessionId, message) {
   });
 }
 
-function netejarSessio(sessionId) {
-  const session = sessions[sessionId];
+function broadcastLeaderboard(codi_acces) {
+  const session = sessions[codi_acces];
+  if (!session) return;
+  const leaderboard = Object.entries(session.participants)
+    .map(([userId, data]) => ({
+      userId: parseInt(userId, 10),
+      userName: data.userName,
+      reps: data.reps,
+    }))
+    .sort((a, b) => b.reps - a.reps);
+
+  broadcastToSession(codi_acces, {
+    type: 'leaderboard',
+    codi_acces,
+    leaderboard,
+  });
+}
+
+async function netejarSessio(codi_acces) {
+  const session = sessions[codi_acces];
   if (session && Object.keys(session.participants).length === 0) {
-    delete sessions[sessionId];
-    console.log(`Sessió ${sessionId} eliminada (sense participants)`);
+    delete sessions[codi_acces];
+    console.log(`Sessió ${codi_acces} eliminada (sense participants)`);
+    // Opcional: Marcar la sala com a 'finalitzada' a la BBDD
+    try {
+      await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ? AND estat != ?', ['finalitzada', codi_acces, 'finalitzada']);
+    } catch (error) {
+      console.error('Error al finalitzar la sala a la BBDD:', error);
+    }
   }
 }
 
 wss.on('connection', (ws) => {
   console.log('Nou client WebSocket connectat');
-  let currentSessionId = null;
+  let currentCodiAcces = null;
   let currentUserId = null;
 
-  ws.on('message', (data) => {
+  ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
       console.log('Missatge rebut:', message);
 
       switch (message.type) {
         case 'join': {
-          const { sessionId, userId } = message;
+          const { codi_acces, userId, userName } = message;
 
-          if (!sessionId || !userId) {
-            return ws.send(JSON.stringify({ error: 'sessionId i userId requerits' }));
+          if (!codi_acces || !userId || !userName) {
+            return ws.send(JSON.stringify({ error: 'codi_acces, userId i userName requerits' }));
           }
 
-          if (!sessions[sessionId]) {
-            sessions[sessionId] = { participants: {}, leaderboard: [] };
-            console.log(`Sessió creada: ${sessionId}`);
+          // Si la sessió no existeix en memòria, la inicialitzem des de la BBDD
+          if (!sessions[codi_acces]) {
+            const [rows] = await pool.execute('SELECT id FROM sales WHERE codi_acces = ?', [codi_acces]);
+            if (rows.length === 0) {
+              return ws.send(JSON.stringify({ type: 'error', message: 'La sala no existeix.' }));
+            }
+            sessions[codi_acces] = { sala_id: rows[0].id, participants: {} };
           }
 
-          const session = sessions[sessionId];
+          const session = sessions[codi_acces];
           const numParticipants = Object.keys(session.participants).length;
 
           if (numParticipants >= 4) {
-            console.log(`Sessió ${sessionId} plena (4 jugadors màxim)`);
             return ws.send(JSON.stringify({
               type: 'error',
               message: 'La sessió està plena (màxim 4 jugadors).'
             }));
           }
 
-          if (session.participants[userId]) {
-            return ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Usuari ja connectat en aquesta sessió.'
-            }));
-          }
-
-          session.participants[userId] = { ws, reps: 0 };
-          currentSessionId = sessionId;
+          session.participants[userId] = { ws, userName, reps: 0 };
+          currentCodiAcces = codi_acces;
           currentUserId = userId;
 
-          const leaderboard = calcularLeaderboard(sessionId);
-          broadcastToSession(sessionId, {
-            type: 'leaderboard',
-            sessionId,
-            leaderboard
-          });
+          broadcastLeaderboard(codi_acces);
 
           ws.send(JSON.stringify({
             type: 'joined',
-            sessionId,
+            codi_acces,
             userId,
             message: 'T’has unit a la sessió correctament.'
           }));
 
-          console.log(`Usuari ${userId} unit a la sessió ${sessionId} (${numParticipants + 1}/4 jugadors)`);
+          console.log(`Usuari ${userId} (${userName}) unit a la sessió ${codi_acces} (${numParticipants + 1}/4 jugadors)`);
           break;
         }
 
         case 'start': {
-          const { sessionId } = message;
-          if (!sessionId || !sessions[sessionId]) return;
-
-          console.log(`Partida iniciada a la sessió ${sessionId}`);
-
-          broadcastToSession(sessionId, {
-            type: 'start',
-            sessionId
-          });
+          const { codi_acces } = message;
+          if (!codi_acces || !sessions[codi_acces]) return;
+          
+          // Només el creador (o el primer que s'ha unit) pot començar?
+          // Per ara, només actualitzem la BBDD i avisem
+          try {
+            await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['en_curs', codi_acces]);
+            console.log(`Partida iniciada a la sessió ${codi_acces}`);
+            broadcastToSession(codi_acces, {
+              type: 'start',
+              codi_acces
+            });
+          } catch (error) {
+            console.error("Error a l'iniciar la partida:", error);
+          }
           break;
         }
 
-
         case 'update': {
           if (
-            currentSessionId &&
+            currentCodiAcces &&
             currentUserId &&
-            sessions[currentSessionId]?.participants[currentUserId]
+            sessions[currentCodiAcces]?.participants[currentUserId]
           ) {
-            sessions[currentSessionId].participants[currentUserId].reps = message.reps || 0;
-            const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, {
-              type: 'leaderboard',
-              sessionId: currentSessionId,
-              leaderboard
-            });
+            sessions[currentCodiAcces].participants[currentUserId].reps = message.reps || 0;
+            broadcastLeaderboard(currentCodiAcces);
+          }
+          break;
+        }
+
+        case 'finish': {
+          // El client envia aquest missatge abans de 'leave' o desconnectar-se
+          const { reps, exercici, codi_acces } = message;
+          const session = sessions[codi_acces];
+          
+          if (!session || !currentUserId || !exercici || reps === undefined) return;
+
+          const { sala_id } = session;
+          const repsFinals = parseInt(reps, 10) || 0;
+
+          if (repsFinals > 0) {
+            try {
+              // 1. Guardar a la taula de participacions
+              await pool.execute(
+                'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = ?',
+                [currentUserId, sala_id, exercici, repsFinals, repsFinals]
+              );
+
+              // 2. Actualitzar el total de l'usuari
+              await pool.execute(
+                'UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1 WHERE id = ?',
+                [repsFinals, currentUserId]
+              );
+              
+              console.log(`Dades guardades per usuari ${currentUserId} a sala ${sala_id}: ${repsFinals} ${exercici}`);
+
+            } catch (error) {
+              console.error("Error al guardar dades 'finish':", error);
+            }
           }
           break;
         }
 
         case 'leave': {
-          if (currentSessionId && currentUserId) {
-            delete sessions[currentSessionId].participants[currentUserId];
-            const leaderboard = calcularLeaderboard(currentSessionId);
-            broadcastToSession(currentSessionId, {
-              type: 'leaderboard',
-              sessionId: currentSessionId,
-              leaderboard
-            });
-            netejarSessio(currentSessionId);
-            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentSessionId}`);
-            currentSessionId = null;
+          if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
+            delete sessions[currentCodiAcces].participants[currentUserId];
+            broadcastLeaderboard(currentCodiAcces);
+            netejarSessio(currentCodiAcces);
+            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentCodiAcces}`);
+            currentCodiAcces = null;
             currentUserId = null;
           }
           break;
@@ -189,12 +224,21 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log('Client WebSocket desconnectat');
+    if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
+      // El client s'ha desconnectat sense 'leave' (ex: tancar pestanya)
+      // Les dades 'finish' no s'hauran guardat, però el traiem de la llista
+      delete sessions[currentCodiAcces].participants[currentUserId];
+      broadcastLeaderboard(currentCodiAcces);
+      netejarSessio(currentCodiAcces);
+    }
   });
 
   ws.on('error', (error) => {
     console.error('Error en WebSocket:', error);
   });
 });
+
+// --- API DE REGISTRE I LOGIN (Sense canvis) ---
 
 app.post('/api/register', async (req, res) => {
   const { nom, email, password } = req.body;
@@ -213,7 +257,7 @@ app.post('/api/register', async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: 'Aquest email ja està registrat' });
     }
-    console.error(error); 
+    console.error(error);
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
@@ -228,7 +272,7 @@ app.post('/api/login', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       'SELECT * FROM usuaris WHERE email = ? OR nom = ?',
-      [loginInput, loginInput] 
+      [loginInput, loginInput]
     );
 
     const user = rows[0];
@@ -271,20 +315,100 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-app.get('/api/create-session', (req, res) => { 
-  const sessionId = uuidv4();
-  sessions[sessionId] = { participants: {}, leaderboard: [] };
-  console.log(`Nova sessió de sala creada: ${sessionId}`);
-  res.json({ sessionId });
+
+// --- NOVES APIS PER A SALES I RANKING ---
+
+function generarCodiAcces(length = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// API per crear una nova sala
+app.post('/api/sala/crear', async (req, res) => {
+  const creador_id = req.session.user?.id;
+  if (!creador_id) {
+    return res.status(401).json({ message: 'No autenticat' });
+  }
+
+  let codi_acces;
+  let sala;
+  let attempts = 0;
+
+  // Intentem generar un codi únic (improbable que falli, però per seguretat)
+  do {
+    codi_acces = generarCodiAcces(6);
+    try {
+      const [result] = await pool.execute(
+        'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)',
+        [creador_id, codi_acces, 'esperant']
+      );
+      sala = { id: result.insertId, creador_id, codi_acces, estat: 'esperant' };
+    } catch (error) {
+      if (error.code !== 'ER_DUP_ENTRY') { 
+        console.error(error);
+        return res.status(500).json({ message: 'Error del servidor al crear sala' });
+      }
+      // Si el codi està duplicat (ER_DUP_ENTRY), el bucle tornarà a provar
+    }
+    attempts++;
+  } while (!sala && attempts < 10);
+
+  if (!sala) {
+    return res.status(500).json({ message: 'No s\'ha pogut crear la sala (massa intents)' });
+  }
+  
+  console.log(`Sala creada: ${codi_acces} per usuari ${creador_id}`);
+  res.status(201).json(sala);
 });
 
-app.get('/api/check-session/:sessionId', (req, res) => {
-  const { sessionId } = req.params;
-  if (sessions[sessionId]) {
-    return res.status(200).json({ exists: true });
-  } else {
-    return res.status(404).json({ exists: false });
+// API per unir-se a una sala (comprovar si existeix)
+app.post('/api/sala/unir', async (req, res) => {
+  const { codi_acces } = req.body;
+  if (!codi_acces) {
+    return res.status(400).json({ message: 'Codi d\'accés requerit' });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT * FROM sales WHERE codi_acces = ? AND estat = ?',
+      [codi_acces.toUpperCase(), 'esperant']
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Sala no trobada o ja està en curs' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
   }
 });
+
+// API per obtenir el ranking global
+app.get('/api/ranking', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT nom, repeticions_totals FROM usuaris WHERE repeticions_totals > 0 ORDER BY repeticions_totals DESC, nom ASC LIMIT 10'
+    );
+    // Mapegem a la nova estructura que espera el frontend
+    const ranking = rows.map(r => ({
+      jugador: r.nom,
+      puntos: r.repeticions_totals
+    }));
+    res.json(ranking);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+
+// --- ELIMINACIÓ DE LES ANTIGUES RUTES DE SESSIÓ EN MEMÒRIA ---
+// app.get('/api/create-session', ...); // ELIMINAT
+// app.get('/api/check-session/:sessionId', ...); // ELIMINAT
 
 console.log('Servidor WebSocket i API llestos (HTTP a :4000, WS a /ws)');

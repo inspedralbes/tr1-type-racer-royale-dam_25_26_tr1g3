@@ -3,16 +3,13 @@
         <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
             <v-container class="text-center text-white pa-4 pa-md-8 fade-in-container" style="max-width: 1400px;">
 
-                <!-- Botó per sortir -->
                 <v-btn class="top-left-back-btn rectangular-btn" variant="flat" size="large"
                     prepend-icon="mdi-arrow-left" @click="sortir">
                     Sortir
                 </v-btn>
 
-                <!-- Títol -->
                 <h2 class="exercise-title my-6">{{ exerciciLabel }} — Multijugador</h2>
 
-                <!-- Graella de jugadors -->
                 <v-row dense class="justify-center">
                     <v-col v-for="(jugador, i) in leaderboard" :key="jugador.userId" cols="12" sm="6" md="6" lg="6"
                         class="d-flex justify-center mb-6">
@@ -20,12 +17,13 @@
                             elevation="12" width="100%" max-width="550">
                             <h3 class="text-h6 font-weight-bold mb-3 neon-player-name">
                                 <v-icon v-if="i === 0" color="yellow-accent-4" start>mdi-trophy-variant</v-icon>
-                                {{ jugador.userId }}
+                                
+                                {{ jugador.userName }} 
+                                
                                 <span v-if="jugador.userId === userId"
                                     class="text-caption text-cyan-lighten-2">(Tu)</span>
                             </h3>
 
-                            <!-- Càmera local només per al jugador actual -->
                             <div v-if="jugador.userId === userId" class="relative w-full">
                                 <video ref="video" autoplay playsinline muted class="rounded-xl w-full"
                                     style="object-fit: cover; background: black;"></video>
@@ -38,7 +36,6 @@
                                 <p class="mt-2 text-body-2">Càmera no disponible</p>
                             </div>
 
-                            <!-- Comptador -->
                             <v-card class="mt-6 py-4 px-4 text-center rounded-xl" color="transparent" elevation="10"
                                 style="border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); background: rgba(0,0,0,0.25);">
                                 <h4 class="text-h6 font-weight-regular text-grey-lighten-2">Repeticions</h4>
@@ -58,13 +55,20 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
+import { useAuthStore } from '@/stores/authStore'; // AFEGIT: Importar authStore
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore(); // AFEGIT: Instanciar authStore
 
 const exercici = route.params.ejercicio
-const sessionId = route.params.sessionId
-const userId = `usuari_${Math.floor(Math.random() * 10000)}`
+
+// CANVIAT: El paràmetre de la ruta ara és 'codi_acces'
+const codi_acces = route.params.codi_acces 
+
+// CANVIAT: Obtenir dades de l'usuari real de l'store
+const userId = authStore.user.id;
+const userName = authStore.userName;
 
 const noms = {
     flexiones: 'FLEXIONS',
@@ -94,27 +98,37 @@ onMounted(() => {
     startCamera()
 })
 
+// CANVIAT: Assegura que la funció 'sortir' s'executa en desmuntar
 onBeforeUnmount(() => {
-    stopCamera()
-    if (ws.value?.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify({ type: 'leave' }))
-        ws.value.close()
-    }
+    sortir();
 })
 
-// ---------- WEBSOCKET ----------
+// ---------- WEBSOCKET (MODIFICAT) ----------
 function connectWebSocket() {
-    ws.value = new WebSocket('ws://localhost:4000')
+    // AFEGIT: Càlcul dinàmic de la URL del WebSocket
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.host;
+    const WS_URL = `${wsProtocol}//${wsHost}/ws`;
+
+    ws.value = new WebSocket(WS_URL) // CANVIAT: URL dinàmica
+
     ws.value.onopen = () => {
-        console.log('Connectat a la sessió', sessionId)
-        ws.value.send(JSON.stringify({ type: 'join', sessionId, userId }))
+        console.log('Connectat a la sessió', codi_acces)
+        // CANVIAT: Envia les dades reals (codi_acces, userId, userName)
+        ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }))
     }
+    
     ws.value.onmessage = (event) => {
         const message = JSON.parse(event.data)
         if (message.type === 'leaderboard') {
-            leaderboard.value = message.leaderboard
+            // El leaderboard ara conté { userId, userName, reps }
+            leaderboard.value = message.leaderboard 
         }
     }
+
+    // AFEGIT: Gestió d'errors i tancament
+    ws.value.onclose = () => console.log('Desconnectat del servidor');
+    ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
 // ---------- CÀMERA ----------
@@ -135,7 +149,7 @@ function stopCamera() {
     if (streamRef) {
         streamRef.getTracks().forEach((t) => t.stop())
         streamRef = null
-        video.value.srcObject = null
+        if (video.value) video.value.srcObject = null;
     }
     detecting = false
     const ctx = canvas.value?.getContext('2d')
@@ -150,9 +164,9 @@ async function initMoveNet() {
 }
 
 async function detectPose() {
-    const ctx = canvas.value.getContext('2d')
+    const ctx = canvas.value?.getContext('2d')
     async function loop() {
-        if (!detecting || video.value.paused || video.value.ended) return
+        if (!detecting || !video.value || video.value.paused || video.value.ended) return
         const poses = await detector.estimatePoses(video.value)
         if (poses.length > 0) {
             drawPose(ctx, poses[0])
@@ -164,6 +178,7 @@ async function detectPose() {
 }
 
 function drawPose(ctx, pose) {
+    if (!canvas.value) return; // Control per si el component es destrueix
     ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
     for (const kp of pose.keypoints) {
         if (kp.score > 0.4) {
@@ -280,9 +295,28 @@ function sendReps() {
 }
 
 
-// ---------- SORTIR ----------
+// ---------- SORTIR (MODIFICAT) ----------
 function sortir() {
     stopCamera()
+
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        // 1. AFEGIT: Enviem el missatge 'finish' per guardar les dades a la BBDD
+        ws.value.send(JSON.stringify({
+            type: 'finish',
+            reps: count.value,
+            exercici: exercici,
+            codi_acces: codi_acces
+        }));
+        
+        // 2. Enviem 'leave' per actualitzar la UI de la resta
+        ws.value.send(JSON.stringify({ type: 'leave' }));
+        
+        // 3. Tanquem el socket
+        ws.value.close();
+        ws.value = null; // Important per evitar crides duplicades des de onBeforeUnmount
+    }
+
+    // 4. Tornem enrere
     router.back()
 }
 </script>

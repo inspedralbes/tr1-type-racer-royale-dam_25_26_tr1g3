@@ -87,94 +87,115 @@
 <script setup>
 import { ref, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from '@/stores/authStore'; 
+import { useAuthStore } from '@/stores/authStore';
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore(); 
+const authStore = useAuthStore();
 const exercici = route.params.ejercicio;
 
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsHost = window.location.host; 
-const WS_URL = `${wsProtocol}//${wsHost}/ws`; 
+const wsHost = window.location.host;
+const WS_URL = `${wsProtocol}//${wsHost}/ws`;
 
 let socket = null;
 const aSala = ref(false);
 const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
-const hostId = ref("");
+const hostId = ref(0); // Ara serà un ID numèric
 const errorMsg = ref("");
 
-const userId = authStore.userName; 
+// Obtenim l'ID i el nom de l'usuari autenticat
+const userId = authStore.user.id;
+const userName = authStore.userName;
 
 onBeforeUnmount(() => {
   sortirSala();
   if (socket) socket.close();
 });
 
-function generarCodiSala() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let codi = "";
-  for (let i = 0; i < 5; i++) {
-    codi += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return codi;
-}
 
 async function crearSala() {
   try {
-    const codi = generarCodiSala();
-    const sessionId = `${exercici}-${codi}`;
-    connectToSession(sessionId, true);
+    const res = await fetch('/api/sala/crear', { method: 'POST' });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.message || 'Error en crear la sala');
+    }
+    const sala = await res.json();
+    // 'sala.creador_id' (que és 'userId') serà el host
+    connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
-    errorMsg.value = "Error en crear la sala.";
+    errorMsg.value = err.message;
   }
 }
 
 async function unirSala() {
-  if (!codiSalaInput.value.trim()) return;
-  const sessionId = `${exercici}-${codiSalaInput.value.trim().toUpperCase()}`;
+  const codi = codiSalaInput.value.trim().toUpperCase();
+  if (!codi) return;
   errorMsg.value = "";
 
   try {
-    const res = await fetch(`/api/check-session/${sessionId}`);
+    const res = await fetch('/api/sala/unir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codi_acces: codi })
+    });
 
     if (!res.ok) {
-      errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
+      const errData = await res.json();
+      errorMsg.value = errData.message || "Sala no trobada.";
       sortirSala();
       return;
     }
 
-    connectToSession(sessionId);
+    const sala = await res.json();
+    // 'sala.creador_id' és el host
+    connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
     errorMsg.value = "Error en la connexió amb el servidor.";
     sortirSala();
   }
 }
 
-function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL); 
+function connectToSession(codi_acces, creador_id) {
+  socket = new WebSocket(WS_URL);
 
   socket.addEventListener("open", () => {
-    codiSala.value = sessionId;
+    codiSala.value = codi_acces;
     aSala.value = true;
-    hostId.value = isHost ? userId : "";
-    socket.send(JSON.stringify({ type: "join", sessionId, userId }));
+    hostId.value = creador_id; // Guardem l'ID numèric del creador
+    // Enviem el nostre ID numèric i el nostre nom
+    socket.send(JSON.stringify({ type: "join", codi_acces, userId, userName }));
   });
 
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "leaderboard") {
-      jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderboard.length > 0) { 
+      // El leaderboard ara és un array d'objectes { userId, userName, reps }
+      jugadors.value = msg.leaderboard;
+      
+      // Si el hostId encara no està definit i hi ha jugadors,
+      // el primer jugador (que hauria de ser el creador) és el host.
+      // Això és una reserva, ja que el rebem de l'API.
+      if (!hostId.value && msg.leaderboard.length > 0) {
         hostId.value = msg.leaderboard[0].userId;
       }
     }
 
     if (msg.type === "start") {
-      router.push(`/juego-multi/${exercici}/${msg.sessionId}`);
+      // El 'sessionId' que passem a la ruta és ara el 'codi_acces'
+      router.push({
+        name: 'JuegoMultiplayer',
+        params: { ejercicio: exercici, codi_acces: msg.codi_acces }
+      });
+    }
+    
+    if (msg.type === "error") {
+      errorMsg.value = msg.message;
+      sortirSala();
     }
   });
 
@@ -188,14 +209,13 @@ function sortirSala() {
     try {
       socket.send(JSON.stringify({ type: "leave" }));
       socket.close();
-    } catch (e) { }
+    } catch (e) { /* Ignora errors si ja està tancat */ }
     socket = null;
   }
-
   aSala.value = false;
   codiSala.value = "";
   jugadors.value = [];
-  hostId.value = "";
+  hostId.value = 0;
 }
 
 function sortirManual() {
@@ -206,7 +226,7 @@ function iniciarPartida() {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: "start",
-      sessionId: codiSala.value,
+      codi_acces: codiSala.value,
     }));
   }
 }

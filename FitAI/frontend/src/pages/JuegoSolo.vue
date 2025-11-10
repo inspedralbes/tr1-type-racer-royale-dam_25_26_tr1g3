@@ -130,8 +130,7 @@
               <v-list density="compact" class="text-grey-lighten-3 bg-transparent ranking-list">
                 <v-list-item
                   v-for="(user, index) in leaderboard"
-                  :key="user.userId"
-                  class="rounded-lg mb-2 pa-2 list-item-glow"
+                  :key="user.userId" class="rounded-lg mb-2 pa-2 list-item-glow"
                   :class="index === 0 ? 'bg-top1' : index === 1 ? 'bg-top2' : index === 2 ? 'bg-top3' : 'bg-standard'"
                   style="border: 1px solid rgba(255, 255, 255, 0.05);"
                 >
@@ -140,8 +139,8 @@
                       <v-icon size="small" class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
                         {{ index === 0 ? 'mdi-trophy-variant' : 'mdi-account-circle' }}
                       </v-icon>
-                      <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userId }}
-                    </div>
+                      <strong class="mr-2">{{ index + 1 }}.</strong> 
+                      {{ user.userName }} </div>
                     <span class="font-weight-black" :class="index < 3 ? 'text-h6 text-teal-accent-3' : 'text-body-1'">
                       {{ user.reps }} <span class="text-caption font-weight-light">reps</span>
                     </span>
@@ -164,6 +163,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'; // AFEGIT: Importar authStore
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
@@ -171,12 +171,13 @@ import { mdiFolderOutline } from '@mdi/js'
 
 const pathCarregar = mdiFolderOutline
 
-
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore(); // AFEGIT: Instanciar authStore
 
 const exercici = route.params.ejercicio
-const sessionId = route.params.sessionId
+// CANVIAT: El paràmetre de la ruta ara és 'codi_acces'
+const codi_acces = route.params.codi_acces 
 
 const noms = {
  flexiones: 'FLEXIONS',
@@ -207,7 +208,9 @@ let streamRef = null
 let detecting = false
 
 const ws = ref(null)
-const userId = ref(`usuari_${Math.floor(Math.random() * 10000)}`)
+// CANVIAT: Obtenir dades de l'usuari real de l'store
+const userId = authStore.user.id;
+const userName = authStore.userName;
 
 onMounted(() => connectWebSocket())
 
@@ -237,12 +240,12 @@ async function startCamera() {
 function stopCamera() {
  if (streamRef) {
  streamRef.getTracks().forEach((t) => t.stop())
- video.value.srcObject = null
+ if (video.value) video.value.srcObject = null;
  streamRef = null
- detecting = false
- const ctx = canvas.value.getContext('2d');
- ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
  }
+ detecting = false
+ const ctx = canvas.value?.getContext('2d');
+ if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 }
 
 function selectVideo() {
@@ -254,8 +257,8 @@ async function loadVideoFromFile(event) {
  const file = event.target.files[0]
  if (!file) return
  
- const ctx = canvas.value.getContext('2d');
- ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+ const ctx = canvas.value?.getContext('2d');
+ if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
  const url = URL.createObjectURL(file)
  video.value.srcObject = null
@@ -281,9 +284,9 @@ async function initMoveNet() {
 }
 
 async function detectPose() {
- const ctx = canvas.value.getContext('2d')
+ const ctx = canvas.value?.getContext('2d')
  async function poseDetectionFrame() {
- if (!detecting || video.value.paused || video.value.ended) return
+ if (!detecting || !video.value || video.value.paused || video.value.ended) return
  
  if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
  canvas.value.width = video.value.videoWidth || 640;
@@ -302,10 +305,10 @@ async function detectPose() {
 }
 
 async function detectVideoFrame() {
- const ctx = canvas.value.getContext('2d')
+ const ctx = canvas.value?.getContext('2d')
  async function frameLoop() {
- if (!detecting || video.value.paused || video.value.ended) {
- if (video.value.ended) {
+ if (!detecting || !video.value || video.value.paused || video.value.ended) {
+ if (video.value && video.value.ended) {
  detecting = false;
  }
  return
@@ -404,10 +407,73 @@ function drawPose(ctx, pose) {
  ctx.shadowBlur = 0;
 }
 
+// MODIFICAT: S'han de definir tots els exercicis
 function checkMoviment(pose) {
- if (exercici === 'abdominales') checkAbdominal(pose)
+    switch (exercici) {
+        case 'flexiones':
+            checkFlexio(pose); // AFEGIT
+            break;
+        case 'sentadillas':
+            checkEsquat(pose); // AFEGIT
+            break;
+        case 'saltos':
+            checkSalt(pose); // AFEGIT
+            break;
+        case 'abdominales':
+            checkAbdominal(pose);
+            break;
+    }
 }
 
+// MODIFICAT: Funció de recompte genèrica per actualitzar WS
+function handleRepCount() {
+    count.value++;
+    up = false; // Reinicia l'estat
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
+    }
+}
+
+// ---------------- FLEXIONS (AFEGIT) ----------------
+function checkFlexio(pose) {
+    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
+    if (!espatlla || !canell) return
+    const dist = Math.abs(espatlla.y - canell.y)
+    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+}
+
+// ---------------- SQUATS (AFEGIT) ----------------
+function checkEsquat(pose) {
+    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
+    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+    if (!maluc || !genoll) return
+    const dist = Math.abs(maluc.y - genoll.y)
+    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+}
+
+// ---------------- SALTS (AFEGIT) ----------------
+let initialY = null;
+let jumping = false;
+function checkSalt(pose) {
+    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+    if (!peu) return
+    if (initialY === null) initialY = peu.y
+    const delta = initialY - peu.y
+    const UMBRAL_SALT = 60
+    if (delta > UMBRAL_SALT && !jumping) {
+        jumping = true
+    } else if (delta < 10 && jumping) {
+        jumping = false; // Canviat 'up' per 'jumping'
+        handleRepCount(); // Crida la funció genèrica
+    }
+}
+
+// ---------------- ABDOMINALS (MODIFICAT) ----------------
 function checkAbdominal(pose) {
  const nas = pose.keypoints.find((k) => k.name === 'nose')
  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
@@ -422,15 +488,11 @@ function checkAbdominal(pose) {
  }
 
  if (distancia > UMBRAL_ARRIBA && up) {
- count.value++
- up = false
- if (ws.value?.readyState === WebSocket.OPEN) {
- ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
- }
+   handleRepCount(); // Crida la funció genèrica
  }
 }
 
-// VERSIÓ CORREGIDA DE connectWebSocket
+// VERSIÓ CORREGIDA DE connectWebSocket (MODIFICAT)
 function connectWebSocket() {
  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
  const wsHost = window.location.host;
@@ -441,30 +503,48 @@ function connectWebSocket() {
  ws.value = new WebSocket(wsUrl); 
 
  ws.value.onopen = () => {
- console.log('Connectat al servidor WebSocket');
- ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }));
+   console.log('Connectat al servidor WebSocket');
+   // CANVIAT: S'envien les dades reals
+   ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
  };
  ws.value.onmessage = (event) => {
- const message = JSON.parse(event.data);
- if (message.type === 'leaderboard') {
- leaderboard.value = message.leaderboard;
- }
+   const message = JSON.parse(event.data);
+   if (message.type === 'leaderboard') {
+     // El leaderboard ara conté { userId, userName, reps }
+     leaderboard.value = message.leaderboard;
+   }
  };
  ws.value.onclose = () => console.log('Desconnectat del servidor');
  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
+// MODIFICAT: Funció 'tornar' per guardar dades
 function tornar() {
- stopCamera();
- router.back()
+  stopCamera();
+  
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    // 1. AFEGIT: Enviem 'finish' per guardar a la BBDD
+    ws.value.send(JSON.stringify({
+      type: 'finish',
+      reps: count.value,
+      exercici: exercici,
+      codi_acces: codi_acces
+    }));
+    
+    // 2. Enviem 'leave'
+    ws.value.send(JSON.stringify({ type: 'leave' }));
+    
+    // 3. Tanquem
+    ws.value.close();
+    ws.value = null; // Important per evitar crides duplicades
+  }
+  
+  router.back()
 }
 
+// MODIFICAT: Assegurem que es guarda en sortir
 onBeforeUnmount(() => {
- stopCamera();
- if (ws.value?.readyState === WebSocket.OPEN) {
- ws.value.send(JSON.stringify({ type: 'leave' }))
- ws.value.close()
- }
+  tornar();
 })
 </script>
 

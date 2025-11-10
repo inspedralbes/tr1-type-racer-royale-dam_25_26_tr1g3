@@ -127,33 +127,25 @@ const searchQuery = ref('')
 const rankingHeaders = [
   { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
   { title: 'Jugador', key: 'jugador', align: 'start' },
+  // 'puntos' ja coincideix amb el que retorna la nova API
   { title: 'Puntos', key: 'puntos', align: 'end' },
 ]
 
-// **Este array es donde debes cargar los datos de tu base de datos.**
-// La estructura de cada elemento debe ser: { jugador: 'Nombre', puntos: 12345 }
 const rankingData = ref([])
 
-// Función de ejemplo para cargar los datos de tu base de datos
+// Funció actualitzada per carregar dades reals
 const loadRankingData = async () => {
-    // Ejemplo de cómo cargarías los datos (DEBES REEMPLAZAR ESTO)
-    try {
-        // const response = await fetch('/api/ranking-global');
-        // const data = await response.json();
-        
-        // Simulación de datos cargados para que veas el formato (borrar cuando uses tu DB)
-        const mockDataFromDB = [
-            { jugador: 'NeoFitMaster', puntos: 15400 },
-            { jugador: 'CyberLifter', puntos: 12100 },
-            { jugador: 'Atheos', puntos: 9850 },
-            { jugador: 'RepsPro', puntos: 7320 },
-            { jugador: 'IronLegs', puntos: 6990 },
-        ];
-        
-        rankingData.value = mockDataFromDB; // Asigna los datos a la variable reactiva
-    } catch (error) {
-        console.error('Error al cargar la clasificación:', error);
+  try {
+    const response = await fetch('/api/ranking');
+    if (!response.ok) {
+        throw new Error('No s\'ha pogut carregar la classificació');
     }
+    const data = await response.json();
+    rankingData.value = data; // Assigna les dades reals
+  } catch (error) {
+    console.error('Error al carregar la classificació:', error);
+    rankingData.value = []; // En cas d'error, deixa la taula buida
+  }
 }
 
 // Clasificación ordenada por puntos (máximo primero)
@@ -172,10 +164,8 @@ const getRankClass = (index) => {
 
 // Llama a la función para cargar los datos cuando el componente se monta
 onMounted(() => {
-    // LLAMA AQUÍ A TU FUNCIÓN REAL DE CARGA DE DATOS
-    loadRankingData(); 
+  loadRankingData();
 })
-
 
 // --- DATOS Y LÓGICA DE EJERCICIOS (existente) ---
 const exercicis = [
