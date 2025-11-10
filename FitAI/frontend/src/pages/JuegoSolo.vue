@@ -177,6 +177,8 @@ import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
+import fonsGif from '@/assets/fons.gif'
+import pujadesGif from '@/assets/pujades.gif'
 
 const pathCarregar = mdiFolderOutline
 
@@ -192,11 +194,15 @@ const noms = {
   Squats: 'ESQUATS',
   Salts: 'SALTS',
   Abdominals: 'ABDOMINALS',
+  Fons: 'FONS',
+  Pujades: 'PUJADES',
   // Asegúrate de que las claves coincidan con el parámetro de ruta `exercici`
   flexiones: 'FLEXIONS',
   sentadillas: 'ESQUATS',
   saltos: 'SALTS',
   abdominales: 'ABDOMINALS',
+  fons: 'FONS',
+  pujades: 'PUJADES',
 }
 
 // Mapeo de GIFs (tomado del primer script con las claves ajustadas)
@@ -205,10 +211,15 @@ const gifs = {
   Squats: sentadillasGif,
   Salts: saltosGif,
   Abdominals: abdominalesGif,
+  Fons: fonsGif,
+  Pujades: pujadesGif,
+  // Asegúrate de que las claves coincidan con el parámetro de ruta `
   flexiones: flexionesGif,
   sentadillas: sentadillasGif,
   saltos: saltosGif,
   abdominales: abdominalesGif,
+  fons: fonsGif,
+  pujades: pujadesGif,
 }
 
 // Determinar el label y el GIF usando el valor de la URL
@@ -471,7 +482,11 @@ function drawPose(ctx, pose) {
 
 function checkMoviment(pose) {
   if (exercici === 'abdominales') checkAbdominal(pose)
-  // Implementación de otros ejercicios aquí
+  if (exercici === 'flexiones') checkFlexiones(pose)
+  if (exercici === 'sentadillas') checkSentadillas(pose)
+  if (exercici === 'saltos') checkSaltos(pose)
+  if (exercici === 'fons') checkFons(pose)
+  if (exercici === 'pujades') checkPujades(pose)
 }
 
 function checkAbdominal(pose) {

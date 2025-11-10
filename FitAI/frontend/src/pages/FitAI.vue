@@ -204,6 +204,18 @@ const exercicis = [
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
   },
+  {
+    nom: 'Fons',
+    label: 'Fons',
+    imatge: new URL('@/assets/fons.jpg', import.meta.url).href, // **ASSEGURA'T D'AFEGIR AQUESTA IMATGE**
+    descripcio: 'Exercici intens per tríceps, espatlles i pit.',
+  },
+  {
+    nom: 'Pujades', 
+    label: 'Pujades', 
+    imatge: new URL('@/assets/pujades.jpg', import.meta.url).href, // **ASSEGURA'T D'AFEGIR AQUESTA IMATGE**
+    descripcio: 'Enforteix les cames de manera unilateral millorant l\'equilibri.',
+  },
 
 ]
 
