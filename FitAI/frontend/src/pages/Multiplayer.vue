@@ -45,21 +45,20 @@
 
             <v-card class="rounded-xl mb-4 pa-2 elevation-6 glass-list">
               <v-list density="compact">
-                <v-list-item v-for="j in jugadors" :key="j" class="rounded-lg my-1"
-                  :class="j === hostId ? 'bg-host' : 'bg-player'">
+                <v-list-item v-for="j in jugadors" :key="j.userId" class="rounded-lg my-1"
+                  :class="j.userId === hostId ? 'bg-host' : 'bg-player'">
                   <v-list-item-content class="d-flex align-center justify-space-between text-white">
                     <span class="text-body-1">
-                      <v-icon v-if="j === hostId" color="#8b5cf6" class="mr-2">
+                      <v-icon v-if="j.userId === hostId" color="#8b5cf6" class="mr-2">
                         mdi-crown
                       </v-icon>
-                      {{ j }}
-                    </span>
-                    <span v-if="j === userId" class="text-caption text-grey-lighten-1">
+                      {{ j.userName }} </span>
+                    <span v-if="j.userId === userId" class="text-caption text-grey-lighten-1">
                       (Tu)
                     </span>
                   </v-list-item-content>
                 </v-list-item>
-              </v-list>
+                </v-list>
             </v-card>
 
             <v-btn v-if="userId === hostId" class="neon-btn mb-3" variant="elevated" size="large" block
@@ -110,7 +109,8 @@ const errorMsg = ref("");
 
 // 🟢 CAMBIO: Se obtienen tanto el ID numérico como el nombre de usuario
 const userId = authStore.user.id; // Asume que el store de autenticación tiene 'user.id'
-const userName = authStore.value; // Asume que el store de autenticación tiene 'userName'
+// 👇 CAMBIO AQUÍ 👇
+const userName = authStore.userName; // Corregido: Obtener 'userName' del store, no 'value'
 
 onBeforeUnmount(() => {
   sortirSala();
