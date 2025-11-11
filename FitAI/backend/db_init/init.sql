@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS usuaris (
 CREATE TABLE IF NOT EXISTS sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     creador_id INT NOT NULL,
-    codi_acces CHAR(6) NOT NULL UNIQUE,
+    codi_acces CHAR(6
+    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------) DEFAULT NULL,
     estat ENUM('esperant', 'en_curs', 'finalitzada') NOT NULL DEFAULT 'esperant',
     data_creacio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (creador_id) REFERENCES usuaris(id) ON DELETE CASCADE
