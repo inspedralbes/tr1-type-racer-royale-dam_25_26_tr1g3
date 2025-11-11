@@ -10,26 +10,27 @@ function generarCodiAcces(length = 6) {
 }
 
 /**
- * RAD-3: Creació de noves sessions amb codis d'accés únics.
  * Intenta crear una sala amb un codi generat aleatòriament.
  * Si el codi ja existeix (molt improbable), ho reintenta fins a 10 vegades.
- * @param {number} creadorId - L'ID de l'usuari que crea la sala.
- * @returns {Promise<Object>} L'objecte de la sala creada.
+ * @param {number} creadorId
+ * @returns {Promise<Object>}
  */
+
 export async function crearNovaSala(creadorId) {
   let attempts = 0;
   while (attempts < 10) {
     const codiAcces = generarCodiAcces(6);
     try {
       const sql = 'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)';
-      const [result] = await db.query(sql, [creadorId, codiAcces, 'esperant']);
+      
+      // LÍNIA CORREGIDA: Hem eliminat els claudàtors [ ]
+      const result = await db.query(sql, [creadorId, codiAcces, 'esperant']);
+      
       return { id: result.insertId, creador_id: creadorId, codi_acces: codiAcces, estat: 'esperant' };
     } catch (error) {
       if (error.code !== 'ER_DUP_ENTRY') {
-        // Si l'error no és per codi duplicat, el llancem
         throw error;
       }
-      // Si el codi està duplicat, el bucle continuarà i ho tornarà a intentar.
     }
     attempts++;
   }
@@ -37,10 +38,9 @@ export async function crearNovaSala(creadorId) {
 }
 
 /**
- * RAD-3: Sistema d'adhesió de participants (part de validació).
  * Busca una sala pel seu codi d'accés que estigui en estat 'esperant'.
- * @param {string} codiAcces - El codi de 6 caràcters de la sala.
- * @returns {Promise<Object|null>} L'objecte de la sala o null si no es troba o no està disponible.
+ * @param {string} codiAcces
+ * @returns {Promise<Object|null>}
  */
 export async function buscarSalaPerCodi(codiAcces) {
   const sql = "SELECT * FROM sales WHERE codi_acces = ? AND estat = 'esperant'";
@@ -49,10 +49,9 @@ export async function buscarSalaPerCodi(codiAcces) {
 }
 
 /**
- * RAD-3: Llistat de sessions disponibles.
  * Obté una llista de totes les sales que estan esperant jugadors.
  * Utilitza un JOIN per obtenir el nom del creador.
- * @returns {Promise<Array>} Llista de sales disponibles.
+ * @returns {Promise<Array>}
  */
 export async function llistarSalesDisponibles() {
     const sql = `
@@ -68,7 +67,7 @@ export async function llistarSalesDisponibles() {
 
 /**
  * Canvia l'estat d'una sala a 'en_curs'.
- * @param {string} codiAcces - El codi de la sala a iniciar.
+ * @param {string} codiAcces
  * @returns {Promise<any>}
  */
 export async function iniciarSala(codiAcces) {

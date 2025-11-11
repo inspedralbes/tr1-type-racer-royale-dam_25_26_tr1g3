@@ -1,9 +1,7 @@
 import db from '../config/database.js';
 
 /**
- * RAD-3: Actualització en temps real dels resultats individuals.
  * Insereix o actualitza les repeticions d'un usuari en una sala específica.
- * L'ús de 'ON DUPLICATE KEY UPDATE' és perfecte per a aquest cas.
  * @param {number} usuariId 
  * @param {number} salaId 
  * @param {string} exercici 
@@ -20,7 +18,6 @@ export async function actualitzarResultatsParticipant(usuariId, salaId, exercici
 }
 
 /**
- * RAD-3: Càlcul i consulta de classificacions (leaderboard) d'una sala.
  * Combina informació de 'participacions' i 'usuaris' (JOIN) per mostrar el nom.
  * @param {number} salaId - L'ID de la sala.
  * @returns {Promise<Array>} Una llista d'usuaris ordenada per repeticions.

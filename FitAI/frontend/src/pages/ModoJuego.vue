@@ -106,7 +106,7 @@ const jugarSol = async () => {
   errorMessage.value = null
   try {
     // ➡️ Llama a la nueva API para crear una sala/sesión en la BBDD
-    const res = await fetch('/api/sala/crear', { method: 'POST' })
+    const res = await fetch('/api/sala/crear', { method: 'POST', credentials: 'include' })
 
     if (!res.ok) {
       // Intenta obtener el mensaje de error del cuerpo de la respuesta

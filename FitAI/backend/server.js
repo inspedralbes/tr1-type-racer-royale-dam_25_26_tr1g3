@@ -255,15 +255,17 @@ app.post('/api/logout', (req, res) => {
 // Gestió de Sales
 app.post('/api/sala/crear', async (req, res) => {
   const creador_id = req.session.user?.id;
+  
   if (!creador_id) {
     return res.status(401).json({ message: 'No autenticat' });
   }
+
   try {
     const sala = await SalaModel.crearNovaSala(creador_id);
     res.status(201).json(sala);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error del servidor al crear sala' });
+    return res.status(500).json({ message: 'Error del servidor al crear sala' });
   }
 });
 
