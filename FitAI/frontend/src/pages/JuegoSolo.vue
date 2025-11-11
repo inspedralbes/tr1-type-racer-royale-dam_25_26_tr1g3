@@ -140,7 +140,7 @@
                       <v-icon size="small" class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
                         {{ index === 0 ? 'mdi-trophy-variant' : 'mdi-account-circle' }}
                       </v-icon>
-                      <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userId }}
+                      <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userName }}
                     </div>
                     <span class="font-weight-black" :class="index < 3 ? 'text-h6 text-teal-accent-3' : 'text-body-1'">
                       {{ user.reps }} <span class="text-caption font-weight-light">reps</span>
@@ -148,7 +148,7 @@
                   </div>
                 </v-list-item>
               </v-list>
-               <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
+              <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
                   No hi ha dades a la classificació. Comença a entrenar!
               </div>
             </v-card>
