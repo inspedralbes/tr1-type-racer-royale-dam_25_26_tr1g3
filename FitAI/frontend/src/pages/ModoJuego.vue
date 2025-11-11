@@ -34,6 +34,7 @@
               elevation="14"
               @click="jugarSol"
             >
+
               <v-icon size="48" class="mb-3 text-blue-300 glow-icon"
                 >mdi-account-circle-outline</v-icon
               >
@@ -93,24 +94,29 @@ const nombres = {
   Squats: 'Squats',
   Salts: 'Salts',
   Abdominals: 'Abdominals',
+  // Se asume que si hay más ejercicios en el listado de 'Kim', deberían ir aquí:
+  // Fons: 'Fons', 
+  // Pujades: 'Pujades', 
 }
 
 const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
 
+// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva') para usar la API de la BBDD
 const jugarSol = async () => {
   errorMessage.value = null
   try {
-    // Utilitzem la nova API per crear una sala a la BBDD
+    // ➡️ Llama a la nueva API para crear una sala/sesión en la BBDD
     const res = await fetch('/api/sala/crear', { method: 'POST' })
 
     if (!res.ok) {
+      // Intenta obtener el mensaje de error del cuerpo de la respuesta
       const errorData = await res.json();
       throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
     }
     
     const data = await res.json()
     
-    // Naveguem a JuegoSolo amb el 'codi_acces' rebut de la BBDD
+    // ➡️ Navega usando 'codi_acces' (lo que devuelve la nueva API de BBDD)
     router.push({
       name: 'JuegoSolo',
       params: { ejercicio: exercici, codi_acces: data.codi_acces },

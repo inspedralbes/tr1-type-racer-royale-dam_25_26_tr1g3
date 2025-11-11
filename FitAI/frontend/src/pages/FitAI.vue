@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue' // onMounted se mantiene para el placeholder
+import { ref, computed, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -127,48 +127,52 @@ const searchQuery = ref('')
 const rankingHeaders = [
   { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
   { title: 'Jugador', key: 'jugador', align: 'start' },
-  // 'puntos' ja coincideix amb el que retorna la nova API
   { title: 'Puntos', key: 'puntos', align: 'end' },
 ]
 
 const rankingData = ref([])
 
-// Funció actualitzada per carregar dades reals
+// 🟢 CAMBIO PRINCIPAL: Se reemplaza la función simulada de 'Kim' por la función de DB real de 'prueva'.
 const loadRankingData = async () => {
   try {
-    const response = await fetch('/api/ranking');
+    // ➡️ Código de 'prueva' para llamar a la API real
+    const response = await fetch('/api/ranking'); 
+    
     if (!response.ok) {
         throw new Error('No s\'ha pogut carregar la classificació');
     }
+    
     const data = await response.json();
-    rankingData.value = data; // Assigna les dades reals
+    rankingData.value = data; // Asigna los datos reales
   } catch (error) {
     console.error('Error al carregar la classificació:', error);
-    rankingData.value = []; // En cas d'error, deixa la taula buida
+    rankingData.value = []; // En caso de error, deja la tabla vacía
   }
-}
+} 
 
-// Clasificación ordenada por puntos (máximo primero)
+
+// Clasificación, clases de ranking y onMounted se mantienen casi idénticos, solo se ajustó la llamada en onMounted.
 const sortedRanking = computed(() => {
-  // Crea una copia para no mutar el original antes de ordenar
   return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
 })
 
-// Clases para resaltar las primeras posiciones
 const getRankClass = (index) => {
-  if (index === 0) return 'text-amber-lighten-2 text-h5' // Oro
-  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' // Plata
-  if (index === 2) return 'text-brown-lighten-2' // Bronce
+  if (index === 0) return 'text-amber-lighten-2 text-h5' 
+  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' 
+  if (index === 2) return 'text-brown-lighten-2' 
   return 'text-white'
 }
 
-// Llama a la función para cargar los datos cuando el componente se monta
 onMounted(() => {
+  // 🟢 Se asegura que se llama a la nueva función de carga real.
   loadRankingData();
 })
 
-// --- DATOS Y LÓGICA DE EJERCICIOS (existente) ---
+
+// --- DATOS Y LÓGICA DE EJERCICIOS ---
+// 🟢 MANTENIDO/UNIFICADO: Se usa la lista de ejercicios de 'Kim' porque es más completa.
 const exercicis = [
+
   {
     nom: 'Flexions',
     label: 'Flexions',
@@ -193,6 +197,20 @@ const exercicis = [
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
   },
+  // ➡️ Estos dos ejercicios se tomaron de 'Kim' y NO estaban en 'prueva'.
+  {
+    nom: 'Fons',
+    label: 'Fons',
+    imatge: new URL('@/assets/fons.jpg', import.meta.url).href, 
+    descripcio: 'Exercici intens per tríceps, espatlles i pit.',
+  },
+  {
+    nom: 'Pujades', 
+    label: 'Pujades', 
+    imatge: new URL('@/assets/pujades.jpg', import.meta.url).href, 
+    descripcio: 'Enforteix les cames de manera unilateral millorant l\'equilibri.',
+  },
+
 ]
 
 const filteredExercicis = computed(() =>
