@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue' // onMounted se mantiene para el placeholder
+import { ref, computed, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -130,54 +130,47 @@ const rankingHeaders = [
   { title: 'Puntos', key: 'puntos', align: 'end' },
 ]
 
-// **Este array es donde debes cargar los datos de tu base de datos.**
-// La estructura de cada elemento debe ser: { jugador: 'Nombre', puntos: 12345 }
 const rankingData = ref([])
 
-// Función de ejemplo para cargar los datos de tu base de datos
+// 🟢 CAMBIO PRINCIPAL: Se reemplaza la función simulada de 'Kim' por la función de DB real de 'prueva'.
 const loadRankingData = async () => {
-    // Ejemplo de cómo cargarías los datos (DEBES REEMPLAZAR ESTO)
-    try {
-        // const response = await fetch('/api/ranking-global');
-        // const data = await response.json();
-        
-        // Simulación de datos cargados para que veas el formato (borrar cuando uses tu DB)
-        const mockDataFromDB = [
-            { jugador: 'NeoFitMaster', puntos: 15400 },
-            { jugador: 'CyberLifter', puntos: 12100 },
-            { jugador: 'Atheos', puntos: 9850 },
-            { jugador: 'RepsPro', puntos: 7320 },
-            { jugador: 'IronLegs', puntos: 6990 },
-        ];
-        
-        rankingData.value = mockDataFromDB; // Asigna los datos a la variable reactiva
-    } catch (error) {
-        console.error('Error al cargar la clasificación:', error);
+  try {
+    // ➡️ Código de 'prueva' para llamar a la API real
+    const response = await fetch('/api/ranking'); 
+    
+    if (!response.ok) {
+        throw new Error('No s\'ha pogut carregar la classificació');
     }
-}
+    
+    const data = await response.json();
+    rankingData.value = data; // Asigna los datos reales
+  } catch (error) {
+    console.error('Error al carregar la classificació:', error);
+    rankingData.value = []; // En caso de error, deja la tabla vacía
+  }
+} 
 
-// Clasificación ordenada por puntos (máximo primero)
+
+// Clasificación, clases de ranking y onMounted se mantienen casi idénticos, solo se ajustó la llamada en onMounted.
 const sortedRanking = computed(() => {
-  // Crea una copia para no mutar el original antes de ordenar
   return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
 })
 
-// Clases para resaltar las primeras posiciones
 const getRankClass = (index) => {
-  if (index === 0) return 'text-amber-lighten-2 text-h5' // Oro
-  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' // Plata
-  if (index === 2) return 'text-brown-lighten-2' // Bronce
+  if (index === 0) return 'text-amber-lighten-2 text-h5' 
+  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' 
+  if (index === 2) return 'text-brown-lighten-2' 
   return 'text-white'
 }
 
-// Llama a la función para cargar los datos cuando el componente se monta
 onMounted(() => {
-    // LLAMA AQUÍ A TU FUNCIÓN REAL DE CARGA DE DATOS
-    loadRankingData(); 
+  // 🟢 Se asegura que se llama a la nueva función de carga real.
+  loadRankingData();
 })
 
 
-// --- DATOS Y LÓGICA DE EJERCICIOS (existente) ---
+// --- DATOS Y LÓGICA DE EJERCICIOS ---
+// 🟢 MANTENIDO/UNIFICADO: Se usa la lista de ejercicios de 'Kim' porque es más completa.
 const exercicis = [
 
   {
@@ -204,16 +197,17 @@ const exercicis = [
     imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
     descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
   },
+  // ➡️ Estos dos ejercicios se tomaron de 'Kim' y NO estaban en 'prueva'.
   {
     nom: 'Fons',
     label: 'Fons',
-    imatge: new URL('@/assets/fons.jpg', import.meta.url).href, // **ASSEGURA'T D'AFEGIR AQUESTA IMATGE**
+    imatge: new URL('@/assets/fons.jpg', import.meta.url).href, 
     descripcio: 'Exercici intens per tríceps, espatlles i pit.',
   },
   {
     nom: 'Pujades', 
     label: 'Pujades', 
-    imatge: new URL('@/assets/pujades.jpg', import.meta.url).href, // **ASSEGURA'T D'AFEGIR AQUESTA IMATGE**
+    imatge: new URL('@/assets/pujades.jpg', import.meta.url).href, 
     descripcio: 'Enforteix les cames de manera unilateral millorant l\'equilibri.',
   },
 

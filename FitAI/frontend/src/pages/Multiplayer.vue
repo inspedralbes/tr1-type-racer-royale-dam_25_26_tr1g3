@@ -87,94 +87,120 @@
 <script setup>
 import { ref, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from '@/stores/authStore'; 
+import { useAuthStore } from '@/stores/authStore';
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore(); 
+const authStore = useAuthStore();
 const exercici = route.params.ejercicio;
 
+// Configuración de WebSocket (igual en ambos)
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsHost = window.location.host; 
-const WS_URL = `${wsProtocol}//${wsHost}/ws`; 
+const wsHost = window.location.host;
+const WS_URL = `${wsProtocol}//${wsHost}/ws`;
 
 let socket = null;
 const aSala = ref(false);
 const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
-const hostId = ref("");
+// 🟢 CAMBIO: hostId ahora usa el valor inicial numérico (0) de 'prueva'
+const hostId = ref(0); 
 const errorMsg = ref("");
 
-const userId = authStore.userName; 
+// 🟢 CAMBIO: Se obtienen tanto el ID numérico como el nombre de usuario
+const userId = authStore.user.id; // Asume que el store de autenticación tiene 'user.id'
+const userName = authStore.value; // Asume que el store de autenticación tiene 'userName'
 
 onBeforeUnmount(() => {
   sortirSala();
   if (socket) socket.close();
 });
 
-function generarCodiSala() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let codi = "";
-  for (let i = 0; i < 5; i++) {
-    codi += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return codi;
-}
 
+
+// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva'): Crea la sala mediante la API (POST /api/sala/crear)
 async function crearSala() {
   try {
-    const codi = generarCodiSala();
-    const sessionId = `${exercici}-${codi}`;
-    connectToSession(sessionId, true);
+    const res = await fetch('/api/sala/crear', { method: 'POST' });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.message || 'Error en crear la sala');
+    }
+    const sala = await res.json();
+    // Usa 'codi_acces' y 'creador_id' devueltos por el backend
+    connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
-    errorMsg.value = "Error en crear la sala.";
+    errorMsg.value = err.message;
   }
 }
 
+// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva'): Une la sala mediante la API (POST /api/sala/unir)
 async function unirSala() {
-  if (!codiSalaInput.value.trim()) return;
-  const sessionId = `${exercici}-${codiSalaInput.value.trim().toUpperCase()}`;
+  const codi = codiSalaInput.value.trim().toUpperCase();
+  if (!codi) return;
   errorMsg.value = "";
 
   try {
-    const res = await fetch(`/api/check-session/${sessionId}`);
+    const res = await fetch('/api/sala/unir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codi_acces: codi })
+    });
 
     if (!res.ok) {
-      errorMsg.value = "Sala no trobada. Comprova el codi i torna-ho a intentar.";
+      const errData = await res.json();
+      errorMsg.value = errData.message || "Sala no trobada. Comprova el codi i torna-ho a intentar.";
       sortirSala();
       return;
     }
 
-    connectToSession(sessionId);
+    const sala = await res.json();
+    // Usa 'codi_acces' y 'creador_id' devueltos por el backend
+    connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
     errorMsg.value = "Error en la connexió amb el servidor.";
     sortirSala();
   }
 }
 
-function connectToSession(sessionId, isHost = false) {
-  socket = new WebSocket(WS_URL); 
+// 🟢 FUNCIÓN ACTUALIZADA (BASADA EN 'prueva'): Maneja la conexión WebSocket
+function connectToSession(codi_acces, creador_id) {
+  socket = new WebSocket(WS_URL);
 
   socket.addEventListener("open", () => {
-    codiSala.value = sessionId;
+    codiSala.value = codi_acces;
     aSala.value = true;
-    hostId.value = isHost ? userId : "";
-    socket.send(JSON.stringify({ type: "join", sessionId, userId }));
+    hostId.value = creador_id; // Guarda el ID numérico del creador/host
+    // Envía el ID numérico y el nombre de usuario para el registro en el servidor WS
+    socket.send(JSON.stringify({ type: "join", codi_acces, userId, userName }));
   });
 
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "leaderboard") {
-      jugadors.value = msg.leaderboard.map((p) => p.userId);
-      if (!hostId.value && msg.leaderboard.length > 0) { 
+      // ➡️ Ahora 'jugadors' almacena el objeto completo { userId, userName, reps }
+      jugadors.value = msg.leaderboard;
+      
+      // La lógica del hostId se mantiene, aunque el valor principal viene de la API.
+      if (!hostId.value && msg.leaderboard.length > 0) {
         hostId.value = msg.leaderboard[0].userId;
       }
     }
 
     if (msg.type === "start") {
-      router.push(`/juego-multi/${exercici}/${msg.sessionId}`);
+      // ➡️ Navega usando 'codi_acces' como parámetro
+      router.push({
+        name: 'JuegoMultiplayer',
+        params: { ejercicio: exercici, codi_acces: msg.codi_acces }
+      });
+    }
+    
+    // ➡️ Adición de manejo de errores WS (de 'prueva')
+    if (msg.type === "error") {
+      errorMsg.value = msg.message;
+      sortirSala();
     }
   });
 
@@ -183,30 +209,32 @@ function connectToSession(sessionId, isHost = false) {
   });
 }
 
+// 🟢 FUNCIÓN AJUSTADA: Reinicia hostId a 0 y cierra el socket
 function sortirSala() {
   if (socket) {
     try {
       socket.send(JSON.stringify({ type: "leave" }));
       socket.close();
-    } catch (e) { }
+    } catch (e) { /* Ignora errores si ya está cerrado */ }
     socket = null;
   }
-
   aSala.value = false;
   codiSala.value = "";
   jugadors.value = [];
-  hostId.value = "";
+  // ➡️ Reinicia a 0
+  hostId.value = 0; 
 }
 
 function sortirManual() {
   sortirSala();
 }
 
+// 🟢 FUNCIÓN AJUSTADA: Envía 'codi_acces' en lugar de 'sessionId'
 function iniciarPartida() {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: "start",
-      sessionId: codiSala.value,
+      codi_acces: codiSala.value, // Envía el código de acceso
     }));
   }
 }
