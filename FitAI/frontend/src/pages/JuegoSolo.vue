@@ -164,33 +164,30 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'; // 🟢 AFEGIT: Importar authStore
+import { useAuthStore } from '@/stores/authStore'; 
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
 // ===================================================================
-// 1. GESTIÓN DE GIFS
-// Se usan las rutas directas de 'Kim' y se añaden los ejercicios extra.
+// 1. GESTIÓN DE GIFS (Sin cambios)
 // ===================================================================
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
-import fonsGif from '@/assets/fons.gif' // 🟢 MANTENIDO/AFEGIT de Kim
-import pujadesGif from '@/assets/pujades.gif' // 🟢 MANTENIDO/AFEGIT de Kim
+import fonsGif from '@/assets/fons.gif' 
+import pujadesGif from '@/assets/pujades.gif' 
 
 const pathCarregar = mdiFolderOutline
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore(); // 🟢 AFEGIT: Instanciar authStore
+const authStore = useAuthStore(); 
 
-const exercici = route.params.ejercicio // Usa 'ejercicio'
-// 🟢 CAMBIO: Usamos 'codi_acces' de la ruta (repositorio 'prueva')
+const exercici = route.params.ejercicio 
 const codi_acces = route.params.codi_acces 
 
-// Mapeo de nombres de ejercicio (combinando la completitud de Kim)
 const noms = {
   Flexions: 'FLEXIONS',
   Squats: 'SQUATS',
@@ -198,15 +195,14 @@ const noms = {
   Abdominals: 'ABDOMINALS',
   Fons: 'FONS',
   Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS', // Para asegurar minusculas
-  sentadillas: 'ESQUATS',
+  flexiones: 'FLEXIONS', 
+  sentadillas: 'SQUATS',
   saltos: 'SALTS',
   abdominales: 'ABDOMINALS',
   fons: 'FONS',
   pujades: 'PUJADES',
 }
 
-// Mapeo de GIFs
 const gifs = {
   Flexions: flexionesGif,
   Squats: sentadillasGif,
@@ -222,13 +218,12 @@ const gifs = {
   pujades: pujadesGif,
 }
 
-// Determinar el label y el GIF
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
 
 // ===================================================================
-// 2. ESTADO
+// 2. ESTADO (Con variables corregidas para saltos)
 // ===================================================================
 const video = ref(null)
 const canvas = ref(null)
@@ -237,35 +232,40 @@ const count = ref(0)
 const leaderboard = ref([])
 
 let detector = null
-let up = false // Estado de la repetición
+let up = false // Estado de repetición (para flexiones, squats, etc.)
 let streamRef = null
 let detecting = false
 
+// 👇 CAMBIO: Variables de estado específicas para saltos
+let jumpState = 'start'; 
+let groundYRef = null; 
+
 const ws = ref(null)
-// 🟢 CAMBIO: Obtenemos datos de usuario real (repositorio 'prueva')
 const userId = authStore.user.id;
 const userName = authStore.userName;
 
 
 // ===================================================================
-// 3. LIFECYCLE HOOKS
+// 3. LIFECYCLE HOOKS (Sin cambios)
 // ===================================================================
 onMounted(() => connectWebSocket())
 
-// 🟢 CAMBIO: Al salir del componente, se llama a 'tornar' (que incluye la lógica de 'finish' del WS)
 onBeforeUnmount(() => {
-  // Asegura que si se sale sin usar el botón, se guardan los datos.
   tornar(); 
 })
 
 
 // ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Basadas en 'Kim' y ajustadas)
-// Se mantiene la lógica del primer script, ya que es la más limpia y completa.
+// 4. FUNCIONES DE CÁMARA/VIDEO (Con reinicio de estado)
 // ===================================================================
 async function startCamera() {
+  // 👇 CAMBIO: Reiniciar estado y contador
+  count.value = 0;
+  jumpState = 'start';
+  groundYRef = null;
+  up = false;
+
   try {
-    // Inicializar dimensiones del canvas (ajustes de 'prueva' para manejar nulls)
     if (video.value?.offsetWidth && video.value?.offsetHeight) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
@@ -290,12 +290,12 @@ async function startCamera() {
 function stopCamera() {
   if (streamRef) {
     streamRef.getTracks().forEach((t) => t.stop())
-    if (video.value) video.value.srcObject = null; // Ajuste de 'prueva' para null
+    if (video.value) video.value.srcObject = null; 
     streamRef = null
   }
   detecting = false
   const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height); // Ajuste de 'prueva'
+  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height); 
 }
 
 function selectVideo() {
@@ -304,10 +304,16 @@ function selectVideo() {
 }
 
 async function loadVideoFromFile(event) {
+  // 👇 CAMBIO: Reiniciar estado y contador
+  count.value = 0;
+  jumpState = 'start';
+  groundYRef = null;
+  up = false;
+
   const file = event.target.files[0]
   if (!file) return
   
-  const ctx = canvas.value?.getContext('2d'); // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d'); 
   if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
   const url = URL.createObjectURL(file)
@@ -333,11 +339,10 @@ async function initMoveNet() {
   })
 }
 
-// 🟢 MANTENIDO: detectPose y detectVideoFrame se mantienen idénticos, usando la lógica unificada de 'drawPose'
 async function detectPose() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d') 
   async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) return // Ajuste de 'prueva'
+    if (!detecting || !video.value || video.value.paused || video.value.ended) return 
     
     if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
         canvas.value.width = video.value.videoWidth || 640;
@@ -356,11 +361,11 @@ async function detectPose() {
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d') 
   async function frameLoop() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) { // Ajuste de 'prueva'
-        if (video.value?.ended) { // Ajuste de 'prueva'
-             detecting = false;
+    if (!detecting || !video.value || video.value.paused || video.value.ended) { 
+        if (video.value?.ended) { 
+              detecting = false;
         }
         return
     }
@@ -380,15 +385,12 @@ async function detectVideoFrame() {
   requestAnimationFrame(frameLoop)
 }
 
-// 🟢 MANTENIDO: drawPose (de 'Kim', con lógica de escalado, y validaciones de 'prueva')
-// La implementación de drawPose es idéntica en el Kim original y en el Prueva corregido,
-// así que se mantiene la versión más robusta.
 function drawPose(ctx, pose) {
   const videoElement = video.value;
   const canvasElement = canvas.value;
 
   if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-  // ... (código drawPose completo sin cambios) ...
+  
   const videoDisplayedWidth = videoElement.offsetWidth;
   const videoDisplayedHeight = videoElement.offsetHeight;
   
@@ -462,112 +464,189 @@ function drawPose(ctx, pose) {
 
   ctx.shadowBlur = 0; 
 }
+// ===================================================================
+// 5.1. FUNCIÓN AUXILIAR PARA CÁLCULO DE ÁNGULO (Sin cambios)
+// ===================================================================
+function getAngle(keypoints, p1Name, p2Name, p3Name) {
+ const p1 = keypoints.find((k) => k.name === p1Name);
+ const p2 = keypoints.find((k) => k.name === p2Name);
+ const p3 = keypoints.find((k) => k.name === p3Name);
+
+ if (!p1 || !p2 || !p3 || p1.score < 0.4 || p2.score < 0.4 || p3.score < 0.4) {
+   return null; 
+ }
+
+ const radianes =
+   Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+   Math.atan2(p1.y - p2.y, p1.x - p2.x);
+
+ let angle = Math.abs(radianes * (180 / Math.PI));
+
+ if (angle > 180.0) {
+   angle = 360 - angle;
+ }
+
+ return angle;
+}
 
 
 // ===================================================================
-// 5. LÓGICA DE MOVIMIENTO
-// Se unifica usando el switch de 'prueva' y se añaden las funciones 
-// extra de 'Kim' (Fons y Pujades) si no existían.
+// 5. LÓGICA DE MOVIMIENTO (Corregida y unificada)
 // ===================================================================
 
-// 🟢 AFEGIT: Función de recompte genérica (de 'prueva')
 function handleRepCount() {
     count.value++;
-    up = false; // Reinicia l'estat
+    up = false; // Reinicia l'estat (para flexiones, squats, fons, pujades)
     if (ws.value?.readyState === WebSocket.OPEN) {
         ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
     }
 }
 
-// 🟢 MANTENIDO/UNIFICADO: Switch principal (de 'prueva' pero con todos los casos de 'Kim')
 function checkMoviment(pose) {
+    // 👇 CAMBIO: Nombres de casos deben coincidir con el mapeo (minúsculas)
     switch (exercici) {
         case 'flexiones':
-            checkFlexio(pose); 
+            checkFlexiones(pose); 
             break;
         case 'sentadillas':
-            checkEsquat(pose); 
+            checkSentadillas(pose); 
             break;
         case 'saltos':
-            checkSalt(pose); 
+            checkSaltos(pose); 
             break;
         case 'abdominales':
-            checkAbdominal(pose);
+            checkAbdominales(pose); // Asumiendo que esta función existe y es correcta
             break;
         case 'fons':
-            checkFons(pose); // 🟢 AFEGIT (se necesita la implementación)
+            checkFons(pose); 
             break;
         case 'pujades':
-            checkPujades(pose); // 🟢 AFEGIT (se necesita la implementación)
+            checkPujades(pose); 
             break;
     }
 }
 
-// 🟢 FUNCIONES AÑADIDAS/UNIFICADAS (Tomadas de 'prueva', con el uso de handleRepCount)
-
 // ---------------- FLEXIONS (checkFlexio) ----------------
-function checkFlexio(pose) {
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
-    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return // Score check
-    const dist = Math.abs(espatlla.y - canell.y)
-    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+function checkFlexiones(pose) {
+ const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
+ const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
+ const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+ if (angle === null) return;
+
+ const UMBRAL_ABAJO = 90; 
+ const UMBRAL_ARRIBA = 160; 
+
+ if (angle < UMBRAL_ABAJO && !up) {
+     up = true;
+ }
+
+ if (angle > UMBRAL_ARRIBA && up) {
+   handleRepCount(); // <-- CAMBIO: Usar handler
+ }
 }
+
 
 // ---------------- SQUATS (checkEsquat) ----------------
-function checkEsquat(pose) {
-    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
-    const dist = Math.abs(maluc.y - genoll.y)
-    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+function checkSentadillas(pose) {
+ const angleL = getAngle(pose.keypoints, 'left_hip', 'left_knee', 'left_ankle');
+ const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
+ const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+ if (angle === null) return;
+
+ const UMBRAL_ABAJO = 90; 
+ const UMBRAL_ARRIBA = 165; 
+
+ if (angle < UMBRAL_ABAJO && !up) {
+     up = true;
+ }
+
+ if (angle > UMBRAL_ARRIBA && up) {
+   handleRepCount(); // <-- CAMBIO: Usar handler
+ }
 }
 
-// ---------------- SALTS (checkSalt) ----------------
-let initialY = null;
-let jumping = false;
-function checkSalt(pose) {
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!peu || peu.score < 0.4) return
-    if (initialY === null) initialY = peu.y
-    const delta = initialY - peu.y
-    const UMBRAL_SALT = 60
-    if (delta > UMBRAL_SALT && !jumping) {
-        jumping = true
-    } else if (delta < 10 && jumping) {
-        jumping = false; 
-        handleRepCount(); 
-    }
-}
-
-// ---------------- ABDOMINALS (checkAbdominal) ----------------
-// Se toma la versión de 'prueva' que usa handleRepCount, pero la lógica es idéntica a 'Kim'
-function checkAbdominal(pose) {
+// ---------------- ABDOMINALS (Placeholder) ----------------
+// (Asegúrate de que esta lógica también use handleRepCount)
+function checkAbdominales(pose) {
+ // Lógica de abdominales...
+ // Ejemplo:
  const nas = pose.keypoints.find((k) => k.name === 'nose')
  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
- if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return // Score check
+ if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return 
 
  const distancia = Math.abs(nas.y - maluc.y)
  const UMBRAL_ARRIBA = 150; 
  const UMBRAL_ABAJO = 100;
 
  if (distancia < UMBRAL_ABAJO && !up) {
- up = true; 
+   up = true; 
  }
-
  if (distancia > UMBRAL_ARRIBA && up) {
    handleRepCount(); 
  }
 }
 
-// ---------------- FONS (DEBE SER AÑADIDO) ----------------
+
+// ---------------- SALTS (Lógica corregida) ----------------
+function checkSaltos(pose) {
+  const nas = pose.keypoints.find((k) => k.name === 'nose');
+  const maluc = pose.keypoints.find((k) => k.name === 'left_hip');
+
+  // Necesitamos al menos nariz y cadera
+  if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return;
+
+  const noseY = nas.y;
+  
+  // Umbrales absolutos (puedes ajustarlos)
+  const UMBRAL_SALT_ALT = 50; // La nariz debe subir 50px (Y disminuye)
+  const UMBRAL_FLEXION = 20;  // La nariz debe bajar 20px (Y aumenta)
+
+  // 1. Fase de 'start': Capturar la posición inicial del suelo
+  if (jumpState === 'start') {
+      groundYRef = noseY; // Establece la referencia del suelo
+      jumpState = 'ground'; // Pasa al estado de "en el suelo"
+      return; // Salir y esperar al siguiente frame
+  }
+  
+  if (groundYRef === null) return; // No se ha inicializado
+
+  // El switch maneja el estado del salto
+  switch (jumpState) {
+    case 'ground':
+      // 2. En el suelo: Esperando una flexión para saltar
+      // Si la nariz baja (Y aumenta)
+      if (noseY > (groundYRef + UMBRAL_FLEXION)) {
+        jumpState = 'down';
+      }
+      break;
+    
+    case 'down':
+      // 3. Flexionado: Esperando el impulso hacia arriba
+      // Si la nariz sube (Y disminuye) por encima del umbral de salto
+      if (noseY < (groundYRef - UMBRAL_SALT_ALT)) {
+        jumpState = 'up';
+      }
+      // Si se levanta sin saltar
+      else if (noseY < groundYRef) {
+         jumpState = 'ground';
+      }
+      break;
+
+    case 'up':
+      // 4. En el aire: Esperando el aterrizaje
+      // Si la nariz vuelve a la posición del suelo (Y aumenta)
+      if (noseY > (groundYRef - 10)) { // Aterrizado (con margen)
+        handleRepCount(); // <-- Llama al handler unificado
+        jumpState = 'ground'; // Vuelve al estado "en el suelo"
+        // No actualizamos groundYRef para mantener la referencia estable
+      }
+      break;
+  }
+}
+
+
+// ---------------- FONS (checkFons) ----------------
 function checkFons(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos el hombro (shoulder) y el codo (elbow) como ejemplo.
     const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
     const colze = pose.keypoints.find(k => k.name === 'left_elbow')
     if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
@@ -577,10 +656,8 @@ function checkFons(pose) {
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// ---------------- PUJADES (DEBE SER AÑADIDO) ----------------
+// ---------------- PUJADES (checkPujades) ----------------
 function checkPujades(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos la rodilla (knee) y el tobillo (ankle) como ejemplo.
     const genoll = pose.keypoints.find(k => k.name === 'left_knee')
     const peu = pose.keypoints.find(k => k.name === 'left_ankle')
     if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
@@ -592,7 +669,7 @@ function checkPujades(pose) {
 
 
 // ===================================================================
-// 6. WEBSOCKET (Tomada y ajustada de 'prueva')
+// 6. WEBSOCKET (Sin cambios)
 // ===================================================================
 
 function connectWebSocket() {
@@ -606,13 +683,11 @@ function connectWebSocket() {
 
  ws.value.onopen = () => {
    console.log('Connectat al servidor WebSocket');
-   // 🟢 CAMBIO: Se usan 'codi_acces', 'userId' y 'userName'
    ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
  };
  ws.value.onmessage = (event) => {
    const message = JSON.parse(event.data);
    if (message.type === 'leaderboard') {
-     // 🟢 CAMBIO: El leaderboard ahora contiene datos completos
      leaderboard.value = message.leaderboard;
    }
  };
@@ -622,14 +697,13 @@ function connectWebSocket() {
 
 
 // ===================================================================
-// 7. NAVEGACIÓN (Tomada y ajustada de 'prueva' con lógica de 'finish')
+// 7. NAVEGACIÓN (Sin cambios)
 // ===================================================================
 
 function tornar() {
   stopCamera();
   
   if (ws.value?.readyState === WebSocket.OPEN) {
-    // 🟢 AFEGIT: Enviamos 'finish' para guardar los resultados en la BBDD
     ws.value.send(JSON.stringify({
       type: 'finish',
       reps: count.value,
@@ -637,7 +711,6 @@ function tornar() {
       codi_acces: codi_acces
     }));
     
-    // Enviamos 'leave' y cerramos la conexión
     ws.value.send(JSON.stringify({ type: 'leave' }));
     ws.value.close();
     ws.value = null; 
