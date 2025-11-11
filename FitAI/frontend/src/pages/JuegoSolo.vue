@@ -164,45 +164,48 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'; 
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
 // ===================================================================
-// 1. GESTIÓN DE GIFS (Sin cambios)
+// 1. GESTIÓN DE GIFS (Tomado del primer script)
+// Se recomienda usar las rutas directas como en el primer script si
+// tu configuración de Vite/Webpack lo soporta:
 // ===================================================================
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
-import fonsGif from '@/assets/fons.gif' 
-import pujadesGif from '@/assets/pujades.gif' 
+import fonsGif from '@/assets/fons.gif'
+import pujadesGif from '@/assets/pujades.gif'
 
 const pathCarregar = mdiFolderOutline
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore(); 
 
-const exercici = route.params.ejercicio 
-const codi_acces = route.params.codi_acces 
+const exercici = route.params.ejercicio // Usa 'ejercicio' directamente
+const sessionId = route.params.sessionId
 
+// Mapeo de nombres de ejercicio (ajustado para usar las claves del segundo script si son las que vienen por URL)
 const noms = {
   Flexions: 'FLEXIONS',
-  Squats: 'SQUATS',
+  Squats: 'ESQUATS',
   Salts: 'SALTS',
   Abdominals: 'ABDOMINALS',
   Fons: 'FONS',
   Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS', 
-  sentadillas: 'SQUATS',
+  // Asegúrate de que las claves coincidan con el parámetro de ruta `exercici`
+  flexiones: 'FLEXIONS',
+  sentadillas: 'ESQUATS',
   saltos: 'SALTS',
   abdominales: 'ABDOMINALS',
   fons: 'FONS',
   pujades: 'PUJADES',
 }
 
+// Mapeo de GIFs (tomado del primer script con las claves ajustadas)
 const gifs = {
   Flexions: flexionesGif,
   Squats: sentadillasGif,
@@ -210,6 +213,7 @@ const gifs = {
   Abdominals: abdominalesGif,
   Fons: fonsGif,
   Pujades: pujadesGif,
+  // Asegúrate de que las claves coincidan con el parámetro de ruta `
   flexiones: flexionesGif,
   sentadillas: sentadillasGif,
   saltos: saltosGif,
@@ -218,12 +222,12 @@ const gifs = {
   pujades: pujadesGif,
 }
 
+// Determinar el label y el GIF usando el valor de la URL
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
-
 // ===================================================================
-// 2. ESTADO (Con variables corregidas para saltos)
+// 2. ESTADO
 // ===================================================================
 const video = ref(null)
 const canvas = ref(null)
@@ -232,41 +236,36 @@ const count = ref(0)
 const leaderboard = ref([])
 
 let detector = null
-let up = false // Estado de repetición (para flexiones, squats, etc.)
+let up = false
 let streamRef = null
 let detecting = false
 
-// 👇 CAMBIO: Variables de estado específicas para saltos
-let jumpState = 'start'; 
-let groundYRef = null; 
-
 const ws = ref(null)
-const userId = authStore.user.id;
-const userName = authStore.userName;
-
+const userId = ref(`usuari_${Math.floor(Math.random() * 10000)}`)
 
 // ===================================================================
-// 3. LIFECYCLE HOOKS (Sin cambios)
+// 3. LIFECYCLE HOOKS
 // ===================================================================
 onMounted(() => connectWebSocket())
 
 onBeforeUnmount(() => {
-  tornar(); 
+  stopCamera();
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({ type: 'leave' }))
+    ws.value.close()
+  }
 })
 
+// ===================================================================
+// 4. FUNCIONES DE CÁMARA/VIDEO (Combinadas y limpiadas)
+// Se mantiene la lógica del primer script para la inicialización
+// del canvas/video, ya que es más limpia.
+// ===================================================================
 
-// ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Con reinicio de estado)
-// ===================================================================
 async function startCamera() {
-  // 👇 CAMBIO: Reiniciar estado y contador
-  count.value = 0;
-  jumpState = 'start';
-  groundYRef = null;
-  up = false;
-
   try {
-    if (video.value?.offsetWidth && video.value?.offsetHeight) {
+    // Inicializar dimensiones del canvas
+    if (video.value.offsetWidth && video.value.offsetHeight) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
     } else {
@@ -290,12 +289,12 @@ async function startCamera() {
 function stopCamera() {
   if (streamRef) {
     streamRef.getTracks().forEach((t) => t.stop())
-    if (video.value) video.value.srcObject = null; 
+    video.value.srcObject = null
     streamRef = null
+    detecting = false
+    const ctx = canvas.value.getContext('2d');
+    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
   }
-  detecting = false
-  const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height); 
 }
 
 function selectVideo() {
@@ -304,32 +303,41 @@ function selectVideo() {
 }
 
 async function loadVideoFromFile(event) {
-  // 👇 CAMBIO: Reiniciar estado y contador
-  count.value = 0;
-  jumpState = 'start';
-  groundYRef = null;
-  up = false;
-
   const file = event.target.files[0]
   if (!file) return
   
-  const ctx = canvas.value?.getContext('2d'); 
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+  // 1. Comprova el format (millor si ho fas abans de carregar)
+  if (!file.type.startsWith('video/mp4') && !file.type.startsWith('video/webm')) {
+    console.warn('Format de vídeo no recomanat. Si us plau, utilitza MP4 o WebM.');
+    // Podries mostrar un error a l'usuari aquí
+  }
+  
+  const ctx = canvas.value.getContext('2d');
+  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
   stopCamera() 
   video.value.src = url
   
-  video.value.onloadedmetadata = () => {
-    canvas.value.width = video.value.videoWidth;
-    canvas.value.height = video.value.videoHeight;
+  video.value.onloadedmetadata = async () => {
+    // !! IMPORTANT !!
+    // Ara que el vídeo està carregat, ajustem el canvas a la mida
+    // VISIBLE del vídeo (offsetWidth) per a la funció drawPose.
+    canvas.value.width = video.value.offsetWidth;
+    canvas.value.height = video.value.offsetHeight;
+    
+    // Assegura't que MoveNet està llest
+    if (!detector) await initMoveNet()
+    
+    // Inicia la detecció NOMÉS ARA
+    detecting = true
+    detectVideoFrame()
+    
+    // Inicia la reproducció (ho pots fer abans, però és més segur aquí)
+    await video.value.play()
   };
-  
-  await video.value.play()
-  if (!detector) await initMoveNet()
-  detecting = true
-  detectVideoFrame()
+
 }
 
 async function initMoveNet() {
@@ -339,15 +347,22 @@ async function initMoveNet() {
   })
 }
 
+// El resto de detectPose y detectVideoFrame son idénticas en ambos scripts,
+// así que mantendremos las del primer script, ya que son ligeramente más compactas.
 async function detectPose() {
-  const ctx = canvas.value?.getContext('2d') 
+  const ctx = canvas.value.getContext('2d')
   async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) return 
+    // !! CORREGIT !! Afegit !video.value
+    if (!detecting || !video.value || video.value.paused || video.value.ended) return
     
+    // !! ELIMINAT !! Traiem el redimensionament d'aquí.
+    // Ja ho fa onloadedmetadata (a l'inici) i drawPose (a cada frame)
+    /*
     if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
         canvas.value.width = video.value.videoWidth || 640;
         canvas.value.height = video.value.videoHeight || 480;
     }
+    */
 
     const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
 
@@ -361,19 +376,23 @@ async function detectPose() {
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value?.getContext('2d') 
+  const ctx = canvas.value.getContext('2d')
   async function frameLoop() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) { 
-        if (video.value?.ended) { 
+    // !! CORREGIT !! Afegit !video.value
+    if (!detecting || !video.value || video.value.paused || video.value.ended) {
+        if (video.value && video.value.ended) { // Comprovació extra
               detecting = false;
         }
         return
     }
 
+    // !! ELIMINAT !! Traiem el redimensionament d'aquí.
+    /*
     if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
         canvas.value.width = video.value.videoWidth || 640;
         canvas.value.height = video.value.videoHeight || 480;
     }
+    */
     
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
@@ -384,26 +403,36 @@ async function detectVideoFrame() {
   }
   requestAnimationFrame(frameLoop)
 }
+// ===================================================================
+// 5. DRAWPOSE (Tomado del segundo script por su lógica de escalado)
+// Es crucial para que el esqueleto se dibuje bien si el video
+// no tiene el mismo tamaño que el canvas mostrado.
+// ===================================================================
 
 function drawPose(ctx, pose) {
   const videoElement = video.value;
   const canvasElement = canvas.value;
 
   if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-  
+
+  // Usa las dimensiones *mostradas* por el elemento <video> en el DOM
+  // para escalar los puntos clave
   const videoDisplayedWidth = videoElement.offsetWidth;
   const videoDisplayedHeight = videoElement.offsetHeight;
   
+  // Usa las dimensiones *naturales* del video para el cálculo de ratio
   const videoNaturalWidth = videoElement.videoWidth;
   const videoNaturalHeight = videoElement.videoHeight;
   
+  // El canvas debe tener el mismo tamaño que el video mostrado
   if (canvasElement.width !== videoDisplayedWidth || canvasElement.height !== videoDisplayedHeight) {
     canvasElement.width = videoDisplayedWidth;
     canvasElement.height = videoDisplayedHeight;
   }
- 
+
   ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
+  // Calcular el factor de escalado y el desplazamiento (ej. letterboxing/pillarboxing)
   const videoAspectRatio = videoNaturalWidth / videoNaturalHeight;
   const canvasAspectRatio = videoDisplayedWidth / videoDisplayedHeight;
   
@@ -412,13 +441,16 @@ function drawPose(ctx, pose) {
   let offsetY = 0;
 
   if (videoAspectRatio > canvasAspectRatio) {
+    // Si el video es más ancho (proporcionalmente), el factor se basa en la altura
     scaleFactor = videoDisplayedHeight / videoNaturalHeight;
     offsetX = (videoDisplayedWidth - videoNaturalWidth * scaleFactor) / 2;
   } else {
+    // Si el video es más alto (proporcionalmente), el factor se basa en la anchura
     scaleFactor = videoDisplayedWidth / videoNaturalWidth;
     offsetY = (videoDisplayedHeight - videoNaturalHeight * scaleFactor) / 2;
   }
 
+  // Función de transformación para escalar y desplazar cada punto
   const transformPoint = (kp) => {
     if (!kp) return null;
     return {
@@ -428,7 +460,7 @@ function drawPose(ctx, pose) {
   };
   
   // Dibujar puntos clave
-  ctx.fillStyle = '#00ffaa'; 
+  ctx.fillStyle = '#00ffaa'; // Neón verde/cian
   ctx.shadowBlur = 12;
   ctx.shadowColor = '#00ffaa';
   
@@ -442,9 +474,10 @@ function drawPose(ctx, pose) {
   }
 
   // Dibujar esqueletos (conexiones)
+  // Usamos getAdjacentPairs para la detección de MoveNet
   const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#8b5cf6'; 
+  ctx.strokeStyle = '#8b5cf6'; // Morado neón para las líneas
   ctx.shadowBlur = 8;
   ctx.shadowColor = '#8b5cf6';
   
@@ -462,262 +495,332 @@ function drawPose(ctx, pose) {
     }
   }
 
-  ctx.shadowBlur = 0; 
+  ctx.shadowBlur = 0; // Resetear sombra
 }
+
 // ===================================================================
-// 5.1. FUNCIÓN AUXILIAR PARA CÁLCULO DE ÁNGULO (Sin cambios)
+// 5.1. FUNCIÓN AUXILIAR PARA CÁLCULO DE ÁNGULO
 // ===================================================================
+
+
+/**
+* Calcula el ángulo en grados formado por tres puntos clave (A, B, C).
+* El ángulo se centra en el punto B (la articulación).
+* @param {object} keypoints - Array de keypoints de la pose.
+* @param {string} p1Name - Nombre del primer punto (ej. 'left_shoulder').
+* @param {string} p2Name - Nombre del punto central (articulación) (ej. 'left_elbow').
+* @param {string} p3Name - Nombre del tercer punto (ej. 'left_wrist').
+* @returns {number | null} - El ángulo en grados (0-180) o null si algún punto no es válido.
+*/
 function getAngle(keypoints, p1Name, p2Name, p3Name) {
- const p1 = keypoints.find((k) => k.name === p1Name);
- const p2 = keypoints.find((k) => k.name === p2Name);
- const p3 = keypoints.find((k) => k.name === p3Name);
+  const p1 = keypoints.find((k) => k.name === p1Name);
+  const p2 = keypoints.find((k) => k.name === p2Name);
+  const p3 = keypoints.find((k) => k.name === p3Name);
 
- if (!p1 || !p2 || !p3 || p1.score < 0.4 || p2.score < 0.4 || p3.score < 0.4) {
-   return null; 
- }
 
- const radianes =
-   Math.atan2(p3.y - p2.y, p3.x - p2.x) -
-   Math.atan2(p1.y - p2.y, p1.x - p2.x);
+  if (!p1 || !p2 || !p3 || p1.score < 0.4 || p2.score < 0.4 || p3.score < 0.4) {
+   return null; // Retorna null si alguno de los puntos no es fiable o no existe
+  }
+
+
+  const radianes =
+    Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+    Math.atan2(p1.y - p2.y, p1.x - p2.x);
+
 
  let angle = Math.abs(radianes * (180 / Math.PI));
 
- if (angle > 180.0) {
-   angle = 360 - angle;
- }
 
- return angle;
+ // Asegura que el ángulo esté entre 0 y 180 grados
+  if (angle > 180.0) {
+    angle = 360 - angle;
+  }
+
+
+  return angle;
 }
 
 
 // ===================================================================
-// 5. LÓGICA DE MOVIMIENTO (Corregida y unificada)
+// 6. LÓGICA DE MOVIMIENTO (Idéntica en ambos, mantenemos una versión)
 // ===================================================================
-
-function handleRepCount() {
-    count.value++;
-    up = false; // Reinicia l'estat (para flexiones, squats, fons, pujades)
-    if (ws.value?.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
-    }
-}
 
 function checkMoviment(pose) {
-    // 👇 CAMBIO: Nombres de casos deben coincidir con el mapeo (minúsculas)
-    switch (exercici) {
-        case 'flexiones':
-            checkFlexiones(pose); 
-            break;
-        case 'sentadillas':
-            checkSentadillas(pose); 
-            break;
-        case 'saltos':
-            checkSaltos(pose); 
-            break;
-        case 'abdominales':
-            checkAbdominales(pose); // Asumiendo que esta función existe y es correcta
-            break;
-        case 'fons':
-            checkFons(pose); 
-            break;
-        case 'pujades':
-            checkPujades(pose); 
-            break;
+  if (exercici === 'abdominales') checkAbdominal(pose)
+  if (exercici === 'flexiones') checkFlexiones(pose)
+  if (exercici === 'sentadillas') checkSentadillas(pose)
+  if (exercici === 'saltos') checkSaltos(pose)
+  if (exercici === 'fons') checkFons(pose)
+  if (exercici === 'pujades') checkPujades(pose)
+}
+
+function checkAbdominal(pose) {
+  const nas = pose.keypoints.find((k) => k.name === 'nose')
+  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+  if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return; // Validación de score
+
+  const distancia = Math.abs(nas.y - maluc.y)
+  const UMBRAL_ARRIBA = 150; 
+  const UMBRAL_ABAJO = 100;
+
+  if (distancia < UMBRAL_ABAJO && !up) {
+      up = true; 
+  }
+
+  if (distancia > UMBRAL_ARRIBA && up) {
+    count.value++
+    up = false
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
     }
+  }
 }
 
-// ---------------- FLEXIONS (checkFlexio) ----------------
 function checkFlexiones(pose) {
- const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
- const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
- const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
- if (angle === null) return;
+ // Usaremos el lado izquierdo o derecho, el que tenga mejor visibilidad (score)
+  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
+  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
 
- const UMBRAL_ABAJO = 90; 
- const UMBRAL_ARRIBA = 160; 
 
- if (angle < UMBRAL_ABAJO && !up) {
-     up = true;
- }
+ // Elegir el ángulo más fiable. Si ambos son null, salir.
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
 
- if (angle > UMBRAL_ARRIBA && up) {
-   handleRepCount(); // <-- CAMBIO: Usar handler
- }
+
+  if (angle === null) return;
+
+
+ // UMBRALES DE ÁNGULO
+ const UMBRAL_ABAJO = 90; // Codo flexionado (ángulo agudo o recto)
+ const UMBRAL_ARRIBA = 160; // Codo extendido (casi recto)
+
+
+ // Fase de "abajo" (el codo se dobla)
+  if (angle < UMBRAL_ABAJO && !up) {
+     // El codo ha pasado el punto de flexión (ha bajado)
+      up = true;
+  }
+
+
+ // Fase de "arriba" (el codo se extiende y se completa la repetición)
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+   // Notificación al WebSocket
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+    }
+  }
 }
 
 
-// ---------------- SQUATS (checkEsquat) ----------------
 function checkSentadillas(pose) {
- const angleL = getAngle(pose.keypoints, 'left_hip', 'left_knee', 'left_ankle');
- const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
- const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
- if (angle === null) return;
+ // Usaremos el lado izquierdo o derecho, el que tenga mejor visibilidad (score)
+  const angleL = getAngle(pose.keypoints, 'left_hip', 'left_knee', 'left_ankle');
+  const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
 
- const UMBRAL_ABAJO = 90; 
- const UMBRAL_ARRIBA = 165; 
 
- if (angle < UMBRAL_ABAJO && !up) {
-     up = true;
- }
+ // Elegir el ángulo más fiable. Si ambos son null, salir.
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
 
- if (angle > UMBRAL_ARRIBA && up) {
-   handleRepCount(); // <-- CAMBIO: Usar handler
- }
+
+  if (angle === null) return;
+
+
+ // UMBRALES DE ÁNGULO
+ const UMBRAL_ABAJO = 90; // Rodilla bien doblada (sentadilla profunda)
+ const UMBRAL_ARRIBA = 165; // Rodilla casi recta (de pie)
+
+
+ // Fase de "abajo" (el ángulo se reduce al doblar la rodilla)
+  if (angle < UMBRAL_ABAJO && !up) {
+     // Ha pasado el punto de máxima flexión (está abajo)
+      up = true;
+  }
+
+
+ // Fase de "arriba" (el ángulo se extiende y se completa la repetición)
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+   // Notificación al WebSocket
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+    }
+  }
 }
 
-// ---------------- ABDOMINALS (Placeholder) ----------------
-// (Asegúrate de que esta lógica también use handleRepCount)
-function checkAbdominales(pose) {
- // Lógica de abdominales...
- // Ejemplo:
- const nas = pose.keypoints.find((k) => k.name === 'nose')
- const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
- if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return 
-
- const distancia = Math.abs(nas.y - maluc.y)
- const UMBRAL_ARRIBA = 150; 
- const UMBRAL_ABAJO = 100;
-
- if (distancia < UMBRAL_ABAJO && !up) {
-   up = true; 
- }
- if (distancia > UMBRAL_ARRIBA && up) {
-   handleRepCount(); 
- }
-}
-
-
-// ---------------- SALTS (Lógica corregida) ----------------
 function checkSaltos(pose) {
-  const nas = pose.keypoints.find((k) => k.name === 'nose');
-  const maluc = pose.keypoints.find((k) => k.name === 'left_hip');
+  const shoulderL = pose.keypoints.find((k) => k.name === 'left_shoulder');
+  const shoulderR = pose.keypoints.find((k) => k.name === 'right_shoulder');
+  const wristL = pose.keypoints.find((k) => k.name === 'left_wrist');
+  const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
+  const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
 
-  // Necesitamos al menos nariz y cadera
-  if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return;
-
-  const noseY = nas.y;
-  
-  // Umbrales absolutos (puedes ajustarlos)
-  const UMBRAL_SALT_ALT = 50; // La nariz debe subir 50px (Y disminuye)
-  const UMBRAL_FLEXION = 20;  // La nariz debe bajar 20px (Y aumenta)
-
-  // 1. Fase de 'start': Capturar la posición inicial del suelo
-  if (jumpState === 'start') {
-      groundYRef = noseY; // Establece la referencia del suelo
-      jumpState = 'ground'; // Pasa al estado de "en el suelo"
-      return; // Salir y esperar al siguiente frame
+  // Validació de punts clau
+  if (!shoulderL || !shoulderR || !wristL || !ankleL || !ankleR ||
+      shoulderL.score < 0.4 || shoulderR.score < 0.4 || wristL.score < 0.4 || 
+      ankleL.score < 0.4 || ankleR.score < 0.4) {
+    return;
   }
+
+  // --- LÒGICA MILLORADA ---
+
+  // 1. Condició de Braços (Relativa - Es manté igual)
+  // La nina (wrist) més amunt (menor 'y') que l'espatlla (shoulder)
+  const brazosArriba = wristL.y < shoulderL.y;
+
+  // 2. Condició de Peus (Relativa - Normalitzada)
   
-  if (groundYRef === null) return; // No se ha inicializado
+  // A. Calcular la nostra "unitat de mesura": l'amplada de les espatlles
+  const shoulderWidth = Math.abs(shoulderL.x - shoulderR.x);
+  
+  // B. Calcular la distància actual dels turmells
+  const distanciaPies = Math.abs(ankleL.x - ankleR.x);
 
-  // El switch maneja el estado del salto
-  switch (jumpState) {
-    case 'ground':
-      // 2. En el suelo: Esperando una flexión para saltar
-      // Si la nariz baja (Y aumenta)
-      if (noseY > (groundYRef + UMBRAL_FLEXION)) {
-        jumpState = 'down';
-      }
-      break;
-    
-    case 'down':
-      // 3. Flexionado: Esperando el impulso hacia arriba
-      // Si la nariz sube (Y disminuye) por encima del umbral de salto
-      if (noseY < (groundYRef - UMBRAL_SALT_ALT)) {
-        jumpState = 'up';
-      }
-      // Si se levanta sin saltar
-      else if (noseY < groundYRef) {
-         jumpState = 'ground';
-      }
-      break;
+  // C. Definir llindars RELATIUS a l'amplada de les espatlles
+  // Llindar Obert: Els peus estan més separats que 1.5 vegades l'amplada de les espatlles.
+  const UMBRAL_PIES_ABIERTO_RATIO = 1.5; 
+  // Llindar Tancat: Els peus estan més junts que 0.5 vegades l'amplada de les espatlles.
+  const UMBRAL_PIES_CERRADO_RATIO = 0.5;
 
-    case 'up':
-      // 4. En el aire: Esperando el aterrizaje
-      // Si la nariz vuelve a la posición del suelo (Y aumenta)
-      if (noseY > (groundYRef - 10)) { // Aterrizado (con margen)
-        handleRepCount(); // <-- Llama al handler unificado
-        jumpState = 'ground'; // Vuelve al estado "en el suelo"
-        // No actualizamos groundYRef para mantener la referencia estable
-      }
-      break;
+  // D. Comprovar les condicions relatives
+  const piesAbiertos = distanciaPies > (shoulderWidth * UMBRAL_PIES_ABIERTO_RATIO);
+  const piesCerrados = distanciaPies < (shoulderWidth * UMBRAL_PIES_CERRADO_RATIO);
+
+  // --- LÒGICA DE COMPTADOR ---
+
+  // Fase 1: Abierto (Preparació per tancar)
+  // El cos està en posició "oberta" (braços amunt I peus oberts)
+  if (brazosArriba && piesAbiertos && !up) {
+      up = true;
+  }
+
+  // Fase 2: Cerrado (Repetició completada)
+  // El cos torna a la posició "tancada" (braços avall I peus tancats)
+  if (!brazosArriba && piesCerrados && up) {
+    count.value++;
+    up = false;
+    // Notificació al WebSocket
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+    }
   }
 }
 
-
-// ---------------- FONS (checkFons) ----------------
 function checkFons(pose) {
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const colze = pose.keypoints.find(k => k.name === 'left_elbow')
-    if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
-    const dist = Math.abs(espatlla.y - colze.y)
-    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  // Usaremos el lado izquierdo o derecho, el que tenga mejor visibilidad (score)
+  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
+  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
+
+  // Elegir el ángulo más fiable.
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+
+  if (angle === null) return;
+
+  // UMBRALES DE ÁNGULO para Dips (similares a Flexiones, ya que es el mismo movimiento articular)
+  const UMBRAL_ABAJO = 90; // Codo flexionado (ángulo agudo/recto al bajar)
+  const UMBRAL_ARRIBA = 160; // Codo extendido (casi recto al subir)
+
+  // Fase de "abajo" (el codo se dobla para bajar el cuerpo)
+  if (angle < UMBRAL_ABAJO && !up) {
+      // El codo ha pasado el punto de flexión (ha bajado)
+      up = true;
+  }
+
+  // Fase de "arriba" (el codo se extiende y se completa la repetición)
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+    // Notificación al WebSocket
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+    }
+  }
 }
 
-// ---------------- PUJADES (checkPujades) ----------------
 function checkPujades(pose) {
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
-    const dist = Math.abs(genoll.y - peu.y)
-    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
-}
+  // Usaremos el lado izquierdo o derecho, el que tenga mejor visibilidad (score)
+  const hipL = pose.keypoints.find((k) => k.name === 'left_hip');
+  const kneeL = pose.keypoints.find((k) => k.name === 'left_knee');
+  const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
 
+  const hipR = pose.keypoints.find((k) => k.name === 'right_hip');
+  const kneeR = pose.keypoints.find((k) => k.name === 'right_knee');
+  const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
+
+  // Función auxiliar para verificar una pierna
+  const checkLeg = (hip, knee, ankle) => {
+      if (!hip || !knee || !ankle || hip.score < 0.4 || knee.score < 0.4 || ankle.score < 0.4) return false;
+      // 1. La rodilla está levantada por encima de la cadera (y más alta que la otra rodilla/cadera)
+      // Nota: Recuerda que 'y' más pequeño = más arriba.
+      const rodillaArriba = knee.y < hip.y; 
+      
+      // 2. La rodilla está mucho más alta que el tobillo (pierna doblada)
+      const distanciaKneeAnkle = Math.abs(knee.y - ankle.y);
+      const UMBRAL_PIERNA_DOBLADA = 100; // La rodilla debe estar separada del tobillo
+      
+      // 3. La rodilla debe estar cerca de la cadera horizontalmente (rodilla levantada hacia el cuerpo)
+      const distanciaHorizontal = Math.abs(knee.x - hip.x);
+      const UMBRAL_HORIZONTAL = 50; 
+
+      return rodillaArriba && distanciaKneeAnkle > UMBRAL_PIERNA_DOBLADA && distanciaHorizontal < UMBRAL_HORIZONTAL;
+  }
+  
+  // Condición de repetición: Al menos una rodilla debe estar arriba
+  const piernaArriba = checkLeg(hipL, kneeL, ankleL) || checkLeg(hipR, kneeR, ankleR);
+
+  // Fase 1: Rodilla arriba
+  if (piernaArriba && !up) {
+      up = true;
+  }
+
+  // Fase 2: Rodilla abajo (vuelta a la posición inicial)
+  if (!piernaArriba && up) {
+    count.value++;
+    up = false;
+    // Notificación al WebSocket
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ type: 'update', reps: count.value }))
+    }
+  }
+}
 
 // ===================================================================
-// 6. WEBSOCKET (Sin cambios)
+// 7. WEBSOCKET (Idéntica, mantenemos la del segundo script)
 // ===================================================================
 
 function connectWebSocket() {
- const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
- const wsHost = window.location.host;
- const wsUrl = `${wsProtocol}//${wsHost}/ws`;
- 
- console.log(`Connectant a WebSocket a: ${wsUrl}`);
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.host;
+  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+  
+  console.log(`Connectant a WebSocket a: ${wsUrl}`);
 
- ws.value = new WebSocket(wsUrl); 
+  ws.value = new WebSocket(wsUrl); 
 
- ws.value.onopen = () => {
-   console.log('Connectat al servidor WebSocket');
-   ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
- };
- ws.value.onmessage = (event) => {
-   const message = JSON.parse(event.data);
-   if (message.type === 'leaderboard') {
-     leaderboard.value = message.leaderboard;
-   }
- };
- ws.value.onclose = () => console.log('Desconnectat del servidor');
- ws.value.onerror = (err) => console.error('Error WebSocket:', err);
+  ws.value.onopen = () => {
+    console.log('Connectat al servidor WebSocket');
+    ws.value.send(JSON.stringify({ type: 'join', sessionId, userId: userId.value }));
+  };
+  ws.value.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.type === 'leaderboard') {
+      leaderboard.value = message.leaderboard;
+    }
+  };
+  ws.value.onclose = () => console.log('Desconnectat del servidor');
+  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
-
 // ===================================================================
-// 7. NAVEGACIÓN (Sin cambios)
+// 8. NAVEGACIÓN
 // ===================================================================
 
 function tornar() {
   stopCamera();
-  
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'finish',
-      reps: count.value,
-      exercici: exercici,
-      codi_acces: codi_acces
-    }));
-    
-    ws.value.send(JSON.stringify({ type: 'leave' }));
-    ws.value.close();
-    ws.value = null; 
-  }
-  
   router.back()
 }
+
 </script>
 
 <style scoped>
