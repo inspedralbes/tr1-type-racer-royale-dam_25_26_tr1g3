@@ -193,7 +193,7 @@ const codi_acces = route.params.codi_acces
 // Mapeo de nombres de ejercicio (combinando la completitud de Kim)
 const noms = {
   Flexions: 'FLEXIONS',
-  Squats: 'ESQUATS',
+  Squats: 'SQUATS',
   Salts: 'SALTS',
   Abdominals: 'ABDOMINALS',
   Fons: 'FONS',
