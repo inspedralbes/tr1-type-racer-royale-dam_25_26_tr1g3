@@ -23,7 +23,6 @@ export async function crearNovaSala(creadorId) {
     try {
       const sql = 'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)';
       
-      // LÍNIA CORREGIDA: Hem eliminat els claudàtors [ ]
       const result = await db.query(sql, [creadorId, codiAcces, 'esperant']);
       
       return { id: result.insertId, creador_id: creadorId, codi_acces: codiAcces, estat: 'esperant' };
