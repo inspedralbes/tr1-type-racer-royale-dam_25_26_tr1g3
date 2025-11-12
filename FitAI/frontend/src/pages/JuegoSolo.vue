@@ -86,6 +86,70 @@
               />
             </div>
 
+            <!-- NOU: TEMPORITZADOR AFEGIT -->
+            <v-card
+              class="mt-6 py-4 px-5 text-center rounded-xl timer-card"
+              color="transparent"
+              elevation="10"
+              style="width: 85%; border: 2px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px); background: rgba(139, 92, 246, 0.1);"
+            >
+              <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
+              
+              <div v-if="!timerActive" class="d-flex justify-center gap-2 mb-3">
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(1)"
+                  :disabled="timerActive"
+                >
+                  1 min
+                </v-btn>
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(2)"
+                  :disabled="timerActive"
+                >
+                  2 min
+                </v-btn>
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(5)"
+                  :disabled="timerActive"
+                >
+                  5 min
+                </v-btn>
+              </div>
+
+              <div v-if="timerActive">
+                <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
+                <v-btn
+                  color="red-darken-1"
+                  variant="outlined"
+                  size="small"
+                  rounded="lg"
+                  @click="stopTimer"
+                >
+                  <v-icon start>mdi-stop</v-icon>
+                  Detener
+                </v-btn>
+              </div>
+
+              <p v-if="!timerActive && !timerFinished" class="text-caption text-grey-lighten-1 mt-2">
+                Selecciona un temps per començar
+              </p>
+              <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
+                ✅ Temps completat!
+              </p>
+            </v-card>
+
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
               color="transparent"
@@ -160,37 +224,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue' // AFEGIT 'computed'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'; // 🟢 AFEGIT: Importar authStore
+import { useAuthStore } from '@/stores/authStore';
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
 // ===================================================================
 // 1. GESTIÓN DE GIFS
-// Se usan las rutas directas de 'Kim' y se añaden los ejercicios extra.
 // ===================================================================
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
-import fonsGif from '@/assets/fons.gif' // 🟢 MANTENIDO/AFEGIT de Kim
-import pujadesGif from '@/assets/pujades.gif' // 🟢 MANTENIDO/AFEGIT de Kim
+import fonsGif from '@/assets/fons.gif'
+import pujadesGif from '@/assets/pujades.gif'
 
 const pathCarregar = mdiFolderOutline
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore(); // 🟢 AFEGIT: Instanciar authStore
+const authStore = useAuthStore();
 
-const exercici = route.params.ejercicio // Usa 'ejercicio'
-// 🟢 CAMBIO: Usamos 'codi_acces' de la ruta (repositorio 'prueva')
+const exercici = route.params.ejercicio
 const codi_acces = route.params.codi_acces 
 
-// Mapeo de nombres de ejercicio (combinando la completitud de Kim)
 const noms = {
   Flexions: 'FLEXIONS',
   Squats: 'SQUATS',
@@ -198,7 +259,7 @@ const noms = {
   Abdominals: 'ABDOMINALS',
   Fons: 'FONS',
   Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS', // Para asegurar minusculas
+  flexiones: 'FLEXIONS',
   sentadillas: 'ESQUATS',
   saltos: 'SALTS',
   abdominales: 'ABDOMINALS',
@@ -206,7 +267,6 @@ const noms = {
   pujades: 'PUJADES',
 }
 
-// Mapeo de GIFs
 const gifs = {
   Flexions: flexionesGif,
   Squats: sentadillasGif,
@@ -222,7 +282,6 @@ const gifs = {
   pujades: pujadesGif,
 }
 
-// Determinar el label y el GIF
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
@@ -237,35 +296,73 @@ const count = ref(0)
 const leaderboard = ref([])
 
 let detector = null
-let up = false // Estado de la repetición
+let up = false
 let streamRef = null
 let detecting = false
 
 const ws = ref(null)
-// 🟢 CAMBIO: Obtenemos datos de usuario real (repositorio 'prueva')
 const userId = authStore.user.id;
 const userName = authStore.userName;
 
+
+// ===================================================================
+// NOU: LÒGICA DEL TEMPORITZADOR
+// ===================================================================
+const timerActive = ref(false)
+const timerFinished = ref(false)
+const timeRemaining = ref(0) // en segons
+let timerInterval = null
+
+const formattedTime = computed(() => {
+  const minutes = Math.floor(timeRemaining.value / 60)
+  const seconds = timeRemaining.value % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+
+function startTimer(minutes) {
+  if (timerActive.value) return
+  
+  timeRemaining.value = minutes * 60
+  timerActive.value = true
+  timerFinished.value = false
+  
+  timerInterval = setInterval(() => {
+    timeRemaining.value--
+    
+    if (timeRemaining.value <= 0) {
+      stopTimer()
+      timerFinished.value = true
+      // Aturar la detecció quan el temps acaba
+      if (detecting) {
+        stopCamera()
+      }
+    }
+  }, 1000)
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+  timerActive.value = false
+}
 
 // ===================================================================
 // 3. LIFECYCLE HOOKS
 // ===================================================================
 onMounted(() => connectWebSocket())
 
-// 🟢 CAMBIO: Al salir del componente, se llama a 'tornar' (que incluye la lógica de 'finish' del WS)
 onBeforeUnmount(() => {
-  // Asegura que si se sale sin usar el botón, se guardan los datos.
   tornar(); 
 })
 
 
 // ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Basadas en 'Kim' y ajustadas)
-// Se mantiene la lógica del primer script, ya que es la más limpia y completa.
+// 4. FUNCIONES DE CÁMARA/VIDEO
 // ===================================================================
 async function startCamera() {
   try {
-    // Inicializar dimensiones del canvas (ajustes de 'prueva' para manejar nulls)
     if (video.value?.offsetWidth && video.value?.offsetHeight) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
@@ -290,12 +387,12 @@ async function startCamera() {
 function stopCamera() {
   if (streamRef) {
     streamRef.getTracks().forEach((t) => t.stop())
-    if (video.value) video.value.srcObject = null; // Ajuste de 'prueva' para null
+    if (video.value) video.value.srcObject = null;
     streamRef = null
   }
   detecting = false
   const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height); // Ajuste de 'prueva'
+  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 }
 
 function selectVideo() {
@@ -307,7 +404,7 @@ async function loadVideoFromFile(event) {
   const file = event.target.files[0]
   if (!file) return
   
-  const ctx = canvas.value?.getContext('2d'); // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d');
   if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
   const url = URL.createObjectURL(file)
@@ -333,11 +430,10 @@ async function initMoveNet() {
   })
 }
 
-// 🟢 MANTENIDO: detectPose y detectVideoFrame se mantienen idénticos, usando la lógica unificada de 'drawPose'
 async function detectPose() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d')
   async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) return // Ajuste de 'prueva'
+    if (!detecting || !video.value || video.value.paused || video.value.ended) return
     
     if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
         canvas.value.width = video.value.videoWidth || 640;
@@ -348,7 +444,10 @@ async function detectPose() {
 
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
+      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
+      if (timerActive.value && !timerFinished.value) {
+        checkMoviment(poses[0])
+      }
     }
     requestAnimationFrame(poseDetectionFrame)
   }
@@ -356,10 +455,10 @@ async function detectPose() {
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value?.getContext('2d')
   async function frameLoop() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) { // Ajuste de 'prueva'
-        if (video.value?.ended) { // Ajuste de 'prueva'
+    if (!detecting || !video.value || video.value.paused || video.value.ended) {
+        if (video.value?.ended) {
              detecting = false;
         }
         return
@@ -373,22 +472,21 @@ async function detectVideoFrame() {
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
+      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
+      if (timerActive.value && !timerFinished.value) {
+        checkMoviment(poses[0])
+      }
     }
     requestAnimationFrame(frameLoop)
   }
   requestAnimationFrame(frameLoop)
 }
 
-// 🟢 MANTENIDO: drawPose (de 'Kim', con lógica de escalado, y validaciones de 'prueva')
-// La implementación de drawPose es idéntica en el Kim original y en el Prueva corregido,
-// así que se mantiene la versión más robusta.
 function drawPose(ctx, pose) {
   const videoElement = video.value;
   const canvasElement = canvas.value;
 
   if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-  // ... (código drawPose completo sin cambios) ...
   const videoDisplayedWidth = videoElement.offsetWidth;
   const videoDisplayedHeight = videoElement.offsetHeight;
   
@@ -425,7 +523,6 @@ function drawPose(ctx, pose) {
     };
   };
   
-  // Dibujar puntos clave
   ctx.fillStyle = '#00ffaa'; 
   ctx.shadowBlur = 12;
   ctx.shadowColor = '#00ffaa';
@@ -439,7 +536,6 @@ function drawPose(ctx, pose) {
     }
   }
 
-  // Dibujar esqueletos (conexiones)
   const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#8b5cf6'; 
@@ -466,20 +562,16 @@ function drawPose(ctx, pose) {
 
 // ===================================================================
 // 5. LÓGICA DE MOVIMIENTO
-// Se unifica usando el switch de 'prueva' y se añaden las funciones 
-// extra de 'Kim' (Fons y Pujades) si no existían.
 // ===================================================================
 
-// 🟢 AFEGIT: Función de recompte genérica (de 'prueva')
 function handleRepCount() {
     count.value++;
-    up = false; // Reinicia l'estat
+    up = false;
     if (ws.value?.readyState === WebSocket.OPEN) {
         ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
     }
 }
 
-// 🟢 MANTENIDO/UNIFICADO: Switch principal (de 'prueva' pero con todos los casos de 'Kim')
 function checkMoviment(pose) {
     switch (exercici) {
         case 'flexiones':
@@ -495,28 +587,24 @@ function checkMoviment(pose) {
             checkAbdominal(pose);
             break;
         case 'fons':
-            checkFons(pose); // 🟢 AFEGIT (se necesita la implementación)
+            checkFons(pose);
             break;
         case 'pujades':
-            checkPujades(pose); // 🟢 AFEGIT (se necesita la implementación)
+            checkPujades(pose);
             break;
     }
 }
 
-// 🟢 FUNCIONES AÑADIDAS/UNIFICADAS (Tomadas de 'prueva', con el uso de handleRepCount)
-
-// ---------------- FLEXIONS (checkFlexio) ----------------
 function checkFlexio(pose) {
     const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
     const canell = pose.keypoints.find(k => k.name === 'left_wrist')
-    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return // Score check
+    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
     const dist = Math.abs(espatlla.y - canell.y)
     const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
     if (dist < UMBRAL_ABAJO && !up) up = true
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// ---------------- SQUATS (checkEsquat) ----------------
 function checkEsquat(pose) {
     const maluc = pose.keypoints.find(k => k.name === 'left_hip')
     const genoll = pose.keypoints.find(k => k.name === 'left_knee')
@@ -527,7 +615,6 @@ function checkEsquat(pose) {
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// ---------------- SALTS (checkSalt) ----------------
 let initialY = null;
 let jumping = false;
 function checkSalt(pose) {
@@ -544,19 +631,17 @@ function checkSalt(pose) {
     }
 }
 
-// ---------------- ABDOMINALS (checkAbdominal) ----------------
-// Se toma la versión de 'prueva' que usa handleRepCount, pero la lógica es idéntica a 'Kim'
 function checkAbdominal(pose) {
  const nas = pose.keypoints.find((k) => k.name === 'nose')
  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
- if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return // Score check
+ if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return
 
  const distancia = Math.abs(nas.y - maluc.y)
  const UMBRAL_ARRIBA = 150; 
  const UMBRAL_ABAJO = 100;
 
  if (distancia < UMBRAL_ABAJO && !up) {
- up = true; 
+   up = true; 
  }
 
  if (distancia > UMBRAL_ARRIBA && up) {
@@ -564,10 +649,7 @@ function checkAbdominal(pose) {
  }
 }
 
-// ---------------- FONS (DEBE SER AÑADIDO) ----------------
 function checkFons(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos el hombro (shoulder) y el codo (elbow) como ejemplo.
     const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
     const colze = pose.keypoints.find(k => k.name === 'left_elbow')
     if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
@@ -577,10 +659,7 @@ function checkFons(pose) {
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// ---------------- PUJADES (DEBE SER AÑADIDO) ----------------
 function checkPujades(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos la rodilla (knee) y el tobillo (ankle) como ejemplo.
     const genoll = pose.keypoints.find(k => k.name === 'left_knee')
     const peu = pose.keypoints.find(k => k.name === 'left_ankle')
     if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
@@ -592,7 +671,7 @@ function checkPujades(pose) {
 
 
 // ===================================================================
-// 6. WEBSOCKET (Tomada y ajustada de 'prueva')
+// 6. WEBSOCKET
 // ===================================================================
 
 function connectWebSocket() {
@@ -606,13 +685,11 @@ function connectWebSocket() {
 
  ws.value.onopen = () => {
    console.log('Connectat al servidor WebSocket');
-   // 🟢 CAMBIO: Se usan 'codi_acces', 'userId' y 'userName'
    ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
  };
  ws.value.onmessage = (event) => {
    const message = JSON.parse(event.data);
    if (message.type === 'leaderboard') {
-     // 🟢 CAMBIO: El leaderboard ahora contiene datos completos
      leaderboard.value = message.leaderboard;
    }
  };
@@ -622,14 +699,14 @@ function connectWebSocket() {
 
 
 // ===================================================================
-// 7. NAVEGACIÓN (Tomada y ajustada de 'prueva' con lógica de 'finish')
+// 7. NAVEGACIÓN
 // ===================================================================
 
 function tornar() {
   stopCamera();
+  stopTimer(); // AFEGIT: Aturar el temporitzador en sortir
   
   if (ws.value?.readyState === WebSocket.OPEN) {
-    // 🟢 AFEGIT: Enviamos 'finish' para guardar los resultados en la BBDD
     ws.value.send(JSON.stringify({
       type: 'finish',
       reps: count.value,
@@ -637,7 +714,6 @@ function tornar() {
       codi_acces: codi_acces
     }));
     
-    // Enviamos 'leave' y cerramos la conexión
     ws.value.send(JSON.stringify({ type: 'leave' }));
     ws.value.close();
     ws.value = null; 
@@ -652,7 +728,6 @@ function tornar() {
 /* ======== FONDO Y LAYOUT ======== */
 /* ==================================== */
 .bg-fitai-deep-space {
-  /* Fondo oscuro dinámico con brillo sutil */
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
@@ -694,8 +769,6 @@ function tornar() {
   box-shadow: 0 0 15px rgba(139, 92, 246, 1); 
   transition: all 0.3s ease;
   min-width: 120px;
-
-  /* Asegurar que no se solape con el título */
   margin-top: 10px;
 }
 .top-left-back-btn:hover {
@@ -707,12 +780,11 @@ function tornar() {
 /* ======== TÍTULO EXERCICI (ANIMADO) ======== */
 /* ==================================== */
 .exercise-title {
-  /* Tamaño de fuente responsive */
   font-size: 2.2rem;
   font-weight: 900;
   letter-spacing: 2px;
   text-transform: uppercase;
-  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa); /* Mezcla de colores neón */
+  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-size: 200% 200%;
@@ -739,19 +811,17 @@ function tornar() {
 .shadow-card {
   box-shadow: 0 8px 35px rgba(0, 0, 0, 0.6);
   transition: transform 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05); /* Added subtle border */
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .shadow-card:hover {
     transform: translateY(-2px);
 }
 
-/* CONTADOR (Deep Space Glass) */
 .count-card {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
 }
 .counter-value {
     letter-spacing: 3px;
-    /* Ajuste de color a azul neón para mejor armonía con el tema */
     text-shadow: 0px 0px 18px rgba(59, 130, 246, 0.9); 
     font-size: 4rem !important;
 }
@@ -761,8 +831,21 @@ function tornar() {
   }
 }
 
+/* NOU: Estils per al temporitzador */
+.timer-card {
+  animation: timerPulse 2.5s ease-in-out infinite;
+}
+@keyframes timerPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+  }
+}
+
 /* ==================================== */
-/* ======== BOTONES DE ACCIÓN (Grandes/Responsive) ======== */
+/* ======== BOTONES DE ACCIÓN ======== */
 /* ==================================== */
 .small-btn-group {
   gap: 12px;
@@ -777,7 +860,6 @@ function tornar() {
   border-radius: 8px !important;
 }
 
-/* Ajuste para móviles para evitar que los botones se salgan de la pantalla */
 @media (max-width: 450px) {
   .control-btn-large {
     min-width: 120px;
@@ -806,7 +888,6 @@ function tornar() {
 }
 
 .ranking-title {
-    /* Sombra más definida para el título del ranking */
     text-shadow: 0 0 8px rgba(0, 255, 170, 0.7); 
 }
 
@@ -823,7 +904,6 @@ function tornar() {
   border-left: 5px solid #b08d57 !important;
 }
 .bg-standard {
-     /* Fondo ligeramente más sutil para los no-ganadores */
      background: rgba(255, 255, 255, 0.03) !important;
 }
 .list-item-glow {
