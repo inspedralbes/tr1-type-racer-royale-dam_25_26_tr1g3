@@ -1,462 +1,414 @@
-<template>
-  <v-app>
-    <v-main
-      class="d-flex flex-column align-center pa-4 bg-fitai-bright"
-      style="min-height: 100vh"
-    >
-      <div class="header-content pt-4 pb-6 w-100">
-        <h1 class="nextrep-title mb-6">
-          <span class="next">Next</span><span class="rep">Rep</span>
-        </h1>
+import express from 'express';
+import session from 'express-session';
+import { WebSocketServer, WebSocket } from 'ws';
+// import { v4 as uuidv4 } from 'uuid'; // Ja no el necessitem per a les sales
+import 'dotenv/config';
+import bcrypt from 'bcryptjs';
+import pool from './config/database.js';
 
-        <div class="d-flex justify-center px-4">
-          <v-text-field
-            v-model="searchQuery"
-            placeholder="Buscar ejercicio..."
-            variant="solo-filled"
-            hide-details
-            clearable
-            class="search-bar elevation-6"
-            prepend-inner-icon="mdi-magnify"
-            density="comfortable"
-            flat
-            :style="{ width: $vuetify.display.mobile ? '95%' : '500px' }"
-          ></v-text-field>
-        </div>
-      </div>
+const app = express();
+const port = process.env.PORT || 4000;
 
-      <v-divider class="divider-glow mx-auto mb-8"></v-divider>
+app.use(express.json());
+app.use(session({
+  secret: 'un-secret-molt-molt-segur-canvia-aixo',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
+}));
 
-      <v-container class="pa-0 pa-sm-4">
-        <v-row
-          justify="center"
-          align="stretch"
-          class="ga-4 ga-md-6"
-        >
-          <v-col
-            v-for="exercici in filteredExercicis"
-            :key="exercici.nom"
-            cols="12"
-            sm="6"
-            md="4"
-            lg="3"
-            class="d-flex justify-center"
-          >
-            <v-card
-              class="exercise-card elevation-12"
-              @click="anarAExercici(exercici.nom)"
-            >
-              <v-img
-                :src="exercici.imatge"
-                :alt="exercici.label"
-                height="200"
-                cover
-                class="transition-img"
-              />
+const server = app.listen(port, () => {
+  console.log(`Servidor HTTP executant-se a http://localhost:${port}`);
+});
 
-              <v-overlay
-                contained
-                scrim="#1a2238"
-                class="d-none d-sm-flex align-center justify-center text-center pa-3"
-                activator="parent"
-                location="top"
-              >
-                <p class="text-white text-body-2 font-weight-light">
-                  {{ exercici.descripcio }}
-                </p>
-              </v-overlay>
+const wss = new WebSocketServer({ noServer: true });
 
-              <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-3">
-                {{ exercici.label }}
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
+server.on('upgrade', (request, socket, head) => {
+  const pathname = request.url;
+  if (pathname === '/ws') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
-        <div
-          v-if="filteredExercicis.length === 0"
-          class="text-white text-center mt-10 text-h6 font-weight-light"
-        >
-          No s'han trobat exercicis amb aquest nom. 🤖
-        </div>
-      </v-container>
+// Aquest objecte 'sessions' ara només emmagatzema connexions WS actives,
+// no és la font de veritat de l'estat de la sala.
+const sessions = {}; // Estructura: sessions[codi_acces] = { sala_id, participants: { userId: { ws, userName, reps } } }
 
-      <v-divider class="divider-glow mx-auto my-8"></v-divider>
+function broadcastToSession(codi_acces, message) {
+  const session = sessions[codi_acces];
+  if (!session) return;
+  Object.values(session.participants).forEach(({ ws }) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+    }
+  });
+}
 
-      <v-container
-        class="pa-0 pa-sm-4 mb-10"
-        :style="{ width: $vuetify.display.mobile ? '100%' : '800px' }"
-      >
-        <h2 class="text-h4 text-center mb-6 text-white ranking-title">
-          🏆 Clasificación Global
-        </h2>
-        <v-data-table
-          :headers="rankingHeaders"
-          :items="sortedRanking"
-          :items-per-page="-1"
-          class="elevation-12 ranking-table"
-          density="comfortable"
-          hide-default-footer
-          :mobile="$vuetify.display.mobile"
-          :no-data-text="'Cargando clasificación...'"
-        >
-          <template #item.pos="{ index }">
-            <span :class="['font-weight-bold', getRankClass(index)]">{{ index + 1 }}</span>
-          </template>
-          <template #item.puntos="{ value }">
-            <span class="font-weight-bold text-blue-lighten-2">{{ value.toLocaleString() }}</span>
-          </template>
-        </v-data-table>
-        <p class="text-caption text-center mt-4 text-white text-opacity-75">
-            *La clasificación se actualiza en tiempo real al cargar los datos de la base de datos.
-        </p>
-      </v-container>
-      </v-main>
-  </v-app>
-</template>
+function broadcastLeaderboard(codi_acces) {
+  const session = sessions[codi_acces];
+  if (!session) return;
+  const leaderboard = Object.entries(session.participants)
+    .map(([userId, data]) => ({
+      userId: parseInt(userId, 10),
+      userName: data.userName,
+      reps: data.reps,
+    }))
+    .sort((a, b) => b.reps - a.reps);
 
-<script setup>
-import { ref, computed, onMounted } from 'vue' 
-import { useRouter } from 'vue-router'
+  broadcastToSession(codi_acces, {
+    type: 'leaderboard',
+    codi_acces,
+    leaderboard,
+  });
+}
 
-const router = useRouter()
-const searchQuery = ref('')
+async function netejarSessio(codi_acces) {
+  const session = sessions[codi_acces];
+  if (session && Object.keys(session.participants).length === 0) {
+    delete sessions[codi_acces];
+    console.log(`Sessió ${codi_acces} eliminada (sense participants)`);
+    // Opcional: Marcar la sala com a 'finalitzada' a la BBDD
+    try {
+      await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ? AND estat != ?', ['finalitzada', codi_acces, 'finalitzada']);
+    } catch (error) {
+      console.error('Error al finalitzar la sala a la BBDD:', error);
+    }
+  }
+}
 
-// --- LÓGICA DE CLASIFICACIÓN ---
+wss.on('connection', (ws) => {
+  console.log('Nou client WebSocket connectat');
+  let currentCodiAcces = null;
+  let currentUserId = null;
 
-const rankingHeaders = [
-  { title: '#', key: 'pos', align: 'center', sortable: false, width: '50px' },
-  { title: 'Jugador', key: 'jugador', align: 'start' },
-  { title: 'Puntos', key: 'puntos', align: 'end' },
-]
+  ws.on('message', async (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      console.log('Missatge rebut:', message);
 
-const rankingData = ref([])
+      switch (message.type) {
+        case 'join': {
+          const { codi_acces, userId, userName } = message;
 
-// 🟢 CAMBIO PRINCIPAL: Se reemplaza la función simulada de 'Kim' por la función de DB real de 'prueva'.
-const loadRankingData = async () => {
+          if (!codi_acces || !userId || !userName) {
+            return ws.send(JSON.stringify({ error: 'codi_acces, userId i userName requerits' }));
+          }
+
+          // Si la sessió no existeix en memòria, la inicialitzem des de la BBDD
+          if (!sessions[codi_acces]) {
+            const [rows] = await pool.execute('SELECT id FROM sales WHERE codi_acces = ?', [codi_acces]);
+            if (rows.length === 0) {
+              return ws.send(JSON.stringify({ type: 'error', message: 'La sala no existeix.' }));
+            }
+            sessions[codi_acces] = { sala_id: rows[0].id, participants: {} };
+          }
+
+          const session = sessions[codi_acces];
+          const numParticipants = Object.keys(session.participants).length;
+
+          if (numParticipants >= 4) {
+            return ws.send(JSON.stringify({
+              type: 'error',
+              message: 'La sessió està plena (màxim 4 jugadors).'
+            }));
+          }
+
+          session.participants[userId] = { ws, userName, reps: 0 };
+          currentCodiAcces = codi_acces;
+          currentUserId = userId;
+
+          broadcastLeaderboard(codi_acces);
+
+          ws.send(JSON.stringify({
+            type: 'joined',
+            codi_acces,
+            userId,
+            message: 'T’has unit a la sessió correctament.'
+          }));
+
+          console.log(`Usuari ${userId} (${userName}) unit a la sessió ${codi_acces} (${numParticipants + 1}/4 jugadors)`);
+          break;
+        }
+
+        case 'start': {
+          const { codi_acces } = message;
+          if (!codi_acces || !sessions[codi_acces]) return;
+          
+          // Només el creador (o el primer que s'ha unit) pot començar?
+          // Per ara, només actualitzem la BBDD i avisem
+          try {
+            await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['en_curs', codi_acces]);
+            console.log(`Partida iniciada a la sessió ${codi_acces}`);
+            broadcastToSession(codi_acces, {
+              type: 'start',
+              codi_acces
+            });
+          } catch (error) {
+            console.error("Error a l'iniciar la partida:", error);
+          }
+          break;
+        }
+
+        case 'update': {
+          if (
+            currentCodiAcces &&
+            currentUserId &&
+            sessions[currentCodiAcces]?.participants[currentUserId]
+          ) {
+            sessions[currentCodiAcces].participants[currentUserId].reps = message.reps || 0;
+            broadcastLeaderboard(currentCodiAcces);
+          }
+          break;
+        }
+
+        case 'finish': {
+          // El client envia aquest missatge abans de 'leave' o desconnectar-se
+          const { reps, exercici, codi_acces } = message;
+          const session = sessions[codi_acces];
+          
+          if (!session || !currentUserId || !exercici || reps === undefined) return;
+
+          const { sala_id } = session;
+          const repsFinals = parseInt(reps, 10) || 0;
+
+          if (repsFinals > 0) {
+            try {
+              // 1. Guardar a la taula de participacions
+              await pool.execute(
+                'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = ?',
+                [currentUserId, sala_id, exercici, repsFinals, repsFinals]
+              );
+
+              // 2. Actualitzar el total de l'usuari
+              await pool.execute(
+                'UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1 WHERE id = ?',
+                [repsFinals, currentUserId]
+              );
+              
+              console.log(`Dades guardades per usuari ${currentUserId} a sala ${sala_id}: ${repsFinals} ${exercici}`);
+
+            } catch (error) {
+              console.error("Error al guardar dades 'finish':", error);
+            }
+          }
+          break;
+        }
+
+        case 'leave': {
+          if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
+            delete sessions[currentCodiAcces].participants[currentUserId];
+            broadcastLeaderboard(currentCodiAcces);
+            netejarSessio(currentCodiAcces);
+            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentCodiAcces}`);
+            currentCodiAcces = null;
+            currentUserId = null;
+          }
+          break;
+        }
+
+        default:
+          ws.send(JSON.stringify({ error: 'Tipus de missatge desconegut' }));
+      }
+    } catch (error) {
+      console.error('Error processant missatge WS:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('Client WebSocket desconnectat');
+    if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
+      // El client s'ha desconnectat sense 'leave' (ex: tancar pestanya)
+      // Les dades 'finish' no s'hauran guardat, però el traiem de la llista
+      delete sessions[currentCodiAcces].participants[currentUserId];
+      broadcastLeaderboard(currentCodiAcces);
+      netejarSessio(currentCodiAcces);
+    }
+  });
+
+  ws.on('error', (error) => {
+    console.error('Error en WebSocket:', error);
+  });
+});
+
+// --- API DE REGISTRE I LOGIN (Sense canvis) ---
+
+app.post('/api/register', async (req, res) => {
+  const { nom, email, password } = req.body;
+  if (!nom || !email || !password) {
+    return res.status(400).json({ message: 'Tots els camps són obligatoris' });
+  }
   try {
-    // ➡️ Código de 'prueva' para llamar a la API real
-    const response = await fetch('/api/ranking'); 
-    
-    if (!response.ok) {
-        throw new Error('No s\'ha pogut carregar la classificació');
-    }
-    
-    const data = await response.json();
-    rankingData.value = data; // Asigna los datos reales
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    await pool.execute(
+      'INSERT INTO usuaris (nom, email, password) VALUES (?, ?, ?)',
+      [nom, email, hashedPassword]
+    );
+    res.status(201).json({ message: 'Usuari registrat!' });
   } catch (error) {
-    console.error('Error al carregar la classificació:', error);
-    rankingData.value = []; // En caso de error, deja la tabla vacía
-  }
-} 
-
-
-// Clasificación, clases de ranking y onMounted se mantienen casi idénticos, solo se ajustó la llamada en onMounted.
-const sortedRanking = computed(() => {
-  return [...rankingData.value].sort((a, b) => b.puntos - a.puntos)
-})
-
-const getRankClass = (index) => {
-  if (index === 0) return 'text-amber-lighten-2 text-h5' 
-  if (index === 1) return 'text-blue-grey-lighten-2 text-h6' 
-  if (index === 2) return 'text-brown-lighten-2' 
-  return 'text-white'
-}
-
-onMounted(() => {
-  // 🟢 Se asegura que se llama a la nueva función de carga real.
-  loadRankingData();
-})
-
-
-// --- DATOS Y LÓGICA DE EJERCICIOS ---
-// 🟢 MANTENIDO/UNIFICADO: Se usa la lista de ejercicios de 'Kim' porque es más completa.
-const exercicis = [
-
-  {
-    nom: 'Flexions',
-    label: 'Flexions',
-    imatge: new URL('@/assets/flexiones.jpg', import.meta.url).href,
-    descripcio: 'Treballa pit, braços i espatlles amb aquest exercici clàssic.',
-  },
-  {
-    nom: 'Squats',
-    label: 'Squats',
-    imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
-    descripcio: 'Enforteix cames i glutis amb moviment controlat y profund.',
-  },
-  {
-    nom: 'Salts',
-    label: 'Salts',
-    imatge: new URL('@/assets/saltos.jpg', import.meta.url).href,
-    descripcio: 'Millora la potència explosiva i la coordinació.',
-  },
-  {
-    nom: 'Abdominals',
-    label: 'Abdominals',
-    imatge: new URL('@/assets/abdominales.jpg', import.meta.url).href,
-    descripcio: 'Tonifica el teu nucli i enforteix la zona abdominal.',
-  },
-  // ➡️ Estos dos ejercicios se tomaron de 'Kim' y NO estaban en 'prueva'.
-  {
-    nom: 'Fons',
-    label: 'Fons',
-    imatge: new URL('@/assets/fons.jpg', import.meta.url).href, 
-    descripcio: 'Exercici intens per tríceps, espatlles i pit.',
-  },
-  {
-    nom: 'Pujades', 
-    label: 'Pujades', 
-    imatge: new URL('@/assets/pujades.jpg', import.meta.url).href, 
-    descripcio: 'Enforteix les cames de manera unilateral millorant l\'equilibri.',
-  },
-
-]
-
-const filteredExercicis = computed(() =>
-  exercicis.filter((e) =>
-    (e.label + ' ' + e.descripcio)
-      .toLowerCase()
-      .includes(searchQuery.value.trim().toLowerCase())
-  )
-)
-
-const anarAExercici = (nom) => {
-  router.push({ name: 'ModoJuego', params: { ejercicio: nom } })
-}
-</script>
-
-<style scoped>
-/* ==================================== */
-/* ======== FONDO NEÓN BRILLANTE ======== */
-/* ==================================== */
-.bg-fitai-bright {
-  background:
-    radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.25) 0%, transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(147, 51, 234, 0.25) 0%, transparent 45%),
-    linear-gradient(135deg, #1a2238, #16213e 50%, #0f172a 100%);
-  background-attachment: fixed;
-  background-size: cover;
-  animation: bgShine 18s ease-in-out infinite;
-}
-
-@keyframes bgShine {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* ==================================== */
-/* ======== TÍTULO NEXTREP ======== */
-/* ==================================== */
-.nextrep-title {
-  /* Tamaño de fuente más adaptado a móvil */
-  font-size: 3.5rem; /* Ajuste en móvil */
-  font-weight: 900;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  text-align: center;
-  color: white;
-  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
-  line-height: 1;
-  user-select: none;
-}
-
-/* Ajuste del título en escritorio */
-@media (min-width: 600px) {
-  .nextrep-title {
-    font-size: 4.5rem;
-    letter-spacing: 2px;
-  }
-}
-
-.next {
-  color: #ffffff;
-  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
-}
-
-.rep {
-  background: linear-gradient(90deg, #9b6bff, #3b82f6, #9b6bff);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-style: italic;
-  animation: gradientShift 5s ease infinite;
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Línea luminosa decorativa (más sutil) */
-.divider-glow {
-    max-width: 85%;
-    height: 1px;
-    border-radius: 4px;
-    background: linear-gradient(90deg, transparent 0%, #3b82f6, #8b5cf6, #3b82f6, transparent 100%);
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-    opacity: 0.7;
-}
-@media (min-width: 600px) {
-    .divider-glow {
-        max-width: 600px;
-        height: 2px;
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'Aquest email ja està registrat' });
     }
-}
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { email: loginInput, password } = req.body;
+
+  if (!loginInput || !password) {
+    return res.status(400).json({ message: 'Usuari/Email i contrasenya obligatoris' });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT * FROM usuaris WHERE email = ? OR nom = ?',
+      [loginInput, loginInput]
+    );
+
+    const user = rows[0];
+    if (!user) {
+      return res.status(401).json({ message: 'Credencials incorrectes' });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Credencials incorrectes' });
+    }
+    
+    req.session.user = {
+      id: user.id,
+      nom: user.nom,
+      email: user.email,
+    };
+    res.json(req.session.user);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+app.get('/api/me', (req, res) => {
+  if (req.session.user) {
+    res.json(req.session.user);
+  } else {
+    res.status(401).json({ message: 'No autenticat' });
+  }
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: 'No s\'ha pogut tancar la sessió' });
+    }
+    res.clearCookie('connect.sid');
+    res.json({ message: 'Sessió tancada' });
+  });
+});
 
 
-/* ==================================== */
-/* ======== TARJETAS (CARD) ======== */
-/* ==================================== */
-.exercise-card {
-  width: 100%;
-  max-width: 320px; /* Tamaño máximo más adecuado para móvil */
-  min-height: 250px;
-  border-radius: 16px; /* Bordes más redondeados */
-  background: rgba(30, 30, 47, 0.7); /* Fondo semi-transparente */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  backdrop-filter: blur(8px); /* Efecto cristalizado (Glassmorphism) */
-}
-.exercise-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.8); /* Brillo intenso en hover */
+// --- NOVES APIS PER A SALES I RANKING ---
+
+function generarCodiAcces(length = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
-/* Imagen con zoom sutil en hover */
-.transition-img {
-  transition: transform 0.6s ease;
-}
-.exercise-card:hover .transition-img {
-  transform: scale(1.05);
-}
+// API per crear una nova sala
+app.post('/api/sala/crear', async (req, res) => {
+  const creador_id = req.session.user?.id;
+  if (!creador_id) {
+    return res.status(401).json({ message: 'No autenticat' });
+  }
 
-/* Franja inferior para el nombre (siempre visible, reemplaza el label central) */
-.exercise-label-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  /* Fondo más vibrante y semitransparente */
-  background: rgba(139, 92, 246, 0.7);
-  backdrop-filter: blur(6px);
-  /* Brillo sutil */
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
+  let codi_acces;
+  let sala;
+  let attempts = 0;
 
-/* ==================================== */
-/* ======== BUSCADOR (SEARCH BAR) ======== */
-/* ==================================== */
-.search-bar {
-  max-width: 600px; /* Limita el ancho del buscador en pantallas grandes */
-  border-radius: 12px !important;
-  color: white;
-  transition: all 0.4s ease;
-}
+  // Intentem generar un codi únic (improbable que falli, però per seguretat)
+  do {
+    codi_acces = generarCodiAcces(6);
+    try {
+      const [result] = await pool.execute(
+        'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)',
+        [creador_id, codi_acces, 'esperant']
+      );
+      sala = { id: result.insertId, creador_id, codi_acces, estat: 'esperant' };
+    } catch (error) {
+      if (error.code !== 'ER_DUP_ENTRY') { 
+        console.error(error);
+        return res.status(500).json({ message: 'Error del servidor al crear sala' });
+      }
+      // Si el codi està duplicat (ER_DUP_ENTRY), el bucle tornarà a provar
+    }
+    attempts++;
+  } while (!sala && attempts < 10);
 
-/* Estilo del campo de texto interno (Vuetify overides) */
-.search-bar .v-field__input {
-  color: white !important;
-  font-size: 1rem;
-}
-.search-bar .v-field__overlay {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  transition: background-color 0.4s ease;
-}
-.search-bar:hover .v-field__overlay {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
+  if (!sala) {
+    return res.status(500).json({ message: 'No s\'ha pogut crear la sala (massa intents)' });
+  }
+  
+  console.log(`Sala creada: ${codi_acces} per usuari ${creador_id}`);
+  res.status(201).json(sala);
+});
 
-/* Estilo de la barra de búsqueda al estar enfocada */
-.search-bar:focus-within {
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.8) !important;
-}
+// API per unir-se a una sala (comprovar si existeix)
+app.post('/api/sala/unir', async (req, res) => {
+  const { codi_acces } = req.body;
+  if (!codi_acces) {
+    return res.status(400).json({ message: 'Codi d\'accés requerit' });
+  }
 
-/* Estilo de los iconos (lupa y limpiar) */
-.search-bar .v-icon {
-  color: #8b5cf6 !important; /* Color neón morado para los iconos */
-}
+  try {
+    const [rows] = await pool.execute(
+      'SELECT * FROM sales WHERE codi_acces = ? AND estat = ?',
+      [codi_acces.toUpperCase(), 'esperant']
+    );
 
-/* ==================================== */
-/* ======== RANKING TABLE ======== */
-/* ==================================== */
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Sala no trobada o ja està en curs' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
 
-.ranking-title {
-    text-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
-    letter-spacing: 1.5px;
-}
+// API per obtenir el ranking global
+app.get('/api/ranking', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT nom, repeticions_totals FROM usuaris WHERE repeticions_totals > 0 ORDER BY repeticions_totals DESC, nom ASC LIMIT 10'
+    );
+    // Mapegem a la nova estructura que espera el frontend
+    const ranking = rows.map(r => ({
+      jugador: r.nom,
+      puntos: r.repeticions_totals
+    }));
+    res.json(ranking);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
 
-.ranking-table {
-    border-radius: 12px;
-    background-color: rgba(30, 30, 47, 0.9) !important; /* Fondo más oscuro */
-    color: white !important;
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-}
 
-/* Encabezados de la tabla */
-.ranking-table :deep(th) {
-    background-color: rgba(139, 92, 246, 0.2) !important;
-    color: #ffffff !important;
-    font-weight: bold !important;
-    letter-spacing: 1px;
-}
+// --- ELIMINACIÓ DE LES ANTIGUES RUTES DE SESSIÓ EN MEMÒRIA ---
+// app.get('/api/create-session', ...); // ELIMINAT
+// app.get('/api/check-session/:sessionId', ...); // ELIMINAT
 
-/* Filas de la tabla */
-.ranking-table :deep(tr) {
-    transition: background-color 0.3s ease;
-}
-
-/* Efecto hover en filas */
-.ranking-table :deep(tr:hover) {
-    background-color: rgba(59, 130, 246, 0.15) !important; /* Azul neón suave en hover */
-}
-
-/* Separación entre filas */
-.ranking-table :deep(td) {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    color: white;
-}
-
-/* Estilo para las primeras posiciones */
-.text-amber-lighten-2 {
-    color: #ffb74d !important; /* Dorado */
-    text-shadow: 0 0 8px #ffb74d;
-}
-.text-blue-grey-lighten-2 {
-    color: #b0bec5 !important; /* Plateado */
-    text-shadow: 0 0 6px #b0bec5;
-}
-.text-brown-lighten-2 {
-    color: #a1887f !important; /* Bronce */
-    text-shadow: 0 0 5px #a1887f;
-}
-
-/* Estilo para el campo de puntos (destacado) */
-.text-blue-lighten-2 {
-    color: #81d4fa !important;
-    text-shadow: 0 0 6px #81d4fa;
-}
-
-/* Asegura que el texto de las primeras posiciones tenga el tamaño definido en el script */
-.ranking-table :deep(tr:nth-child(1) .v-data-table__td:first-child span) {
-    font-size: 1.5rem; /* Ajuste para el primero */
-}
-.ranking-table :deep(tr:nth-child(2) .v-data-table__td:first-child span) {
-    font-size: 1.25rem; /* Ajuste para el segundo */
-}
-
-/* ==================================== */
-/* ======== ANIMACIONES Y UTILS ======== */
-/* ==================================== */
-.min-h-screen {
-  min-height: 100vh;
-}
-</style>
+console.log('Servidor WebSocket i API llestos (HTTP a :4000, WS a /ws)');
