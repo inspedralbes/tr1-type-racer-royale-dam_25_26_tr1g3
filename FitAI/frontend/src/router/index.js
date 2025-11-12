@@ -8,6 +8,7 @@ import Multiplayer from '@/pages/Multiplayer.vue'
 import Login from '@/pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import JuegoMultiplayer from '../pages/JuegoMultiplayer.vue'
+import EstadistiquesSessio from '@/pages/EstadistiquesSessio.vue'
 
 const routes = [
   {
@@ -15,6 +16,13 @@ const routes = [
     name: 'Login',
     component: Login
   },
+
+  {
+    path: '/estadistiques',
+    name: 'EstadistiquesSessio',
+    component: EstadistiquesSessio
+  },
+
   {
     path: '/register',
     name: 'Register',
