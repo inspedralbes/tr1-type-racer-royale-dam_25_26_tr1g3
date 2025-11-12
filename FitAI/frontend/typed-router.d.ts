@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     '/Login': RouteRecordInfo<'/Login', '/Login', Record<never, never>, Record<never, never>>,
     '/ModoJuego': RouteRecordInfo<'/ModoJuego', '/ModoJuego', Record<never, never>, Record<never, never>>,
     '/Multiplayer': RouteRecordInfo<'/Multiplayer', '/Multiplayer', Record<never, never>, Record<never, never>>,
+    '/Register': RouteRecordInfo<'/Register', '/Register', Record<never, never>, Record<never, never>>,
   }
 
   /**
@@ -64,6 +65,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/Multiplayer.vue': {
       routes: '/Multiplayer'
+      views: never
+    }
+    'src/pages/Register.vue': {
+      routes: '/Register'
       views: never
     }
   }

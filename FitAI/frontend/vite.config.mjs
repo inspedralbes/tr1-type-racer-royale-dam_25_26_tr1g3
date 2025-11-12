@@ -60,30 +60,32 @@ export default defineConfig({
       '.vue',
     ],
   },
+  
+  // ==========================================================
+  // SECCIÓ "SERVER" CORREGIDA
+  // ==========================================================
   server: {
-    // Aquest és el port del teu frontend (npm run dev)
+    // Port del teu frontend (correcte)
     port: 3000,
 
-    // ==========================================================
-    // SECCIÓ AFEGIDA: PROXY
-    // ==========================================================
     proxy: {
-      // Totes les peticions a /api (ex: /api/create-session)
+      // Totes les peticions a /api (ex: /api/register)
       '/api': {
-        // es redirigiran al teu backend (node server.js)
+        // CANVI: Apuntar al port correcte del teu server.js
         target: 'http://localhost:4000',
         changeOrigin: true,
-        // reescriu la ruta de '/api/create-session' a '/create-session'
-        rewrite: (path) => path.replace(/^\/api/, ''), 
+        
+        // Correcte: No hi ha 'rewrite'
       },
+      
       // Totes les peticions a /ws (WebSockets)
       '/ws': {
-        // es redirigiran al teu backend
-        target: 'http://localhost:4000',
+        // CANVI: Apuntar al port correcte del teu server.js
+        target: 'ws://localhost:4000',
         ws: true, // Activa el proxy per a WebSockets
         changeOrigin: true,
       },
     },
-    // ==========================================================
   },
+  // ==========================================================
 })
