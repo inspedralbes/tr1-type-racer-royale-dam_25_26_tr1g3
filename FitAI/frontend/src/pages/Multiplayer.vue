@@ -20,8 +20,8 @@
             </v-btn>
 
             <v-text-field label="Codi de sala" v-model="codiSalaInput" variant="solo-filled" clearable
-              density="comfortable" prepend-inner-icon="mdi-key" maxlength="5" class="search-bar mb-2 text-white"
-              @input="codiSalaInput = codiSalaInput.toUpperCase().slice(0, 5)" />
+              density="comfortable" prepend-inner-icon="mdi-key" maxlength="6" class="search-bar mb-2 text-white"
+              @input="codiSalaInput = codiSalaInput.toUpperCase().slice(0, 6)" />
 
             <v-btn class="neon-btn-green mt-2" variant="elevated" size="large" block @click="unirSala">
               <v-icon start>mdi-login</v-icon>
