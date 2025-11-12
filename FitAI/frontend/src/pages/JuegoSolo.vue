@@ -164,41 +164,31 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'; // 🟢 AFEGIT: Importar authStore
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
 // ===================================================================
 // 1. GESTIÓN DE GIFS
-// Se usan las rutas directas de 'Kim' y se añaden los ejercicios extra.
 // ===================================================================
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
 import abdominalesGif from '@/assets/abdominales.gif'
-import fonsGif from '@/assets/fons.gif' // 🟢 MANTENIDO/AFEGIT de Kim
-import pujadesGif from '@/assets/pujades.gif' // 🟢 MANTENIDO/AFEGIT de Kim
+import fonsGif from '@/assets/fons.gif'
+import pujadesGif from '@/assets/pujades.gif'
 
 const pathCarregar = mdiFolderOutline
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore(); // 🟢 AFEGIT: Instanciar authStore
 
-const exercici = route.params.ejercicio // Usa 'ejercicio'
-// 🟢 CAMBIO: Usamos 'codi_acces' de la ruta (repositorio 'prueva')
-const codi_acces = route.params.codi_acces 
+const exercici = route.params.ejercicio
+// !! IMPORTANT: Assegura't que 'sessionId' és el 'codi_acces'
+const sessionId = route.params.sessionId // Això ha de ser el teu 'codi_acces'
 
-// Mapeo de nombres de ejercicio (combinando la completitud de Kim)
 const noms = {
-  Flexions: 'FLEXIONS',
-  Squats: 'SQUATS',
-  Salts: 'SALTS',
-  Abdominals: 'ABDOMINALS',
-  Fons: 'FONS',
-  Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS', // Para asegurar minusculas
+  flexiones: 'FLEXIONS',
   sentadillas: 'ESQUATS',
   saltos: 'SALTS',
   abdominales: 'ABDOMINALS',
@@ -206,14 +196,7 @@ const noms = {
   pujades: 'PUJADES',
 }
 
-// Mapeo de GIFs
 const gifs = {
-  Flexions: flexionesGif,
-  Squats: sentadillasGif,
-  Salts: saltosGif,
-  Abdominals: abdominalesGif,
-  Fons: fonsGif,
-  Pujades: pujadesGif,
   flexiones: flexionesGif,
   sentadillas: sentadillasGif,
   saltos: saltosGif,
@@ -222,13 +205,11 @@ const gifs = {
   pujades: pujadesGif,
 }
 
-// Determinar el label y el GIF
-const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
-
+const exerciciLabel = noms[exercici] || 'EXERCICI'
+const exerciciGif = gifs[exercici] || ''
 
 // ===================================================================
-// 2. ESTADO
+// 2. ESTADO (MODIFICAT PER AL NOM D'USUARI)
 // ===================================================================
 const video = ref(null)
 const canvas = ref(null)
@@ -237,36 +218,57 @@ const count = ref(0)
 const leaderboard = ref([])
 
 let detector = null
-let up = false // Estado de la repetición
+let up = false
 let streamRef = null
 let detecting = false
 
 const ws = ref(null)
-// 🟢 CAMBIO: Obtenemos datos de usuario real (repositorio 'prueva')
-const userId = authStore.user.id;
-const userName = authStore.userName;
+
+// !! MODIFICACIÓ AQUÍ !!
+// Obtenim un ID i Nom estables del localStorage
+// (Aquests noms 'fitaiUserName' i 'fitaiUserId' són exemples,
+// utilitza els que facis servir al teu login)
+const userName = ref(localStorage.getItem('fitaiUserName') || 'Convidat'); 
+let storedUserId = localStorage.getItem('fitaiUserId'); // L'ID d'usuari de la BBDD
+
+if (!storedUserId) {
+  // Si no hi ha ID d'usuari (ex: no loguejat), generem un temporal
+  // Idealment, l'usuari hauria d'estar loguejat i tenir un ID real
+  console.warn("No s'ha trobat 'fitaiUserId' a localStorage. S'utilitzarà un ID aleatori.");
+  storedUserId = `usuari_anonim_${Math.floor(Math.random() * 10000)}`;
+}
+const userId = ref(storedUserId);
 
 
 // ===================================================================
 // 3. LIFECYCLE HOOKS
 // ===================================================================
-onMounted(() => connectWebSocket())
-
-// 🟢 CAMBIO: Al salir del componente, se llama a 'tornar' (que incluye la lógica de 'finish' del WS)
-onBeforeUnmount(() => {
-  // Asegura que si se sale sin usar el botón, se guardan los datos.
-  tornar(); 
+onMounted(() => {
+  // Assegura't que sessionId (el codi d'accés) existeix abans de connectar
+  if (sessionId) {
+    connectWebSocket();
+  } else {
+    console.error("No s'ha proporcionat cap codi d'accés (sessionId) a la ruta.");
+    // Podries redirigir l'usuari o mostrar un error
+  }
 })
 
+onBeforeUnmount(() => {
+  stopCamera();
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    // Envia 'leave' abans de tancar (opcional, ja que 'close' ho gestiona)
+    ws.value.send(JSON.stringify({ type: 'leave' }))
+    ws.value.close()
+  }
+})
 
 // ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Basadas en 'Kim' y ajustadas)
-// Se mantiene la lógica del primer script, ya que es la más limpia y completa.
+// 4. FUNCIONES DE CÁMARA/VIDEO (Correccions de 'race condition' incloses)
 // ===================================================================
+
 async function startCamera() {
   try {
-    // Inicializar dimensiones del canvas (ajustes de 'prueva' para manejar nulls)
-    if (video.value?.offsetWidth && video.value?.offsetHeight) {
+    if (video.value.offsetWidth && video.value.offsetHeight) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
     } else {
@@ -290,12 +292,20 @@ async function startCamera() {
 function stopCamera() {
   if (streamRef) {
     streamRef.getTracks().forEach((t) => t.stop())
-    if (video.value) video.value.srcObject = null; // Ajuste de 'prueva' para null
+    video.value.srcObject = null
     streamRef = null
   }
-  detecting = false
-  const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height); // Ajuste de 'prueva'
+  // Aturem la detecció i netegem el canvas
+  detecting = false;
+  if (canvas.value) {
+    const ctx = canvas.value.getContext('2d');
+    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+  }
+  // Neteja l'element de vídeo
+  if(video.value) {
+    video.value.srcObject = null;
+    video.value.src = null;
+  }
 }
 
 function selectVideo() {
@@ -307,23 +317,30 @@ async function loadVideoFromFile(event) {
   const file = event.target.files[0]
   if (!file) return
   
-  const ctx = canvas.value?.getContext('2d'); // Ajuste de 'prueva' para null
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+  if (!file.type.startsWith('video/mp4') && !file.type.startsWith('video/webm')) {
+    console.warn('Format de vídeo no recomanat. Si us plau, utilitza MP4 o WebM.');
+  }
+  
+  const ctx = canvas.value.getContext('2d');
+  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
-  stopCamera() 
+  // stopCamera() // stopCamera() ja s'ha cridat a selectVideo
   video.value.src = url
   
-  video.value.onloadedmetadata = () => {
-    canvas.value.width = video.value.videoWidth;
-    canvas.value.height = video.value.videoHeight;
+  video.value.onloadedmetadata = async () => {
+    // Ajustem el canvas a la mida VISIBLE del vídeo
+    canvas.value.width = video.value.offsetWidth;
+    canvas.value.height = video.value.offsetHeight;
+    
+    if (!detector) await initMoveNet()
+    
+    detecting = true
+    detectVideoFrame() // Inicia el bucle de detecció
+    
+    await video.value.play()
   };
-  
-  await video.value.play()
-  if (!detector) await initMoveNet()
-  detecting = true
-  detectVideoFrame()
 }
 
 async function initMoveNet() {
@@ -333,41 +350,35 @@ async function initMoveNet() {
   })
 }
 
-// 🟢 MANTENIDO: detectPose y detectVideoFrame se mantienen idénticos, usando la lógica unificada de 'drawPose'
 async function detectPose() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value.getContext('2d')
   async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) return // Ajuste de 'prueva'
-    
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
+    if (!detecting || !video.value || video.value.paused || video.value.ended) {
+      if (!detecting) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+      return; // Atura el bucle si la detecció està desactivada
     }
-
+    
     const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
 
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
       checkMoviment(poses[0])
     }
-    requestAnimationFrame(poseDetectionFrame)
+    requestAnimationFrame(poseDetectionFrame) // Continua el bucle
   }
-  requestAnimationFrame(poseDetectionFrame)
+  poseDetectionFrame() // Inicia el bucle
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value?.getContext('2d') // Ajuste de 'prueva' para null
+  const ctx = canvas.value.getContext('2d')
   async function frameLoop() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) { // Ajuste de 'prueva'
-        if (video.value?.ended) { // Ajuste de 'prueva'
+    if (!detecting || !video.value || video.value.paused || video.value.ended) {
+        if (video.value && video.value.ended) {
+             console.log("El vídeo ha acabat.");
              detecting = false;
         }
-        return
-    }
-
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
+        if (!detecting) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+        return // Atura el bucle
     }
     
     const poses = await detector.estimatePoses(video.value)
@@ -375,23 +386,23 @@ async function detectVideoFrame() {
       drawPose(ctx, poses[0])
       checkMoviment(poses[0])
     }
-    requestAnimationFrame(frameLoop)
+    requestAnimationFrame(frameLoop) // Continua el bucle
   }
-  requestAnimationFrame(frameLoop)
+  frameLoop() // Inicia el bucle
 }
 
-// 🟢 MANTENIDO: drawPose (de 'Kim', con lógica de escalado, y validaciones de 'prueva')
-// La implementación de drawPose es idéntica en el Kim original y en el Prueva corregido,
-// así que se mantiene la versión más robusta.
+// ===================================================================
+// 5. DRAWPOSE (Sense canvis)
+// ===================================================================
+
 function drawPose(ctx, pose) {
   const videoElement = video.value;
   const canvasElement = canvas.value;
 
   if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-  // ... (código drawPose completo sin cambios) ...
+
   const videoDisplayedWidth = videoElement.offsetWidth;
   const videoDisplayedHeight = videoElement.offsetHeight;
-  
   const videoNaturalWidth = videoElement.videoWidth;
   const videoNaturalHeight = videoElement.videoHeight;
   
@@ -425,8 +436,8 @@ function drawPose(ctx, pose) {
     };
   };
   
-  // Dibujar puntos clave
-  ctx.fillStyle = '#00ffaa'; 
+  // Dibuixar punts clau
+  ctx.fillStyle = '#00ffaa';
   ctx.shadowBlur = 12;
   ctx.shadowColor = '#00ffaa';
   
@@ -439,10 +450,10 @@ function drawPose(ctx, pose) {
     }
   }
 
-  // Dibujar esqueletos (conexiones)
+  // Dibuixar esquelet
   const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#8b5cf6'; 
+  ctx.strokeStyle = '#8b5cf6';
   ctx.shadowBlur = 8;
   ctx.shadowColor = '#8b5cf6';
   
@@ -459,192 +470,312 @@ function drawPose(ctx, pose) {
       ctx.stroke();
     }
   }
+  ctx.shadowBlur = 0;
+}
 
-  ctx.shadowBlur = 0; 
+// ===================================================================
+// 5.1. FUNCIÓ AUXILIAR D'ANGLE (Sense canvis)
+// ===================================================================
+
+function getAngle(keypoints, p1Name, p2Name, p3Name) {
+  const p1 = keypoints.find((k) => k.name === p1Name);
+  const p2 = keypoints.find((k) => k.name === p2Name);
+  const p3 = keypoints.find((k) => k.name === p3Name);
+
+  if (!p1 || !p2 || !p3 || p1.score < 0.4 || p2.score < 0.4 || p3.score < 0.4) {
+    return null;
+  }
+
+  const radianes =
+    Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+    Math.atan2(p1.y - p2.y, p1.x - p2.x);
+ let angle = Math.abs(radianes * (180 / Math.PI));
+  if (angle > 180.0) {
+    angle = 360 - angle;
+  }
+  return angle;
 }
 
 
 // ===================================================================
-// 5. LÓGICA DE MOVIMIENTO
-// Se unifica usando el switch de 'prueva' y se añaden las funciones 
-// extra de 'Kim' (Fons y Pujades) si no existían.
+// 6. LÒGICA DE MOVIMENT (ACTUALITZADA)
 // ===================================================================
 
-// 🟢 AFEGIT: Función de recompte genérica (de 'prueva')
-function handleRepCount() {
-    count.value++;
-    up = false; // Reinicia l'estat
-    if (ws.value?.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
-    }
-}
-
-// 🟢 MANTENIDO/UNIFICADO: Switch principal (de 'prueva' pero con todos los casos de 'Kim')
 function checkMoviment(pose) {
-    switch (exercici) {
-        case 'flexiones':
-            checkFlexio(pose); 
-            break;
-        case 'sentadillas':
-            checkEsquat(pose); 
-            break;
-        case 'saltos':
-            checkSalt(pose); 
-            break;
-        case 'abdominales':
-            checkAbdominal(pose);
-            break;
-        case 'fons':
-            checkFons(pose); // 🟢 AFEGIT (se necesita la implementación)
-            break;
-        case 'pujades':
-            checkPujades(pose); // 🟢 AFEGIT (se necesita la implementación)
-            break;
-    }
+  // Envia l'estat actual al WS (aquesta part s'ha de fer aquí)
+  // Només envia si el recompte canvia (dins de cada funció 'check')
+  // ...
+
+  // Comprova l'exercici específic
+  if (exercici === 'abdominales') checkAbdominal(pose)
+  if (exercici === 'flexiones') checkFlexiones(pose)
+  if (exercici === 'sentadillas') checkSentadillas(pose)
+  if (exercici === 'saltos') checkSaltos(pose)
+  if (exercici === 'fons') checkFons(pose)
+  if (exercici === 'pujades') checkPujades(pose)
 }
 
-// 🟢 FUNCIONES AÑADIDAS/UNIFICADAS (Tomadas de 'prueva', con el uso de handleRepCount)
-
-// ---------------- FLEXIONS (checkFlexio) ----------------
-function checkFlexio(pose) {
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
-    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return // Score check
-    const dist = Math.abs(espatlla.y - canell.y)
-    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+function sendRepUpdate() {
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
+  }
 }
 
-// ---------------- SQUATS (checkEsquat) ----------------
-function checkEsquat(pose) {
-    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
-    const dist = Math.abs(maluc.y - genoll.y)
-    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
-}
-
-// ---------------- SALTS (checkSalt) ----------------
-let initialY = null;
-let jumping = false;
-function checkSalt(pose) {
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!peu || peu.score < 0.4) return
-    if (initialY === null) initialY = peu.y
-    const delta = initialY - peu.y
-    const UMBRAL_SALT = 60
-    if (delta > UMBRAL_SALT && !jumping) {
-        jumping = true
-    } else if (delta < 10 && jumping) {
-        jumping = false; 
-        handleRepCount(); 
-    }
-}
-
-// ---------------- ABDOMINALS (checkAbdominal) ----------------
-// Se toma la versión de 'prueva' que usa handleRepCount, pero la lógica es idéntica a 'Kim'
+// !! FUNCIÓ ACTUALITZADA !! (Lògica d'angles)
 function checkAbdominal(pose) {
- const nas = pose.keypoints.find((k) => k.name === 'nose')
- const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
- if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return // Score check
+    const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_hip', 'left_knee');
+    const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
+    const angle = angleL !== null ? angleL : angleR; // Prioritza el costat esquerre
 
- const distancia = Math.abs(nas.y - maluc.y)
- const UMBRAL_ARRIBA = 150; 
- const UMBRAL_ABAJO = 100;
+    if (angle === null) return;
 
- if (distancia < UMBRAL_ABAJO && !up) {
- up = true; 
- }
+    const UMBRAL_AVALL = 150; // Angle gran (estirat)
+    const UMBRAL_AMUNT = 120; // Angle tancat (encongit)
 
- if (distancia > UMBRAL_ARRIBA && up) {
-   handleRepCount(); 
- }
+    // Fase 1: Estirat (preparat per pujar)
+    if (angle > UMBRAL_AVALL && !up) {
+        up = true;
+    }
+
+    // Fase 2: Encongit (repetición completada)
+    if (angle < UMBRAL_AMUNT && up) {
+        count.value++;
+        up = false;
+        sendRepUpdate(); // Envia actualització
+    }
 }
 
-// ---------------- FONS (DEBE SER AÑADIDO) ----------------
+// (Sense canvis, ja feia servir angles)
+function checkFlexiones(pose) {
+  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
+  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+  if (angle === null) return;
+
+  const UMBRAL_ABAJO = 90; 
+  const UMBRAL_ARRIBA = 160; 
+
+  if (angle < UMBRAL_ABAJO && !up) {
+      up = true;
+  }
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+    sendRepUpdate();
+  }
+}
+
+// (Sense canvis, ja feia servir angles)
+function checkSentadillas(pose) {
+  const angleL = getAngle(pose.keypoints, 'left_hip', 'left_knee', 'left_ankle');
+  const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+  if (angle === null) return;
+
+  const UMBRAL_ABAJO = 90;
+  const UMBRAL_ARRIBA = 165; 
+
+  if (angle < UMBRAL_ABAJO && !up) {
+      up = true;
+  }
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+    sendRepUpdate();
+  }
+}
+
+// (Sense canvis, ja feia servir ràtios)
+function checkSaltos(pose) {
+  const shoulderL = pose.keypoints.find((k) => k.name === 'left_shoulder');
+  const shoulderR = pose.keypoints.find((k) => k.name === 'right_shoulder');
+  const wristL = pose.keypoints.find((k) => k.name === 'left_wrist');
+  const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
+  const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
+
+  if (!shoulderL || !shoulderR || !wristL || !ankleL || !ankleR ||
+      shoulderL.score < 0.4 || shoulderR.score < 0.4 || wristL.score < 0.4 || 
+      ankleL.score < 0.4 || ankleR.score < 0.4) {
+    return;
+  }
+
+  const brazosArriba = wristL.y < shoulderL.y;
+  const shoulderWidth = Math.abs(shoulderL.x - shoulderR.x);
+  const distanciaPies = Math.abs(ankleL.x - ankleR.x);
+  const UMBRAL_PIES_ABIERTO_RATIO = 1.5; 
+  const UMBRAL_PIES_CERRADO_RATIO = 0.5;
+  const piesAbiertos = distanciaPies > (shoulderWidth * UMBRAL_PIES_ABIERTO_RATIO);
+  const piesCerrados = distanciaPies < (shoulderWidth * UMBRAL_PIES_CERRADO_RATIO);
+
+  if (brazosArriba && piesAbiertos && !up) {
+      up = true;
+  }
+  if (!brazosArriba && piesCerrados && up) {
+    count.value++;
+    up = false;
+    sendRepUpdate();
+  }
+}
+
+// (Sense canvis, ja feia servir angles)
 function checkFons(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos el hombro (shoulder) y el codo (elbow) como ejemplo.
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const colze = pose.keypoints.find(k => k.name === 'left_elbow')
-    if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
-    const dist = Math.abs(espatlla.y - colze.y)
-    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
+  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
+  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
+  if (angle === null) return;
+
+  const UMBRAL_ABAJO = 90;
+  const UMBRAL_ARRIBA = 160;
+
+  if (angle < UMBRAL_ABAJO && !up) {
+      up = true;
+  }
+  if (angle > UMBRAL_ARRIBA && up) {
+    count.value++;
+    up = false;
+    sendRepUpdate();
+  }
 }
 
-// ---------------- PUJADES (DEBE SER AÑADIDO) ----------------
+// !! FUNCIÓ ACTUALITZADA !! (Lògica de ràtios)
 function checkPujades(pose) {
-    // Lógica pendiente de ser añadida si existía en Kim, si no, es un placeholder
-    // Usamos la rodilla (knee) y el tobillo (ankle) como ejemplo.
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
-    const dist = Math.abs(genoll.y - peu.y)
-    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+    const shoulderL = pose.keypoints.find((k) => k.name === 'left_shoulder');
+    const shoulderR = pose.keypoints.find((k) => k.name === 'right_shoulder');
+    const hipL = pose.keypoints.find((k) => k.name === 'left_hip');
+    const kneeL = pose.keypoints.find((k) => k.name === 'left_knee');
+    const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
+    const hipR = pose.keypoints.find((k) => k.name === 'right_hip');
+    const kneeR = pose.keypoints.find((k) => k.name === 'right_knee');
+    const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
+
+    if (!shoulderL || !shoulderR) return;
+
+    // Unitats de mesura relatives
+    const shoulderWidth = Math.abs(shoulderL.x - shoulderR.x);
+    // Estimació de la longitud del tors (fallback si el maluc no es veu)
+    const torsoLengthL = (hipL && shoulderL.score > 0.4 && hipL.score > 0.4) 
+                         ? Math.abs(shoulderL.y - hipL.y) 
+                         : shoulderWidth * 1.5;
+
+    const checkLeg = (hip, knee, ankle) => {
+        if (!hip || !knee || !ankle || hip.score < 0.4 || knee.score < 0.4 || ankle.score < 0.4) return false;
+
+        // 1. Genoll per sobre del maluc
+        const rodillaArriba = knee.y < hip.y;
+        
+        // 2. RÀTIO: Distància vertical genoll-turmell > 50% longitud tors
+        const distanciaKneeAnkle = Math.abs(knee.y - ankle.y);
+        const UMBRAL_PIERNA_DOBLADA_RATIO = 0.5;
+        const piernaDoblada = distanciaKneeAnkle > (torsoLengthL * UMBRAL_PIERNA_DOBLADA_RATIO);
+
+        // 3. RÀTIO: Distància horitzontal genoll-maluc < 50% amplada espatlles
+        const distanciaHorizontal = Math.abs(knee.x - hip.x);
+        const UMBRAL_HORIZONTAL_RATIO = 0.5;
+        const rodillaCentrada = distanciaHorizontal < (shoulderWidth * UMBRAL_HORIZONTAL_RATIO);
+
+        return rodillaArriba && piernaDoblada && rodillaCentrada;
+    }
+    
+    const piernaArriba = checkLeg(hipL, kneeL, ankleL) || checkLeg(hipR, kneeR, ankleR);
+
+    // Fase 1: Genoll amunt
+    if (piernaArriba && !up) {
+        up = true;
+    }
+
+    // Fase 2: Genoll avall (cap cama compleix la condició)
+    if (!piernaArriba && up) {
+        count.value++;
+        up = false;
+        sendRepUpdate();
+    }
 }
 
 
 // ===================================================================
-// 6. WEBSOCKET (Tomada y ajustada de 'prueva')
+// 7. WEBSOCKET (ACTUALITZAT AMB 'userName')
 // ===================================================================
 
 function connectWebSocket() {
- const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
- const wsHost = window.location.host;
- const wsUrl = `${wsProtocol}//${wsHost}/ws`;
- 
- console.log(`Connectant a WebSocket a: ${wsUrl}`);
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.host; // Això apunta al teu servidor (ex: localhost:4000)
+  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+  
+  console.log(`Connectant a WebSocket a: ${wsUrl}`);
 
- ws.value = new WebSocket(wsUrl); 
+  ws.value = new WebSocket(wsUrl); 
 
- ws.value.onopen = () => {
-   console.log('Connectat al servidor WebSocket');
-   // 🟢 CAMBIO: Se usan 'codi_acces', 'userId' y 'userName'
-   ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
- };
- ws.value.onmessage = (event) => {
-   const message = JSON.parse(event.data);
-   if (message.type === 'leaderboard') {
-     // 🟢 CAMBIO: El leaderboard ahora contiene datos completos
-     leaderboard.value = message.leaderboard;
-   }
- };
- ws.value.onclose = () => console.log('Desconnectat del servidor');
- ws.value.onerror = (err) => console.error('Error WebSocket:', err);
+  ws.value.onopen = () => {
+    console.log('Connectat al servidor WebSocket');
+    
+    // !! MODIFICACIÓ CLAU AQUÍ !!
+    // Enviem el 'userName' i assegurem que 'sessionId' és el 'codi_acces'
+    ws.value.send(JSON.stringify({ 
+      type: 'join', 
+      codi_acces: sessionId, // Envia 'codi_acces' que ve de la ruta
+      userId: userId.value,
+      userName: userName.value 
+    }));
+  };
+
+  ws.value.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    
+    // Debug: Mostra tots els missatges rebuts
+    // console.log("WS Rebut:", message); 
+
+    if (message.type === 'leaderboard') {
+      leaderboard.value = message.leaderboard;
+    }
+    if (message.type === 'error') {
+      console.error('Error del servidor WS:', message.message);
+      // Aquí podries mostrar un error a l'usuari
+    }
+    if (message.type === 'joined') {
+      console.log(`Unit correctament a la sala: ${message.codi_acces}`);
+    }
+  };
+
+  ws.value.onclose = () => {
+    console.log('Desconnectat del servidor');
+    // Aquí podries intentar reconnectar si no és un tancament intencionat
+  };
+  
+  ws.value.onerror = (err) => {
+    console.error('Error WebSocket:', err);
+  };
 }
 
-
 // ===================================================================
-// 7. NAVEGACIÓN (Tomada y ajustada de 'prueva' con lógica de 'finish')
+// 8. NAVEGACIÓ I FINALITZACIÓ
 // ===================================================================
 
-function tornar() {
+function finalitzarExercici() {
   stopCamera();
-  
   if (ws.value?.readyState === WebSocket.OPEN) {
-    // 🟢 AFEGIT: Enviamos 'finish' para guardar los resultados en la BBDD
+    // 1. Enviar dades finals a la BBDD
     ws.value.send(JSON.stringify({
       type: 'finish',
       reps: count.value,
-      exercici: exercici,
-      codi_acces: codi_acces
+      exercici: exercici, // Assegura't que 'exercici' té el nom correcte
+      codi_acces: sessionId
     }));
     
-    // Enviamos 'leave' y cerramos la conexión
+    // 2. Sortir de la sala
     ws.value.send(JSON.stringify({ type: 'leave' }));
-    ws.value.close();
-    ws.value = null; 
   }
-  
-  router.back()
 }
+
+function tornar() {
+  // Abans de tornar, ens assegurem de guardar dades i sortir
+  finalitzarExercici();
+  
+  // Esperem un moment perquè els missatges WS s'enviïn
+  setTimeout(() => {
+    router.back(); // Torna a la pàgina anterior
+  }, 100); // 100ms de marge
+}
+
 </script>
 
 <style scoped>
