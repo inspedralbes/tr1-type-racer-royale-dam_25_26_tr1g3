@@ -16,9 +16,9 @@ console.log('Pool de connexions a la base de dades creat correctament.');
 /**
  * Funció 'helper' per a queries simples que no necessiten una transacció.
  * Agafa una connexió del pool, l'executa i l'allibera automàticament.
- * @param {string} sql - La sentència SQL a executar.
- * @param {Array} params - Els paràmetres per a la 'prepared statement'.
- * @returns {Promise<Array>} Retorna les files del resultat.
+ * @param {string} sql
+ * @param {Array} params
+ * @returns {Promise<Array>}
  */
 async function query(sql, params = []) {
   try {
@@ -27,7 +27,6 @@ async function query(sql, params = []) {
     return rows;
   } catch (error) {
     console.error('Error executant la query:', error.message);
-    // Rellença l'error per poder-lo gestionar on es cridi la funció
     throw error;
   }
 }
