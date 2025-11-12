@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   # --- SERVEI DE BASE DE DADES (MariaDB) ---
   db:
@@ -33,11 +35,10 @@ services:
       - fitai_network
 
   # --- SERVEI DE BACKEND (API Node.js) ---
-  backend:
-    container_name: mi_api
+  backend:   
     build:
       context: .
-      dockerfile: ./backend/Dockerfile.backend
+      dockerfile: ./backend/Dockerfile.prod
     restart: always
     ports:
       - "4000:4000"
@@ -56,10 +57,9 @@ services:
 
   # --- SERVEI DE FRONTEND (Nginx) ---
   frontend:
-    container_name: mi_frontend
     build:
       context: .
-      dockerfile: ./frontend/Dockerfile.frontend 
+      dockerfile: ./frontend/Dockerfile.prod
     restart: always
     ports:
       - "8080:80"
@@ -67,6 +67,20 @@ services:
       - backend
     networks:
       - fitai_network
+
+  proxy:
+    image: nginx:stable
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - fitai_network
+    depends_on:
+      - frontend
+      - backend
 
 volumes:
   db_data:

@@ -1,18 +1,10 @@
 # === ETAPA 1: BUILDER (Para compilar el frontend) ===
 FROM node:20-alpine AS builder
-
-
 WORKDIR /app
-
-
 # Copia los archivos de Node.js
 COPY frontend/package*.json ./
-
-
 # Instala todas las dependencias (incluyendo devDependencies necesarias para la compilación)
 RUN npm install
-
-
 # Copia el código fuente
 COPY frontend/. .
 
@@ -21,25 +13,27 @@ COPY frontend/. .
 RUN npm run build
 
 
+
+
 # === ETAPA 2: RUNNER (Para servir con Nginx) ===
 FROM nginx:stable-alpine
 
 
-# Copia el archivo de configuración de Nginx
-# Asegúrate de tener un nginx.conf configurado para servir archivos estáticos
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 
 # Copia los archivos estáticos compilados (la carpeta 'dist' de la etapa anterior) al directorio de Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 
+
+
 # Nginx corre por defecto en el puerto 80
 EXPOSE 80
 
 
+
+
 # Nginx se inicia por defecto al correr el contenedor
 CMD ["nginx", "-g", "daemon off;"]
-
 
 

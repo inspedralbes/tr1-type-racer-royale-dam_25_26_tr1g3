@@ -86,6 +86,70 @@
               />
             </div>
 
+            <!-- NOU: TEMPORITZADOR AFEGIT -->
+            <v-card
+              class="mt-6 py-4 px-5 text-center rounded-xl timer-card"
+              color="transparent"
+              elevation="10"
+              style="width: 85%; border: 2px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px); background: rgba(139, 92, 246, 0.1);"
+            >
+              <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
+              
+              <div v-if="!timerActive" class="d-flex justify-center gap-2 mb-3">
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(1)"
+                  :disabled="timerActive"
+                >
+                  1 min
+                </v-btn>
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(2)"
+                  :disabled="timerActive"
+                >
+                  2 min
+                </v-btn>
+                <v-btn
+                  color="#8b5cf6"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startTimer(5)"
+                  :disabled="timerActive"
+                >
+                  5 min
+                </v-btn>
+              </div>
+
+              <div v-if="timerActive">
+                <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
+                <v-btn
+                  color="red-darken-1"
+                  variant="outlined"
+                  size="small"
+                  rounded="lg"
+                  @click="stopTimer"
+                >
+                  <v-icon start>mdi-stop</v-icon>
+                  Detener
+                </v-btn>
+              </div>
+
+              <p v-if="!timerActive && !timerFinished" class="text-caption text-grey-lighten-1 mt-2">
+                Selecciona un temps per començar
+              </p>
+              <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
+                ✅ Temps completat!
+              </p>
+            </v-card>
+
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
               color="transparent"
@@ -160,10 +224,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue' // AFEGIT 'computed'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore';
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
@@ -182,12 +247,18 @@ const pathCarregar = mdiFolderOutline
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore();
 
 const exercici = route.params.ejercicio
-// !! IMPORTANT: Assegura't que 'sessionId' és el 'codi_acces'
-const sessionId = route.params.sessionId // Això ha de ser el teu 'codi_acces'
+const codi_acces = route.params.codi_acces 
 
 const noms = {
+  Flexions: 'FLEXIONS',
+  Squats: 'SQUATS',
+  Salts: 'SALTS',
+  Abdominals: 'ABDOMINALS',
+  Fons: 'FONS',
+  Pujades: 'PUJADES',
   flexiones: 'FLEXIONS',
   sentadillas: 'ESQUATS',
   saltos: 'SALTS',
@@ -197,6 +268,12 @@ const noms = {
 }
 
 const gifs = {
+  Flexions: flexionesGif,
+  Squats: sentadillasGif,
+  Salts: saltosGif,
+  Abdominals: abdominalesGif,
+  Fons: fonsGif,
+  Pujades: pujadesGif,
   flexiones: flexionesGif,
   sentadillas: sentadillasGif,
   saltos: saltosGif,
@@ -205,11 +282,12 @@ const gifs = {
   pujades: pujadesGif,
 }
 
-const exerciciLabel = noms[exercici] || 'EXERCICI'
-const exerciciGif = gifs[exercici] || ''
+const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
+const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
+
 
 // ===================================================================
-// 2. ESTADO (MODIFICAT PER AL NOM D'USUARI)
+// 2. ESTADO
 // ===================================================================
 const video = ref(null)
 const canvas = ref(null)
@@ -223,52 +301,69 @@ let streamRef = null
 let detecting = false
 
 const ws = ref(null)
+const userId = authStore.user.id;
+const userName = authStore.userName;
 
-// !! MODIFICACIÓ AQUÍ !!
-// Obtenim un ID i Nom estables del localStorage
-// (Aquests noms 'fitaiUserName' i 'fitaiUserId' són exemples,
-// utilitza els que facis servir al teu login)
-const userName = ref(localStorage.getItem('fitaiUserName') || 'Convidat'); 
-let storedUserId = localStorage.getItem('fitaiUserId'); // L'ID d'usuari de la BBDD
 
-if (!storedUserId) {
-  // Si no hi ha ID d'usuari (ex: no loguejat), generem un temporal
-  // Idealment, l'usuari hauria d'estar loguejat i tenir un ID real
-  console.warn("No s'ha trobat 'fitaiUserId' a localStorage. S'utilitzarà un ID aleatori.");
-  storedUserId = `usuari_anonim_${Math.floor(Math.random() * 10000)}`;
+// ===================================================================
+// NOU: LÒGICA DEL TEMPORITZADOR
+// ===================================================================
+const timerActive = ref(false)
+const timerFinished = ref(false)
+const timeRemaining = ref(0) // en segons
+let timerInterval = null
+
+const formattedTime = computed(() => {
+  const minutes = Math.floor(timeRemaining.value / 60)
+  const seconds = timeRemaining.value % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+
+function startTimer(minutes) {
+  if (timerActive.value) return
+  
+  timeRemaining.value = minutes * 60
+  timerActive.value = true
+  timerFinished.value = false
+  
+  timerInterval = setInterval(() => {
+    timeRemaining.value--
+    
+    if (timeRemaining.value <= 0) {
+      stopTimer()
+      timerFinished.value = true
+      // Aturar la detecció quan el temps acaba
+      if (detecting) {
+        stopCamera()
+      }
+    }
+  }, 1000)
 }
-const userId = ref(storedUserId);
 
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+  timerActive.value = false
+}
 
 // ===================================================================
 // 3. LIFECYCLE HOOKS
 // ===================================================================
-onMounted(() => {
-  // Assegura't que sessionId (el codi d'accés) existeix abans de connectar
-  if (sessionId) {
-    connectWebSocket();
-  } else {
-    console.error("No s'ha proporcionat cap codi d'accés (sessionId) a la ruta.");
-    // Podries redirigir l'usuari o mostrar un error
-  }
-})
+onMounted(() => connectWebSocket())
 
 onBeforeUnmount(() => {
-  stopCamera();
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    // Envia 'leave' abans de tancar (opcional, ja que 'close' ho gestiona)
-    ws.value.send(JSON.stringify({ type: 'leave' }))
-    ws.value.close()
-  }
+  tornar(); 
 })
 
-// ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Correccions de 'race condition' incloses)
-// ===================================================================
 
+// ===================================================================
+// 4. FUNCIONES DE CÁMARA/VIDEO
+// ===================================================================
 async function startCamera() {
   try {
-    if (video.value.offsetWidth && video.value.offsetHeight) {
+    if (video.value?.offsetWidth && video.value?.offsetHeight) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
     } else {
@@ -292,20 +387,12 @@ async function startCamera() {
 function stopCamera() {
   if (streamRef) {
     streamRef.getTracks().forEach((t) => t.stop())
-    video.value.srcObject = null
+    if (video.value) video.value.srcObject = null;
     streamRef = null
   }
-  // Aturem la detecció i netegem el canvas
-  detecting = false;
-  if (canvas.value) {
-    const ctx = canvas.value.getContext('2d');
-    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-  }
-  // Neteja l'element de vídeo
-  if(video.value) {
-    video.value.srcObject = null;
-    video.value.src = null;
-  }
+  detecting = false
+  const ctx = canvas.value?.getContext('2d');
+  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 }
 
 function selectVideo() {
@@ -317,30 +404,23 @@ async function loadVideoFromFile(event) {
   const file = event.target.files[0]
   if (!file) return
   
-  if (!file.type.startsWith('video/mp4') && !file.type.startsWith('video/webm')) {
-    console.warn('Format de vídeo no recomanat. Si us plau, utilitza MP4 o WebM.');
-  }
-  
-  const ctx = canvas.value.getContext('2d');
-  ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+  const ctx = canvas.value?.getContext('2d');
+  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
   const url = URL.createObjectURL(file)
   video.value.srcObject = null
-  // stopCamera() // stopCamera() ja s'ha cridat a selectVideo
+  stopCamera() 
   video.value.src = url
   
-  video.value.onloadedmetadata = async () => {
-    // Ajustem el canvas a la mida VISIBLE del vídeo
-    canvas.value.width = video.value.offsetWidth;
-    canvas.value.height = video.value.offsetHeight;
-    
-    if (!detector) await initMoveNet()
-    
-    detecting = true
-    detectVideoFrame() // Inicia el bucle de detecció
-    
-    await video.value.play()
+  video.value.onloadedmetadata = () => {
+    canvas.value.width = video.value.videoWidth;
+    canvas.value.height = video.value.videoHeight;
   };
+  
+  await video.value.play()
+  if (!detector) await initMoveNet()
+  detecting = true
+  detectVideoFrame()
 }
 
 async function initMoveNet() {
@@ -351,58 +431,65 @@ async function initMoveNet() {
 }
 
 async function detectPose() {
-  const ctx = canvas.value.getContext('2d')
+  const ctx = canvas.value?.getContext('2d')
   async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) {
-      if (!detecting) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-      return; // Atura el bucle si la detecció està desactivada
-    }
+    if (!detecting || !video.value || video.value.paused || video.value.ended) return
     
+    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+        canvas.value.width = video.value.videoWidth || 640;
+        canvas.value.height = video.value.videoHeight || 480;
+    }
+
     const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
 
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
+      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
+      if (timerActive.value && !timerFinished.value) {
+        checkMoviment(poses[0])
+      }
     }
-    requestAnimationFrame(poseDetectionFrame) // Continua el bucle
+    requestAnimationFrame(poseDetectionFrame)
   }
-  poseDetectionFrame() // Inicia el bucle
+  requestAnimationFrame(poseDetectionFrame)
 }
 
 async function detectVideoFrame() {
-  const ctx = canvas.value.getContext('2d')
+  const ctx = canvas.value?.getContext('2d')
   async function frameLoop() {
     if (!detecting || !video.value || video.value.paused || video.value.ended) {
-        if (video.value && video.value.ended) {
-             console.log("El vídeo ha acabat.");
+        if (video.value?.ended) {
              detecting = false;
         }
-        if (!detecting) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-        return // Atura el bucle
+        return
+    }
+
+    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
+        canvas.value.width = video.value.videoWidth || 640;
+        canvas.value.height = video.value.videoHeight || 480;
     }
     
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      checkMoviment(poses[0])
+      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
+      if (timerActive.value && !timerFinished.value) {
+        checkMoviment(poses[0])
+      }
     }
-    requestAnimationFrame(frameLoop) // Continua el bucle
+    requestAnimationFrame(frameLoop)
   }
-  frameLoop() // Inicia el bucle
+  requestAnimationFrame(frameLoop)
 }
-
-// ===================================================================
-// 5. DRAWPOSE (Sense canvis)
-// ===================================================================
 
 function drawPose(ctx, pose) {
   const videoElement = video.value;
   const canvasElement = canvas.value;
 
   if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-
   const videoDisplayedWidth = videoElement.offsetWidth;
   const videoDisplayedHeight = videoElement.offsetHeight;
+  
   const videoNaturalWidth = videoElement.videoWidth;
   const videoNaturalHeight = videoElement.videoHeight;
   
@@ -436,8 +523,7 @@ function drawPose(ctx, pose) {
     };
   };
   
-  // Dibuixar punts clau
-  ctx.fillStyle = '#00ffaa';
+  ctx.fillStyle = '#00ffaa'; 
   ctx.shadowBlur = 12;
   ctx.shadowColor = '#00ffaa';
   
@@ -450,10 +536,9 @@ function drawPose(ctx, pose) {
     }
   }
 
-  // Dibuixar esquelet
   const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#8b5cf6';
+  ctx.strokeStyle = '#8b5cf6'; 
   ctx.shadowBlur = 8;
   ctx.shadowColor = '#8b5cf6';
   
@@ -470,312 +555,172 @@ function drawPose(ctx, pose) {
       ctx.stroke();
     }
   }
-  ctx.shadowBlur = 0;
-}
 
-// ===================================================================
-// 5.1. FUNCIÓ AUXILIAR D'ANGLE (Sense canvis)
-// ===================================================================
-
-function getAngle(keypoints, p1Name, p2Name, p3Name) {
-  const p1 = keypoints.find((k) => k.name === p1Name);
-  const p2 = keypoints.find((k) => k.name === p2Name);
-  const p3 = keypoints.find((k) => k.name === p3Name);
-
-  if (!p1 || !p2 || !p3 || p1.score < 0.4 || p2.score < 0.4 || p3.score < 0.4) {
-    return null;
-  }
-
-  const radianes =
-    Math.atan2(p3.y - p2.y, p3.x - p2.x) -
-    Math.atan2(p1.y - p2.y, p1.x - p2.x);
- let angle = Math.abs(radianes * (180 / Math.PI));
-  if (angle > 180.0) {
-    angle = 360 - angle;
-  }
-  return angle;
+  ctx.shadowBlur = 0; 
 }
 
 
 // ===================================================================
-// 6. LÒGICA DE MOVIMENT (ACTUALITZADA)
+// 5. LÓGICA DE MOVIMIENTO
 // ===================================================================
+
+function handleRepCount() {
+    count.value++;
+    up = false;
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
+    }
+}
 
 function checkMoviment(pose) {
-  // Envia l'estat actual al WS (aquesta part s'ha de fer aquí)
-  // Només envia si el recompte canvia (dins de cada funció 'check')
-  // ...
-
-  // Comprova l'exercici específic
-  if (exercici === 'abdominales') checkAbdominal(pose)
-  if (exercici === 'flexiones') checkFlexiones(pose)
-  if (exercici === 'sentadillas') checkSentadillas(pose)
-  if (exercici === 'saltos') checkSaltos(pose)
-  if (exercici === 'fons') checkFons(pose)
-  if (exercici === 'pujades') checkPujades(pose)
+    switch (exercici) {
+        case 'flexiones':
+            checkFlexio(pose); 
+            break;
+        case 'sentadillas':
+            checkEsquat(pose); 
+            break;
+        case 'saltos':
+            checkSalt(pose); 
+            break;
+        case 'abdominales':
+            checkAbdominal(pose);
+            break;
+        case 'fons':
+            checkFons(pose);
+            break;
+        case 'pujades':
+            checkPujades(pose);
+            break;
+    }
 }
 
-function sendRepUpdate() {
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
-  }
+function checkFlexio(pose) {
+    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
+    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
+    const dist = Math.abs(espatlla.y - canell.y)
+    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// !! FUNCIÓ ACTUALITZADA !! (Lògica d'angles)
+function checkEsquat(pose) {
+    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
+    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+    if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
+    const dist = Math.abs(maluc.y - genoll.y)
+    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+}
+
+let initialY = null;
+let jumping = false;
+function checkSalt(pose) {
+    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+    if (!peu || peu.score < 0.4) return
+    if (initialY === null) initialY = peu.y
+    const delta = initialY - peu.y
+    const UMBRAL_SALT = 60
+    if (delta > UMBRAL_SALT && !jumping) {
+        jumping = true
+    } else if (delta < 10 && jumping) {
+        jumping = false; 
+        handleRepCount(); 
+    }
+}
+
 function checkAbdominal(pose) {
-    const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_hip', 'left_knee');
-    const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
-    const angle = angleL !== null ? angleL : angleR; // Prioritza el costat esquerre
+ const nas = pose.keypoints.find((k) => k.name === 'nose')
+ const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+ if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return
 
-    if (angle === null) return;
+ const distancia = Math.abs(nas.y - maluc.y)
+ const UMBRAL_ARRIBA = 150; 
+ const UMBRAL_ABAJO = 100;
 
-    const UMBRAL_AVALL = 150; // Angle gran (estirat)
-    const UMBRAL_AMUNT = 120; // Angle tancat (encongit)
+ if (distancia < UMBRAL_ABAJO && !up) {
+   up = true; 
+ }
 
-    // Fase 1: Estirat (preparat per pujar)
-    if (angle > UMBRAL_AVALL && !up) {
-        up = true;
-    }
-
-    // Fase 2: Encongit (repetición completada)
-    if (angle < UMBRAL_AMUNT && up) {
-        count.value++;
-        up = false;
-        sendRepUpdate(); // Envia actualització
-    }
+ if (distancia > UMBRAL_ARRIBA && up) {
+   handleRepCount(); 
+ }
 }
 
-// (Sense canvis, ja feia servir angles)
-function checkFlexiones(pose) {
-  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
-  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
-  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
-  if (angle === null) return;
-
-  const UMBRAL_ABAJO = 90; 
-  const UMBRAL_ARRIBA = 160; 
-
-  if (angle < UMBRAL_ABAJO && !up) {
-      up = true;
-  }
-  if (angle > UMBRAL_ARRIBA && up) {
-    count.value++;
-    up = false;
-    sendRepUpdate();
-  }
-}
-
-// (Sense canvis, ja feia servir angles)
-function checkSentadillas(pose) {
-  const angleL = getAngle(pose.keypoints, 'left_hip', 'left_knee', 'left_ankle');
-  const angleR = getAngle(pose.keypoints, 'right_hip', 'right_knee', 'right_ankle');
-  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
-  if (angle === null) return;
-
-  const UMBRAL_ABAJO = 90;
-  const UMBRAL_ARRIBA = 165; 
-
-  if (angle < UMBRAL_ABAJO && !up) {
-      up = true;
-  }
-  if (angle > UMBRAL_ARRIBA && up) {
-    count.value++;
-    up = false;
-    sendRepUpdate();
-  }
-}
-
-// (Sense canvis, ja feia servir ràtios)
-function checkSaltos(pose) {
-  const shoulderL = pose.keypoints.find((k) => k.name === 'left_shoulder');
-  const shoulderR = pose.keypoints.find((k) => k.name === 'right_shoulder');
-  const wristL = pose.keypoints.find((k) => k.name === 'left_wrist');
-  const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
-  const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
-
-  if (!shoulderL || !shoulderR || !wristL || !ankleL || !ankleR ||
-      shoulderL.score < 0.4 || shoulderR.score < 0.4 || wristL.score < 0.4 || 
-      ankleL.score < 0.4 || ankleR.score < 0.4) {
-    return;
-  }
-
-  const brazosArriba = wristL.y < shoulderL.y;
-  const shoulderWidth = Math.abs(shoulderL.x - shoulderR.x);
-  const distanciaPies = Math.abs(ankleL.x - ankleR.x);
-  const UMBRAL_PIES_ABIERTO_RATIO = 1.5; 
-  const UMBRAL_PIES_CERRADO_RATIO = 0.5;
-  const piesAbiertos = distanciaPies > (shoulderWidth * UMBRAL_PIES_ABIERTO_RATIO);
-  const piesCerrados = distanciaPies < (shoulderWidth * UMBRAL_PIES_CERRADO_RATIO);
-
-  if (brazosArriba && piesAbiertos && !up) {
-      up = true;
-  }
-  if (!brazosArriba && piesCerrados && up) {
-    count.value++;
-    up = false;
-    sendRepUpdate();
-  }
-}
-
-// (Sense canvis, ja feia servir angles)
 function checkFons(pose) {
-  const angleL = getAngle(pose.keypoints, 'left_shoulder', 'left_elbow', 'left_wrist');
-  const angleR = getAngle(pose.keypoints, 'right_shoulder', 'right_elbow', 'right_wrist');
-  const angle = angleL !== null && (angleR === null || angleL > angleR) ? angleL : angleR;
-  if (angle === null) return;
-
-  const UMBRAL_ABAJO = 90;
-  const UMBRAL_ARRIBA = 160;
-
-  if (angle < UMBRAL_ABAJO && !up) {
-      up = true;
-  }
-  if (angle > UMBRAL_ARRIBA && up) {
-    count.value++;
-    up = false;
-    sendRepUpdate();
-  }
+    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+    const colze = pose.keypoints.find(k => k.name === 'left_elbow')
+    if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
+    const dist = Math.abs(espatlla.y - colze.y)
+    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-// !! FUNCIÓ ACTUALITZADA !! (Lògica de ràtios)
 function checkPujades(pose) {
-    const shoulderL = pose.keypoints.find((k) => k.name === 'left_shoulder');
-    const shoulderR = pose.keypoints.find((k) => k.name === 'right_shoulder');
-    const hipL = pose.keypoints.find((k) => k.name === 'left_hip');
-    const kneeL = pose.keypoints.find((k) => k.name === 'left_knee');
-    const ankleL = pose.keypoints.find((k) => k.name === 'left_ankle');
-    const hipR = pose.keypoints.find((k) => k.name === 'right_hip');
-    const kneeR = pose.keypoints.find((k) => k.name === 'right_knee');
-    const ankleR = pose.keypoints.find((k) => k.name === 'right_ankle');
-
-    if (!shoulderL || !shoulderR) return;
-
-    // Unitats de mesura relatives
-    const shoulderWidth = Math.abs(shoulderL.x - shoulderR.x);
-    // Estimació de la longitud del tors (fallback si el maluc no es veu)
-    const torsoLengthL = (hipL && shoulderL.score > 0.4 && hipL.score > 0.4) 
-                         ? Math.abs(shoulderL.y - hipL.y) 
-                         : shoulderWidth * 1.5;
-
-    const checkLeg = (hip, knee, ankle) => {
-        if (!hip || !knee || !ankle || hip.score < 0.4 || knee.score < 0.4 || ankle.score < 0.4) return false;
-
-        // 1. Genoll per sobre del maluc
-        const rodillaArriba = knee.y < hip.y;
-        
-        // 2. RÀTIO: Distància vertical genoll-turmell > 50% longitud tors
-        const distanciaKneeAnkle = Math.abs(knee.y - ankle.y);
-        const UMBRAL_PIERNA_DOBLADA_RATIO = 0.5;
-        const piernaDoblada = distanciaKneeAnkle > (torsoLengthL * UMBRAL_PIERNA_DOBLADA_RATIO);
-
-        // 3. RÀTIO: Distància horitzontal genoll-maluc < 50% amplada espatlles
-        const distanciaHorizontal = Math.abs(knee.x - hip.x);
-        const UMBRAL_HORIZONTAL_RATIO = 0.5;
-        const rodillaCentrada = distanciaHorizontal < (shoulderWidth * UMBRAL_HORIZONTAL_RATIO);
-
-        return rodillaArriba && piernaDoblada && rodillaCentrada;
-    }
-    
-    const piernaArriba = checkLeg(hipL, kneeL, ankleL) || checkLeg(hipR, kneeR, ankleR);
-
-    // Fase 1: Genoll amunt
-    if (piernaArriba && !up) {
-        up = true;
-    }
-
-    // Fase 2: Genoll avall (cap cama compleix la condició)
-    if (!piernaArriba && up) {
-        count.value++;
-        up = false;
-        sendRepUpdate();
-    }
+    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+    if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
+    const dist = Math.abs(genoll.y - peu.y)
+    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
+    if (dist < UMBRAL_ABAJO && !up) up = true
+    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
 
 // ===================================================================
-// 7. WEBSOCKET (ACTUALITZAT AMB 'userName')
+// 6. WEBSOCKET
 // ===================================================================
 
 function connectWebSocket() {
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHost = window.location.host; // Això apunta al teu servidor (ex: localhost:4000)
-  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
-  
-  console.log(`Connectant a WebSocket a: ${wsUrl}`);
+ const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+ const wsHost = window.location.host;
+ const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+ 
+ console.log(`Connectant a WebSocket a: ${wsUrl}`);
 
-  ws.value = new WebSocket(wsUrl); 
+ ws.value = new WebSocket(wsUrl); 
 
-  ws.value.onopen = () => {
-    console.log('Connectat al servidor WebSocket');
-    
-    // !! MODIFICACIÓ CLAU AQUÍ !!
-    // Enviem el 'userName' i assegurem que 'sessionId' és el 'codi_acces'
-    ws.value.send(JSON.stringify({ 
-      type: 'join', 
-      codi_acces: sessionId, // Envia 'codi_acces' que ve de la ruta
-      userId: userId.value,
-      userName: userName.value 
-    }));
-  };
-
-  ws.value.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    
-    // Debug: Mostra tots els missatges rebuts
-    // console.log("WS Rebut:", message); 
-
-    if (message.type === 'leaderboard') {
-      leaderboard.value = message.leaderboard;
-    }
-    if (message.type === 'error') {
-      console.error('Error del servidor WS:', message.message);
-      // Aquí podries mostrar un error a l'usuari
-    }
-    if (message.type === 'joined') {
-      console.log(`Unit correctament a la sala: ${message.codi_acces}`);
-    }
-  };
-
-  ws.value.onclose = () => {
-    console.log('Desconnectat del servidor');
-    // Aquí podries intentar reconnectar si no és un tancament intencionat
-  };
-  
-  ws.value.onerror = (err) => {
-    console.error('Error WebSocket:', err);
-  };
+ ws.value.onopen = () => {
+   console.log('Connectat al servidor WebSocket');
+   ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
+ };
+ ws.value.onmessage = (event) => {
+   const message = JSON.parse(event.data);
+   if (message.type === 'leaderboard') {
+     leaderboard.value = message.leaderboard;
+   }
+ };
+ ws.value.onclose = () => console.log('Desconnectat del servidor');
+ ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
+
 // ===================================================================
-// 8. NAVEGACIÓ I FINALITZACIÓ
+// 7. NAVEGACIÓN
 // ===================================================================
 
-function finalitzarExercici() {
+function tornar() {
   stopCamera();
+  stopTimer(); // AFEGIT: Aturar el temporitzador en sortir
+  
   if (ws.value?.readyState === WebSocket.OPEN) {
-    // 1. Enviar dades finals a la BBDD
     ws.value.send(JSON.stringify({
       type: 'finish',
       reps: count.value,
-      exercici: exercici, // Assegura't que 'exercici' té el nom correcte
-      codi_acces: sessionId
+      exercici: exercici,
+      codi_acces: codi_acces
     }));
     
-    // 2. Sortir de la sala
     ws.value.send(JSON.stringify({ type: 'leave' }));
+    ws.value.close();
+    ws.value = null; 
   }
-}
-
-function tornar() {
-  // Abans de tornar, ens assegurem de guardar dades i sortir
-  finalitzarExercici();
   
-  // Esperem un moment perquè els missatges WS s'enviïn
-  setTimeout(() => {
-    router.back(); // Torna a la pàgina anterior
-  }, 100); // 100ms de marge
+  router.back()
 }
-
 </script>
 
 <style scoped>
@@ -783,7 +728,6 @@ function tornar() {
 /* ======== FONDO Y LAYOUT ======== */
 /* ==================================== */
 .bg-fitai-deep-space {
-  /* Fondo oscuro dinámico con brillo sutil */
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
@@ -825,8 +769,6 @@ function tornar() {
   box-shadow: 0 0 15px rgba(139, 92, 246, 1); 
   transition: all 0.3s ease;
   min-width: 120px;
-
-  /* Asegurar que no se solape con el título */
   margin-top: 10px;
 }
 .top-left-back-btn:hover {
@@ -838,12 +780,11 @@ function tornar() {
 /* ======== TÍTULO EXERCICI (ANIMADO) ======== */
 /* ==================================== */
 .exercise-title {
-  /* Tamaño de fuente responsive */
   font-size: 2.2rem;
   font-weight: 900;
   letter-spacing: 2px;
   text-transform: uppercase;
-  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa); /* Mezcla de colores neón */
+  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-size: 200% 200%;
@@ -870,19 +811,17 @@ function tornar() {
 .shadow-card {
   box-shadow: 0 8px 35px rgba(0, 0, 0, 0.6);
   transition: transform 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05); /* Added subtle border */
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .shadow-card:hover {
     transform: translateY(-2px);
 }
 
-/* CONTADOR (Deep Space Glass) */
 .count-card {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
 }
 .counter-value {
     letter-spacing: 3px;
-    /* Ajuste de color a azul neón para mejor armonía con el tema */
     text-shadow: 0px 0px 18px rgba(59, 130, 246, 0.9); 
     font-size: 4rem !important;
 }
@@ -892,8 +831,21 @@ function tornar() {
   }
 }
 
+/* NOU: Estils per al temporitzador */
+.timer-card {
+  animation: timerPulse 2.5s ease-in-out infinite;
+}
+@keyframes timerPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+  }
+}
+
 /* ==================================== */
-/* ======== BOTONES DE ACCIÓN (Grandes/Responsive) ======== */
+/* ======== BOTONES DE ACCIÓN ======== */
 /* ==================================== */
 .small-btn-group {
   gap: 12px;
@@ -908,7 +860,6 @@ function tornar() {
   border-radius: 8px !important;
 }
 
-/* Ajuste para móviles para evitar que los botones se salgan de la pantalla */
 @media (max-width: 450px) {
   .control-btn-large {
     min-width: 120px;
@@ -937,7 +888,6 @@ function tornar() {
 }
 
 .ranking-title {
-    /* Sombra más definida para el título del ranking */
     text-shadow: 0 0 8px rgba(0, 255, 170, 0.7); 
 }
 
@@ -954,7 +904,6 @@ function tornar() {
   border-left: 5px solid #b08d57 !important;
 }
 .bg-standard {
-     /* Fondo ligeramente más sutil para los no-ganadores */
      background: rgba(255, 255, 255, 0.03) !important;
 }
 .list-item-glow {
