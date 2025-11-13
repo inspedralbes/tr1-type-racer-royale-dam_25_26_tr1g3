@@ -8,9 +8,42 @@
                     Sortir
                 </v-btn>
                 <!-- Títol -->
-                <h2 class="exercise-title my-6">Multijugador - {{ exercici }}</h2>
+                <h2 class="exercise-title my-6">Multijugador - {{ exerciciLabel }}</h2>
+
+                <!-- ==================================== -->
+                <!-- ======== TEMPORITZADOR AUTOMÀTIC ======== -->
+                <!-- ==================================== -->
+                <v-card class="mt-6 py-4 px-5 text-center rounded-xl timer-card mx-auto" color="transparent"
+                    elevation="10"
+                    style="width: 85%; max-width: 400px; border: 2px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px); background: rgba(139, 92, 246, 0.1);">
+                    <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
+
+                    <!-- Lògica de Pre-compte -->
+                    <div v-if="preCount > 0" class="text-center">
+                        <h2 class="text-h1 font-weight-black text-red-lighten-1 mb-2 pre-count-value">{{ preCount }}
+                        </h2>
+                        <p class="text-h6 text-red-lighten-2 font-weight-bold">¡Prepárate!</p>
+                    </div>
+
+                    <!-- Lògica de Compte Principal -->
+                    <div v-else>
+                        <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
+                    </div>
+
+                    <!-- Lògica de Missatges d'Estat -->
+                    <p v-if="timerActive" class="text-caption text-green-lighten-2 mt-2 font-weight-bold">
+                        🟢 Comptant...
+                    </p>
+                    <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
+                        ✅ Temps completat!
+                    </p>
+                </v-card>
+                <!-- ==================================== -->
+                <!-- ======== FI TEMPORITZADOR ======== -->
+                <!-- ==================================== -->
+
                 <!-- Graella de jugadors -->
-                <v-row dense class="justify-center">
+                <v-row dense class="justify-center mt-6">
                     <v-col v-for="(jugador, i) in leaderboard" :key="jugador.userId" cols="12" sm="6" md="6" lg="6"
                         class="d-flex justify-center mb-6">
                         <v-card class="rounded-xl overflow-hidden shadow-card player-card text-center pa-4"
@@ -54,12 +87,23 @@
                     </v-col>
                 </v-row>
             </v-container>
+
+            <!-- ==================================== -->
+            <!-- ======== POPUP D'ESTADÍSTIQUES (Component Extern) ======== -->
+            <!-- ==================================== -->
+            <EstadistiquesSessioMultiplayer :model-value="showStatsDialog" :exercici="exercici" :total-reps="totalReps"
+                @close="sortir" />
+            <!-- ==================================== -->
+            <!-- ======== FI POPUP D'ESTADÍSTIQUES ======== -->
+            <!-- ==================================== -->
+
         </v-main>
     </v-app>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
+import EstadistiquesSessioMultiplayer from './EstadistiquesSessioMultiplayer.vue' // NOU: Importar el component d'estadístiques
 import { useRoute, useRouter } from 'vue-router'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
@@ -70,13 +114,65 @@ const router = useRouter()
 const exercici = route.params.ejercicio
 const sessionId = route.params.sessionId
 const userId = route.params.userId || `usuari_${Math.floor(Math.random() * 10000)}`
+const userName = 'Tu' // S'ha d'obtenir el nom real de l'usuari si és possible
 
-const noms = {
-    flexiones: 'FLEXIONS',
-    sentadillas: 'ESQUATS',
-    saltos: 'SALTS',
-    abdominales: 'ABDOMINALS',
+// L'etiqueta de l'exercici es calcula ara dins del component EstadistiquesSessioMultiplayer
+const exerciciLabel = computed(() => exercici.toUpperCase()) // Mantinc una versió simple per al títol principal, si cal.
+
+// ===================================================================
+// 1. LÒGICA DEL TEMPORITZADOR
+// ===================================================================
+const initialTime = 60 // 1 minut
+const preCountInitial = 5 // 5 segons de preparació
+const timeRemaining = ref(initialTime)
+const preCount = ref(preCountInitial)
+const timerActive = ref(false)
+const timerFinished = ref(false)
+const showStatsDialog = ref(false) // NOU: Estat per controlar el diàleg d'estadístiques
+let timerInterval = null
+let preCountInterval = null
+
+const formattedTime = computed(() => {
+    const minutes = Math.floor(timeRemaining.value / 60)
+    const seconds = timeRemaining.value % 60
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+})
+
+function startPreCount() {
+    timerFinished.value = false
+    showStatsDialog.value = false // Assegurar que el diàleg estigui tancat
+    preCount.value = preCountInitial
+    preCountInterval = setInterval(() => {
+        preCount.value--
+        if (preCount.value <= 0) {
+            clearInterval(preCountInterval)
+            startTimer()
+        }
+    }, 1000)
 }
+
+function startTimer() {
+    timeRemaining.value = initialTime
+    timerActive.value = true
+    timerInterval = setInterval(() => {
+        timeRemaining.value--
+        if (timeRemaining.value <= 0) {
+            stopTimer()
+            timerFinished.value = true
+            showStatsDialog.value = true // NOU: Mostrar el diàleg quan el temps s'acaba
+        }
+    }, 1000)
+}
+
+function stopTimer() {
+    clearInterval(timerInterval)
+    clearInterval(preCountInterval)
+    timerActive.value = false
+}
+
+// ===================================================================
+// 2. LÒGICA DE LA PÀGINA
+// ===================================================================
 
 // Refs
 const video = ref(null)
@@ -95,7 +191,16 @@ const ws = ref(null)
 const localStream = ref(null)
 const peers = ref({})
 
+// NOU: Càlcul de repeticions totals per a les estadístiques
+const totalReps = computed(() => {
+    const userEntry = leaderboard.value.find(j => j.userId === userId)
+    return userEntry ? userEntry.reps : 0
+})
+
 onMounted(async () => {
+    // Iniciar el temporitzador automàticament
+    startPreCount()
+
     await startLocalStream()
     connectWebSocket()
     await nextTick()
@@ -103,6 +208,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+    stopTimer() // Aturar el temporitzador en sortir
     sortir()
 })
 
@@ -255,10 +361,23 @@ function drawPose(ctx, pose) {
     }
 }
 
+// Funció checkMoviment (no proporcionada, assumim que existeix)
+function checkMoviment(pose) {
+    // Lògica de detecció de moviment
+    // Aquesta funció hauria d'actualitzar 'count' i enviar la nova repeticions al servidor
+    // Per exemple:
+    // if (movimentCompletat) {
+    //     count.value++
+    //     ws.value.send(JSON.stringify({ type: 'reps', reps: count.value }))
+    // }
+}
+
+
 // ---------- SORTIR ----------
 function sortir() {
     console.log('Sortint de la sessió...')
     try {
+        stopTimer() // Assegurar que el temporitzador s'aturi
         stopCamera()
         localStream.value?.getTracks().forEach(t => t.stop())
         Object.values(peers.value).forEach(pc => pc.close())
