@@ -19,12 +19,14 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
+    '/EstadistiquesSessio': RouteRecordInfo<'/EstadistiquesSessio', '/EstadistiquesSessio', Record<never, never>, Record<never, never>>,
     '/FitAI': RouteRecordInfo<'/FitAI', '/FitAI', Record<never, never>, Record<never, never>>,
     '/JuegoMultiplayer': RouteRecordInfo<'/JuegoMultiplayer', '/JuegoMultiplayer', Record<never, never>, Record<never, never>>,
     '/JuegoSolo': RouteRecordInfo<'/JuegoSolo', '/JuegoSolo', Record<never, never>, Record<never, never>>,
     '/Login': RouteRecordInfo<'/Login', '/Login', Record<never, never>, Record<never, never>>,
     '/ModoJuego': RouteRecordInfo<'/ModoJuego', '/ModoJuego', Record<never, never>, Record<never, never>>,
     '/Multiplayer': RouteRecordInfo<'/Multiplayer', '/Multiplayer', Record<never, never>, Record<never, never>>,
+    '/Register': RouteRecordInfo<'/Register', '/Register', Record<never, never>, Record<never, never>>,
   }
 
   /**
@@ -40,6 +42,10 @@ declare module 'vue-router/auto-routes' {
   export interface _RouteFileInfoMap {
     'src/pages/index.vue': {
       routes: '/'
+      views: never
+    }
+    'src/pages/EstadistiquesSessio.vue': {
+      routes: '/EstadistiquesSessio'
       views: never
     }
     'src/pages/FitAI.vue': {
@@ -64,6 +70,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/Multiplayer.vue': {
       routes: '/Multiplayer'
+      views: never
+    }
+    'src/pages/Register.vue': {
+      routes: '/Register'
       views: never
     }
   }

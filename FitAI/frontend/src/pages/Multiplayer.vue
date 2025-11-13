@@ -107,16 +107,31 @@ const jugadors = ref([]);
 const hostId = ref(0); 
 const errorMsg = ref("");
 
+// 2. AFEGIM AQUESTA NOVA VARIABLE
+const isStartingGame = ref(false); // Controla si estem sortint per començar
+
 // 🟢 CAMBIO: Se obtienen tanto el ID numérico como el nombre de usuario
 const userId = authStore.user.id; // Asume que el store de autenticación tiene 'user.id'
 // 👇 CAMBIO AQUÍ 👇
 const userName = authStore.userName; // Corregido: Obtener 'userName' del store, no 'value'
 
 onBeforeUnmount(() => {
+  // 3. MODIFIQUEM EL 'onBeforeUnmount'
+  if (isStartingGame.value) {
+    // Si estem començant, no enviem 'leave'.
+    // Desvinculem els esdeveniments per si de cas.
+    if (socket) {
+      socket.onmessage = null;
+      socket.onclose = null;
+    }
+    return;
+  }
+  
+  // Si sortim per qualsevol altra raó (ex: botó 'enrere'),
+  // netegem la sala.
   sortirSala();
   if (socket) socket.close();
 });
-
 
 
 // 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva'): Crea la sala mediante la API (POST /api/sala/crear)
@@ -190,7 +205,9 @@ function connectToSession(codi_acces, creador_id) {
     }
 
     if (msg.type === "start") {
-      // ➡️ Navega usando 'codi_acces' como parámetro
+      // 4. MARQUEM LA VARIABLE (per als clients)
+      isStartingGame.value = true; 
+      
       router.push({
         name: 'JuegoMultiplayer',
         params: { ejercicio: exercici, codi_acces: msg.codi_acces }
@@ -226,21 +243,27 @@ function sortirSala() {
 }
 
 function sortirManual() {
+  // 5. Assegurem que 'isStartingGame' és fals
+  isStartingGame.value = false;
   sortirSala();
 }
 
-// 🟢 FUNCIÓN AJUSTADA: Envía 'codi_acces' en lugar de 'sessionId'
 function iniciarPartida() {
   if (socket && socket.readyState === WebSocket.OPEN) {
+    // 6. MARQUEM LA VARIABLE (per a l'amfitrió)
+    isStartingGame.value = true;
+    
     socket.send(JSON.stringify({
       type: "start",
-      codi_acces: codiSala.value, // Envía el código de acceso
+      codi_acces: codiSala.value, 
     }));
   }
 }
 
 function tornarEnrere() {
-  router.back();
+  // 7. Assegurem que 'isStartingGame' és fals
+  isStartingGame.value = false;
+  router.back(); // Això activarà 'onBeforeUnmount' correctament
 }
 </script>
 
