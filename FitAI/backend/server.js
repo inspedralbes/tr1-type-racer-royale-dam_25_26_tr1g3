@@ -318,7 +318,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- NOVES APIS PER A SALES I RANKING ---
 
-function generarCodiAcces(length = 6) {
+function generarCodiAcces(length = 5) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -340,7 +340,7 @@ app.post('/api/sala/crear', async (req, res) => {
 
   // Intentem generar un codi únic (improbable que falli, però per seguretat)
   do {
-    codi_acces = generarCodiAcces(6);
+    codi_acces = generarCodiAcces(5);
     try {
       const [result] = await pool.execute(
         'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)',
