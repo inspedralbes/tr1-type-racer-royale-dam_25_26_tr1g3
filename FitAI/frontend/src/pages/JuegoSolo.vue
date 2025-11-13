@@ -5,20 +5,19 @@
         class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
         style="max-width: 1400px;"
       >
+      
         <v-btn
           class="top-left-back-btn rectangular-btn" 
           variant="flat"
           size="large"
-          prepend-icon="mdi-arrow-left"
-          @click="tornar"
+          prepend-icon="mdi-check-circle-outline"  color="success" @click="tornar"
         >
-          Tornar
-        </v-btn>
+          Finalitzar Sessió </v-btn>
 
         <v-row class="mt-16 mt-md-0">
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
             
-            <v-card
+            <v-card 
               class="rounded-xl overflow-hidden shadow-card video-card"
               elevation="12"
               width="100%"

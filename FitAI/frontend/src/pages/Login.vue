@@ -5,7 +5,7 @@
       <v-card class="pa-6 rounded-xl elevation-12 glass-card-futuristic fade-in-container" max-width="450" width="100%">
         
       <v-img
-      src="@/assets/logo-nextrep.png" 
+      src="@/assets/LOGO.png" 
       alt="Logo NextRep"
       class="logo-login mb-4"
       max-height="100"
