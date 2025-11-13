@@ -8,7 +8,7 @@
       src="@/assets/LOGO.png" 
       alt="Logo NextRep"
       class="logo-login mb-4"
-      max-height="100"
+      max-height="180"
       contain
       ></v-img>
 

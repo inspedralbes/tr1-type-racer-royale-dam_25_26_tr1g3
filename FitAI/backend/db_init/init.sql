@@ -40,7 +40,7 @@ VALUES
 (
     'CyberLifter', 
     'cyber@fit.ai', 
-    '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', -- 'password123'
+    '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7', -- 'password123'
     18, 
     12100
 ),

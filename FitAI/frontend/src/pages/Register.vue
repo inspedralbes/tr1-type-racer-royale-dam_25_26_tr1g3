@@ -234,6 +234,17 @@ const goToLogin = () => {
  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
 }
 
+/* ==================================== */
+/* ======== LOGO DE LOGIN (También usado en Registro) ======== */
+/* ==================================== */
+.logo-login {
+    /* Centra la imagen dentro de su contenedor (la tarjeta) */
+    margin-left: auto;
+    margin-right: auto;
+    /* Puedes añadir un poco de brillo si quieres un efecto neón */
+    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
+}
+
 
 /* ==================================== */
 /* ======== TARJETA (GLASS CARDS) ======== */

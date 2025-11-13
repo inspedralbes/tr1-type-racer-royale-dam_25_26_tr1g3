@@ -5,6 +5,16 @@
       style="min-height: 100vh"
     >
       <div class="header-content pt-4 pb-6 w-100">
+        
+        <v-img
+            src="@/assets/LOGO.png" 
+            alt="Logo NextRep"
+            class="logo-home mr-3"
+            max-height="60"
+            max-width="60"
+            contain
+          ></v-img>
+
         <h1 class="nextrep-title mb-6">
           <span class="next">Next</span><span class="rep">Rep</span>
         </h1>
@@ -227,6 +237,20 @@ const anarAExercici = (nom) => {
 </script>
 
 <style scoped>
+
+/* ==================================== */
+/* ======== NUEVO ESTILO DE LOGO ======== */
+/* ==================================== */
+.logo-home {
+    /* Mismo filtro de brillo que en Login/Registro, pero más sutil para la Home */
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+/* Contenedor del título y logo para manejar el centrado */
+.logo-title-container {
+    /* Puedes ajustar el margen en pantallas grandes si es necesario */
+}
+
 /* ==================================== */
 /* ======== FONDO NEÓN BRILLANTE ======== */
 /* ==================================== */
