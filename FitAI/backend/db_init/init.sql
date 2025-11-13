@@ -38,9 +38,9 @@ VALUES
     15400
 ),
 (
-    'CyberLifter', 
-    'cyber@fit.ai', 
-    '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7', -- 'password123'
+    '1', 
+    '1@fit.ai', 
+    '$2b$10$srE4ojgoCYxoEqlO1Uhqbe4y434PpbM/cxAAh3jwFKKGJ91m6HoRu', -- '1'
     18, 
     12100
 ),
