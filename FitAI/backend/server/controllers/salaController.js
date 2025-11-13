@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
 
-function generarCodiAcces(length = 6) {
+function generarCodiAcces(length = 5) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -18,7 +18,7 @@ export const crearSala = async (req, res) => {
   let sala;
   let attempts = 0;
   do {
-    codi_acces = generarCodiAcces(6);
+    codi_acces = generarCodiAcces(5);
     try {
       const [result] = await pool.execute(
         'INSERT INTO sales (creador_id, codi_acces, estat) VALUES (?, ?, ?)',
