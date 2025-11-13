@@ -4,6 +4,14 @@
       
       <v-card class="pa-6 rounded-xl elevation-12 glass-card-futuristic fade-in-container" max-width="450" width="100%">
         
+      <v-img
+      src="@/assets/logo-nextrep.png" 
+      alt="Logo NextRep"
+      class="logo-login mb-4"
+      max-height="100"
+      contain
+      ></v-img>
+
         <v-card-title class="text-h4 text-center font-weight-bold nextrep-title-login mb-4">
           <span class="next">Next</span><span class="rep">Rep</span>
         </v-card-title>
@@ -155,6 +163,16 @@ const goToRegister = () => {
   }
 }
 
+/* ==================================== */
+/* ======== LOGO DE LOGIN ======== */
+/* ==================================== */
+.logo-login {
+    /* Centra la imagen dentro de su contenedor (la tarjeta) */
+    margin-left: auto;
+    margin-right: auto;
+    /* Puedes añadir un poco de brillo si quieres un efecto neón */
+    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
+}
 
 /* ==================================== */
 /* ======== TARJETA (GLASS CARDS) ======== */
