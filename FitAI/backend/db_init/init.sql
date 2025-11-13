@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS participacions (
 INSERT INTO usuaris (nom, email, password, sessions_completades, repeticions_totals) 
 VALUES 
 (
-    'NeoFitMaster', 
-    'neo@fit.ai', 
-    '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', -- 'password123'
+    'nodeuser', 
+    'nodeuser@fit.ai', 
+    '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', -- 'nodepass'
     25, 
     15400
 ),

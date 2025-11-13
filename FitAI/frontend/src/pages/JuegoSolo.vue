@@ -5,20 +5,19 @@
         class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
         style="max-width: 1400px;"
       >
+      
         <v-btn
           class="top-left-back-btn rectangular-btn" 
           variant="flat"
           size="large"
-          prepend-icon="mdi-arrow-left"
-          @click="tornar"
+          prepend-icon="mdi-check-circle-outline"  color="success" @click="tornar"
         >
-          Tornar
-        </v-btn>
+          Finalitzar Sessió </v-btn>
 
         <v-row class="mt-16 mt-md-0">
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
             
-            <v-card
+            <v-card 
               class="rounded-xl overflow-hidden shadow-card video-card"
               elevation="12"
               width="100%"
@@ -682,9 +681,8 @@ function checkPujades(pose) {
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-
 // ===================================================================
-// 6. WEBSOCKET (MODIFICAT)
+// 6. WEBSOCKET (MODIFICAT PER CORREGIR EL TIMING)
 // ===================================================================
 
 function connectWebSocket() {
@@ -699,25 +697,31 @@ function connectWebSocket() {
  ws.value.onopen = () => {
    console.log('Connectat al servidor WebSocket');
    
-   // 1. S'uneix a la sala (per al leaderboard i la gestió de connexió)
+   // 1. S'uneix a la sala (NOMÉS AIXÒ)
    ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
    
-   // 2. (NOU) Envia el missatge 'start' per canviar l'estat a la BBDD a 'en_curs'
-   ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
+   // ❌ NO ENVIEM 'START' AQUÍ
  };
 
  ws.value.onmessage = (event) => {
    const message = JSON.parse(event.data);
+
    if (message.type === 'leaderboard') {
      leaderboard.value = message.leaderboard;
    }
-   // Opcional: Podries escoltar el missatge 'start' que el servidor et reenvia
-   // per confirmar, però no és estrictament necessari.
+
+   // ‼️ CANVI CLAU AQUÍ ‼️
+   // Quan el servidor confirmi que ens hem unit ('joined')...
+   if (message.type === 'joined') {
+     // ...llavors, i només llavors, enviem el missatge 'start'.
+     console.log('Confirmat: Unit a la sala. Enviant "start"...');
+     ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
+   }
  };
+ 
  ws.value.onclose = () => console.log('Desconnectat del servidor');
  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
-
 
 // ===================================================================
 // 7. NAVEGACIÓN (MODIFICADA)
