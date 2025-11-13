@@ -681,9 +681,8 @@ function checkPujades(pose) {
     if (dist > UMBRAL_ARRIBA && up) handleRepCount()
 }
 
-
 // ===================================================================
-// 6. WEBSOCKET (MODIFICAT)
+// 6. WEBSOCKET (MODIFICAT PER CORREGIR EL TIMING)
 // ===================================================================
 
 function connectWebSocket() {
@@ -698,25 +697,31 @@ function connectWebSocket() {
  ws.value.onopen = () => {
    console.log('Connectat al servidor WebSocket');
    
-   // 1. S'uneix a la sala (per al leaderboard i la gestió de connexió)
+   // 1. S'uneix a la sala (NOMÉS AIXÒ)
    ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
    
-   // 2. (NOU) Envia el missatge 'start' per canviar l'estat a la BBDD a 'en_curs'
-   ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
+   // ❌ NO ENVIEM 'START' AQUÍ
  };
 
  ws.value.onmessage = (event) => {
    const message = JSON.parse(event.data);
+
    if (message.type === 'leaderboard') {
      leaderboard.value = message.leaderboard;
    }
-   // Opcional: Podries escoltar el missatge 'start' que el servidor et reenvia
-   // per confirmar, però no és estrictament necessari.
+
+   // ‼️ CANVI CLAU AQUÍ ‼️
+   // Quan el servidor confirmi que ens hem unit ('joined')...
+   if (message.type === 'joined') {
+     // ...llavors, i només llavors, enviem el missatge 'start'.
+     console.log('Confirmat: Unit a la sala. Enviant "start"...');
+     ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
+   }
  };
+ 
  ws.value.onclose = () => console.log('Desconnectat del servidor');
  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
-
 
 // ===================================================================
 // 7. NAVEGACIÓN (MODIFICADA)
