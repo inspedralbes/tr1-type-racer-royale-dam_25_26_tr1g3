@@ -6,19 +6,19 @@
     >
       <div class="header-content pt-4 pb-6 w-100">
         
-        <v-img
-            src="@/assets/LOGO.png" 
-            alt="Logo NextRep"
-            class="logo-home mr-3"
-            max-height="60"
-            max-width="60"
-            contain
-          ></v-img>
-
-        <h1 class="nextrep-title mb-6">
-          <span class="next">Next</span><span class="rep">Rep</span>
-        </h1>
-
+        <div class="d-flex justify-center logo-title-container mb-6">
+            <v-img
+                src="@/assets/LOGO.png" 
+                alt="Logo NextRep"
+                max-height="60" 
+                max-width="60" 
+                class="logo-home mr-3 mt-1" 
+                contain
+            />
+            <h1 class="nextrep-title">
+              <span class="next">Next</span><span class="rep">Rep</span>
+            </h1>
+        </div>
         <div class="d-flex justify-center px-4">
           <v-text-field
             v-model="searchQuery"
@@ -128,6 +128,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
+
+// 🟢 MODIFICACIÓN: Importar la imagen del logo
+const logoSrc = new URL('@/assets/logo-nextrep.png', import.meta.url).href
 
 const router = useRouter()
 const searchQuery = ref('')
@@ -246,11 +249,6 @@ const anarAExercici = (nom) => {
     filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
 }
 
-/* Contenedor del título y logo para manejar el centrado */
-.logo-title-container {
-    /* Puedes ajustar el margen en pantallas grandes si es necesario */
-}
-
 /* ==================================== */
 /* ======== FONDO NEÓN BRILLANTE ======== */
 /* ==================================== */
@@ -279,11 +277,13 @@ const anarAExercici = (nom) => {
   font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-align: center;
+  /* IMPORTANTE: Eliminar text-align: center; ya que el contenedor flex lo centra */
   color: white;
   text-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
   line-height: 1;
   user-select: none;
+  /* Añadir margen izquierdo para separar del logo si es necesario */
+  /* margin-left: 10px; */ 
 }
 
 /* Ajuste del título en escritorio */
@@ -386,15 +386,15 @@ const anarAExercici = (nom) => {
 }
 
 /* Estilo del campo de texto interno (Vuetify overides) */
-.search-bar .v-field__input {
+.search-bar :deep(.v-field__input) {
   color: white !important;
   font-size: 1rem;
 }
-.search-bar .v-field__overlay {
+.search-bar :deep(.v-field__overlay) {
   background-color: rgba(255, 255, 255, 0.1) !important;
   transition: background-color 0.4s ease;
 }
-.search-bar:hover .v-field__overlay {
+.search-bar:hover :deep(.v-field__overlay) {
   background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
@@ -404,7 +404,7 @@ const anarAExercici = (nom) => {
 }
 
 /* Estilo de los iconos (lupa y limpiar) */
-.search-bar .v-icon {
+.search-bar :deep(.v-icon) {
   color: #8b5cf6 !important; /* Color neón morado para los iconos */
 }
 

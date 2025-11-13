@@ -25,7 +25,7 @@
             class="mt-6"
             large
             rounded
-            @click="$router.back()"
+            @click="$router.push('/')" 
           >
             Tornar
           </v-btn>
@@ -42,6 +42,7 @@ const route = useRoute()
 const reps = route.params.reps || 0
 const exercici = route.params.ejercicio || 'EXERCICI'
 
+// Diccionari per mapejar els noms dels exercicis
 const noms = {
   Flexions: 'FLEXIONS',
   Squats: 'SQUATS',
@@ -57,6 +58,7 @@ const noms = {
   pujades: 'PUJADES',
 }
 
+// Obtenir l'etiqueta correcta o utilitzar el valor per defecte
 const exerciciLabel = noms[exercici] || exercici
 </script>
 

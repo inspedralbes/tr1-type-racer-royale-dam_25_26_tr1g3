@@ -85,6 +85,9 @@
               />
             </div>
 
+            <!-- ==================================== -->
+            <!-- ======== TEMPORITZADOR MODIFICAT ======== -->
+            <!-- ==================================== -->
             <v-card
               class="mt-6 py-4 px-5 text-center rounded-xl timer-card"
               color="transparent"
@@ -93,60 +96,74 @@
             >
               <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
               
-              <div v-if="!timerActive" class="d-flex justify-center gap-2 mb-3">
-                <v-btn
-                  color="#8b5cf6"
-                  variant="flat"
-                  size="small"
-                  rounded="lg"
-                  @click="startTimer(1)"
-                  :disabled="timerActive"
-                >
-                  1 min
-                </v-btn>
-                <v-btn
-                  color="#8b5cf6"
-                  variant="flat"
-                  size="small"
-                  rounded="lg"
-                  @click="startTimer(2)"
-                  :disabled="timerActive"
-                >
-                  2 min
-                </v-btn>
-                <v-btn
-                  color="#8b5cf6"
-                  variant="flat"
-                  size="small"
-                  rounded="lg"
-                  @click="startTimer(5)"
-                  :disabled="timerActive"
-                >
-                  5 min
-                </v-btn>
+              <!-- NOU: Lògica de Pre-compte -->
+              <div v-if="preCount > 0" class="text-center">
+                <h2 class="text-h1 font-weight-black text-red-lighten-1 mb-2 pre-count-value">{{ preCount }}</h2>
+                <p class="text-h6 text-red-lighten-2 font-weight-bold">¡Prepárate!</p>
+              </div>
+              
+              <!-- NOU: Lògica de Compte Principal -->
+              <div v-else>
+                <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
               </div>
 
-              <div v-if="timerActive">
-                <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
+              <!-- NOU: Lògica de Botons -->
+              <div class="d-flex justify-center gap-2 mb-3 mt-4">
                 <v-btn
+                  v-if="!timerActive && preCount === 0 && !timerFinished"
+                  color="green-darken-1"
+                  variant="flat"
+                  size="small"
+                  rounded="lg"
+                  @click="startPreCount"
+                  :disabled="timerActive || preCount > 0"
+                >
+                  <v-icon start>mdi-timer-1</v-icon>
+                  1 Minuto
+                </v-btn>
+                
+                <v-btn
+                  v-if="timerActive || preCount > 0"
                   color="red-darken-1"
                   variant="outlined"
                   size="small"
                   rounded="lg"
                   @click="stopTimer"
                 >
-                  <v-icon start>mdi-stop</v-icon>
-                  Detener
+                  <v-icon start>mdi-pause</v-icon>
+                  Parar
+                </v-btn>
+                
+                <v-btn
+                  v-if="!timerActive && timeRemaining < 60 || timerFinished"
+                  color="blue-grey-lighten-2"
+                  variant="outlined"
+                  size="small"
+                  rounded="lg"
+                  @click="resetTimer"
+                >
+                  <v-icon start>mdi-refresh</v-icon>
+                  Restablecer
                 </v-btn>
               </div>
 
-              <p v-if="!timerActive && !timerFinished" class="text-caption text-grey-lighten-1 mt-2">
-                Selecciona un temps per començar
+              <!-- NOU: Lògica de Missatges d'Estat -->
+              <p v-if="!timerActive && preCount === 0 && !timerFinished && timeRemaining === 60" class="text-caption text-grey-lighten-1 mt-2">
+                Premeu 1 Minuto per començar
+              </p>
+              <p v-if="timerActive" class="text-caption text-green-lighten-2 mt-2 font-weight-bold">
+                🟢 Comptant...
               </p>
               <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
                 ✅ Temps completat!
               </p>
+              <p v-if="!timerActive && preCount === 0 && !timerFinished && timeRemaining < 60" class="text-caption text-red-lighten-2 mt-2 font-weight-bold">
+                ⏸️ Temporitzador aturat
+              </p>
             </v-card>
+            <!-- ==================================== -->
+            <!-- ======== FI TEMPORITZADOR ======== -->
+            <!-- ==================================== -->
 
             <v-card
               class="mt-8 py-5 px-6 text-center rounded-xl count-card"
@@ -304,25 +321,42 @@ const userName = authStore.userName;
 
 
 // ===================================================================
-// NOU: LÒGICA DEL TEMPORITZADOR
+// NOU: LÒGICA DEL TEMPORITZADOR (MODIFICADA)
 // ===================================================================
 const timerActive = ref(false)
 const timerFinished = ref(false)
-const timeRemaining = ref(0) // en segons
+const timeRemaining = ref(60) // 1 minuto por defecto
+const preCount = ref(0) // Cuenta regresiva de 5 segundos
 let timerInterval = null
+let preCountInterval = null
 
 const formattedTime = computed(() => {
   const minutes = Math.floor(timeRemaining.value / 60)
   const seconds = timeRemaining.value % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 })
 
-function startTimer(minutes) {
+function startPreCount() {
+  if (timerActive.value || preCountInterval) return
+  
+  preCount.value = 5 // Iniciar en 5
+  timerFinished.value = false
+  
+  preCountInterval = setInterval(() => {
+    preCount.value--
+    
+    if (preCount.value <= 0) {
+      clearInterval(preCountInterval)
+      preCountInterval = null
+      startMainTimer()
+    }
+  }, 1000)
+}
+
+function startMainTimer() {
   if (timerActive.value) return
   
-  timeRemaining.value = minutes * 60
   timerActive.value = true
-  timerFinished.value = false
   
   timerInterval = setInterval(() => {
     timeRemaining.value--
@@ -343,7 +377,18 @@ function stopTimer() {
     clearInterval(timerInterval)
     timerInterval = null
   }
+  if (preCountInterval) {
+    clearInterval(preCountInterval)
+    preCountInterval = null
+  }
   timerActive.value = false
+}
+
+function resetTimer() {
+  stopTimer()
+  timeRemaining.value = 60 // Reiniciar a 1 minuto
+  preCount.value = 0
+  timerFinished.value = false
 }
 
 // ===================================================================
@@ -442,8 +487,8 @@ async function detectPose() {
 
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
-      if (timerActive.value && !timerFinished.value) {
+      // MODIFICAT: Només comprovar moviment si el temporitzador (principal) està actiu
+      if (timerActive.value) {
         checkMoviment(poses[0])
       }
     }
@@ -470,8 +515,8 @@ async function detectVideoFrame() {
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
       drawPose(ctx, poses[0])
-      // MODIFICAT: Només comprovar moviment si el temporitzador està actiu
-      if (timerActive.value && !timerFinished.value) {
+      // MODIFICAT: Només comprovar moviment si el temporitzador (principal) està actiu
+      if (timerActive.value) {
         checkMoviment(poses[0])
       }
     }
