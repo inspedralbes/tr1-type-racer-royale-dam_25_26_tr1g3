@@ -1,4 +1,4 @@
-juegoSolo.vue: <template>
+<template>
   <v-app>
     <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
       <v-container
@@ -720,21 +720,22 @@ function connectWebSocket() {
 
 
 // ===================================================================
-// 7. NAVEGACIÓN
+// 7. NAVEGACIÓN (MODIFICADA)
 // ===================================================================
 
 function tornar() {
   stopCamera();
-  stopTimer(); // AFEGIT: Aturar el temporitzador en sortir
+  stopTimer(); 
   
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    // Normalitzem el nom de l'exercici a minúscules, com espera el backend
-    const exerciciNormalitzat = exercici.toLowerCase();
+  // Guardem els valors finals abans de tancar res
+  const repsFinals = count.value;
+  const exerciciNormalitzat = exercici.toLowerCase();
 
+  if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({
       type: 'finish',
-      reps: count.value,
-      exercici: exerciciNormalitzat, // Enviem el nom normalitzat
+      reps: repsFinals,
+      exercici: exerciciNormalitzat,
       codi_acces: codi_acces
     }));
     
@@ -743,10 +744,18 @@ function tornar() {
     ws.value = null; 
   }
   
-  router.back()
+  // ‼️ CANVI AQUÍ:
+  // En lloc de 'router.back()', redirigim a la pàgina d'estadístiques
+  // passant els paràmetres que espera.
+  router.push({ 
+    name: 'EstadistiquesSessio', 
+    params: { 
+      ejercicio: exercici, // Passem el nom (ex: 'Flexions')
+      reps: repsFinals       // Passem el comptador final
+    } 
+  });
 }
 </script>
-
 <style scoped>
 /* ==================================== */
 /* ======== FONDO Y LAYOUT ======== */
