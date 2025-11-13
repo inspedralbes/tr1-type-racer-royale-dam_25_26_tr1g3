@@ -139,7 +139,7 @@ const anarAExercici = (nom) => {
 .exercise-card {
   width: 100%;
   max-width: 320px; 
-  min-height: 250px;
+  min-height: 180px;
   border-radius: 16px; 
   background: rgba(30, 30, 47, 0.7); 
   border: 1px solid rgba(255, 255, 255, 0.1);
