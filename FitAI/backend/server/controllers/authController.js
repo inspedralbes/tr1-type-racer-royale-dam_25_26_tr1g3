@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
-import pool from '../config/database.js';
+import { Op } from 'sequelize';
+import User from '../models/user.model.js';
 
+// Registre usuari
 export const registerUser = async (req, res) => {
   const { nom, email, password } = req.body;
   if (!nom || !email || !password) {
@@ -9,13 +11,16 @@ export const registerUser = async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    await pool.execute(
-      'INSERT INTO usuaris (nom, email, password) VALUES (?, ?, ?)',
-      [nom, email, hashedPassword]
-    );
+
+    await User.create({
+      nom,
+      email,
+      password: hashedPassword
+    });
+
     res.status(201).json({ message: 'Usuari registrat!' });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ message: 'Aquest email ja està registrat' });
     }
     console.error(error);
@@ -23,17 +28,23 @@ export const registerUser = async (req, res) => {
   }
 };
 
+// Login
 export const loginUser = async (req, res) => {
   const { email: loginInput, password } = req.body;
   if (!loginInput || !password) {
     return res.status(400).json({ message: 'Usuari/Email i contrasenya obligatoris' });
   }
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM usuaris WHERE email = ? OR nom = ?',
-      [loginInput, loginInput]
-    );
-    const user = rows[0];
+    // Utilitza metode Sequilize
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: loginInput },
+          { nom: loginInput }
+        ]
+      }
+    });
+
     if (!user) {
       return res.status(401).json({ message: 'Credencials incorrectes' });
     }
@@ -49,6 +60,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
+// Funció per obtenir l'usuari actual
 export const getCurrentUser = (req, res) => {
   if (req.session.user) {
     res.json(req.session.user);
@@ -57,6 +69,7 @@ export const getCurrentUser = (req, res) => {
   }
 };
 
+// Funció per tancar sessió
 export const logoutUser = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -65,4 +78,43 @@ export const logoutUser = (req, res) => {
     res.clearCookie('connect.sid');
     res.json({ message: 'Sessió tancada' });
   });
+};
+
+// Consultar usuari per ID
+export const getUserById = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'nom', 'email', 'repeticions_totals', 'sessions_completades'] // Excloem la contrasenya
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuari no trobat' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+};
+
+// Actualitzar dades d'usuari
+export const updateUser = async (req, res) => {
+    try {
+        const userId = req.session.user?.id;
+        if (!userId) {
+            return res.status(401).json({ message: 'No autenticat' });
+        }
+        const { nom, email } = req.body;
+
+        const [updated] = await User.update({ nom, email }, {
+            where: { id: userId }
+        });
+
+        if (updated) {
+            res.json({ message: 'Usuari actualitzat correctament' });
+        } else {
+            res.status(404).json({ message: 'Usuari no trobat' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error del servidor' });
+    }
 };
