@@ -12,8 +12,16 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
+    CameraView: typeof import('./src/components/CameraView.vue')['default']
+    ExerciseInfo: typeof import('./src/components/ExerciseInfo.vue')['default']
+    ExerciseList: typeof import('./src/components/ExerciseList.vue')['default']
+    GlobalRanking: typeof import('./src/components/GlobalRanking.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
+    LeaderboardCard: typeof import('./src/components/LeaderboardCard.vue')['default']
+    RepetitionCounter: typeof import('./src/components/RepetitionCounter.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TimerCard: typeof import('./src/components/TimerCard.vue')['default']
+    UserStats: typeof import('./src/components/UserStats.vue')['default']
   }
 }
