@@ -5,18 +5,36 @@
       style="min-height: 100vh"
     >
       <div class="header-content pt-4 pb-6 w-100">
-        <div class="d-flex justify-center logo-title-container mb-6">
-          <v-img
-            src="@/assets/LOGO.png"
-            alt="Logo NextRep"
-            max-height="60"
-            max-width="60"
-            class="logo-home mr-3 mt-1"
-            contain
-          />
-          <h1 class="nextrep-title">
-            <span class="next">Next</span><span class="rep">Rep</span>
-          </h1>
+        <div class="d-flex justify-space-between align-center px-4">
+            
+          <v-btn
+            icon
+            size="large"
+            variant="tonal"
+            class="profile-btn-glow"
+            @click="goToProfile"
+          >
+            <v-icon size="24">mdi-account-circle</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              El meu Perfil
+            </v-tooltip>
+          </v-btn>
+          
+          <div class="d-flex justify-center logo-title-container" style="flex-grow: 1;">
+            <v-img
+              src="@/assets/LOGO.png"
+              alt="Logo NextRep"
+              max-height="60"
+              max-width="60"
+              class="logo-home mr-3 mt-1"
+              contain
+            />
+            <h1 class="nextrep-title">
+              <span class="next">Next</span><span class="rep">Rep</span>
+            </h1>
+          </div>
+          
+          <div style="width: 52px; height: 52px;"></div>
         </div>
       </div>
 
@@ -33,10 +51,21 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router' // Importa useRouter per a la navegació
 // Importar els nous components
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
 import StreakTracker from '@/components/StreakTracker.vue'
+
+const router = useRouter()
+
+/**
+ * Funció per navegar a la pàgina de perfil.
+ * Assegura't que el nom de la ruta ('Profile') coincideix amb el teu router/index.js
+ */
+const goToProfile = () => {
+  router.push({ name: 'Profile' });
+}
 </script>
 
 <style>
@@ -128,5 +157,22 @@ import StreakTracker from '@/components/StreakTracker.vue'
         max-width: 600px;
         height: 2px;
     }
+}
+
+/* ==================================== */
+/* ======== NOU ESTIL BOTÓ PERFIL ======== */
+/* ==================================== */
+.profile-btn-glow {
+    /* Estil base del botó Vuetify (icon, tonal) */
+    background-color: rgba(139, 92, 246, 0.15) !important;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #a78bfa !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.profile-btn-glow:hover {
+    background-color: rgba(139, 92, 246, 0.3) !important;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8) !important;
+    transform: scale(1.05);
 }
 </style>

@@ -32,6 +32,13 @@ const routes = [
   },
 
   {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/pages/Profile.vue'), // Ruta al nou component
+    meta: { requiresAuth: true } // Etiqueta per a la guàrdia
+  },
+
+  {
     path: '/',
     name: 'Home',
     component: FitAI,
@@ -73,7 +80,7 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => { // Afegit async
 
   const authStore = useAuthStore()
-
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   // Intentem comprovar l'autenticació si no tenim usuari a l'store
   // Això gestiona el refresc de pàgina
   if (!authStore.isAuthenticated && to.name !== 'Login' && to.name !== 'Register') {
