@@ -1,5 +1,6 @@
 <template>
-  <div> <div class="d-flex justify-center px-4">
+  <div>
+    <div class="d-flex justify-center px-4">
       <v-text-field
         v-model="searchQuery"
         placeholder="Buscar ejercicio..."
@@ -23,16 +24,23 @@
         class="ga-4 ga-md-6"
       >
         <v-col
- v-for="exercici in filteredExercicis"
-    :key="exercici.nom"
-    cols="12"
-    sm="6"
-    md="4"   lg="3"   class="d-flex justify-center"
+          v-for="exercici in filteredExercicis"
+          :key="exercici.nom"
+          cols="12"
+          sm="6"
+          md="4"
+          lg="3"
+          class="d-flex justify-center"
         >
           <v-card
             class="exercise-card elevation-12"
             @click="anarAExercici(exercici.nom)"
           >
+            
+            <div class="exercise-description-overlay d-flex align-center justify-center text-center pa-4">
+              <span class="text-white font-weight-light text-body-1">{{ exercici.descripcio }}</span>
+            </div>
+
             <v-img
               :src="exercici.imatge"
               :alt="exercici.label"
@@ -40,18 +48,6 @@
               cover
               class="transition-img"
             />
-
-            <v-overlay
-              contained
-              scrim="#1a2238"
-              class="d-none d-sm-flex align-center justify-center text-center pa-3"
-              activator="parent"
-              location="top"
-            >
-              <p class="text-white text-body-2 font-weight-light">
-                {{ exercici.descripcio }}
-              </p>
-            </v-overlay>
 
             <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-1">
               {{ exercici.label }}
@@ -64,7 +60,7 @@
         v-if="filteredExercicis.length === 0"
         class="text-white text-center mt-10 text-h6 font-weight-light"
       >
-        No s'han trobat exercicis amb aquest nom. 🤖
+        No s'han trobat exercicis con este nombre. 🤖
       </div>
     </v-container>
   </div>
@@ -77,7 +73,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const searchQuery = ref('')
 
-// --- DATOS Y LÓGICA DE EJERCICIOS ---
+// --- DATOS Y LÓGICA DE EJERCICIOS (Sin cambios) ---
 const exercicis = [
   {
     nom: 'Flexions',
@@ -136,27 +132,41 @@ const anarAExercici = (nom) => {
 /* ==================================== */
 .exercise-card {
   width: 100%;
-  max-width: 320px; 
+  max-width: 380px;
   min-height: 180px;
-  border-radius: 16px; 
-  background: rgba(30, 30, 47, 0.7); 
+  border-radius: 16px;
+  background: rgba(30, 30, 47, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  backdrop-filter: blur(8px); 
-}
-.exercise-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.8); 
+  backdrop-filter: blur(8px);
+  position: relative; 
 }
 
-/* Imagen con zoom sutil en hover */
-.transition-img {
-  transition: transform 0.6s ease;
+/* Overlay de descripción con animación de entrada */
+.exercise-description-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(62, 93, 231, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  opacity: 0; 
+  transform: translateY(10px); 
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 2; 
+  border-radius: 16px;
 }
-.exercise-card:hover .transition-img {
-  transform: scale(1.00);
+
+.exercise-card:hover .exercise-description-overlay {
+  opacity: 1; 
+  transform: translateY(0); 
 }
 
 /* Franja inferior para el nombre */
@@ -165,18 +175,31 @@ const anarAExercici = (nom) => {
   bottom: 0;
   left: 0;
   width: 100%;
-  background: rgba(98, 0, 255, 0.7);
+  background: rgba(62, 93, 231, 0.7);
   backdrop-filter: blur(6px);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
   letter-spacing: 1px;
   text-transform: uppercase;
+  z-index: 1; 
+  transition: all 0.3s ease; /* AÑADIDO: Para animar la salida */
+}
+
+/* ANIMACIÓN DE SALIDA: Cuando se hace hover en la tarjeta, la etiqueta desaparece */
+.exercise-card:hover .exercise-label-bottom {
+  opacity: 0; /* Desaparece */
+  transform: translateY(100%); /* Se desliza fuera de la tarjeta hacia abajo */
+}
+
+/* Resto de estilos (sin cambios) */
+.transition-img {
+  transition: transform 0.6s ease;
 }
 
 /* ==================================== */
 /* ======== BUSCADOR (SEARCH BAR) ======== */
 /* ==================================== */
 .search-bar {
-  max-width: 600px; 
+  max-width: 600px;
   border-radius: 12px !important;
   color: white;
   transition: all 0.4s ease;
@@ -190,13 +213,10 @@ const anarAExercici = (nom) => {
   background-color: rgba(255, 255, 255, 0.1) !important;
   transition: background-color 0.4s ease;
 }
-.search-bar:hover :deep(.v-field__overlay) {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
 .search-bar:focus-within {
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.8) !important;
 }
 .search-bar :deep(.v-icon) {
-  color: #8b5cf6 !important; 
+  color: #8b5cf6 !important;
 }
 </style>
