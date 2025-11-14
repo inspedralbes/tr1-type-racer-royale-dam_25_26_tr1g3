@@ -10,6 +10,7 @@
       autoplay
       playsinline
       muted
+      loop
       width="100%"
       class="rounded-xl"
       style="object-fit: cover;"
