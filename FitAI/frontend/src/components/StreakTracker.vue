@@ -166,13 +166,7 @@ const updateUserStreak = async () => {
 
 onMounted(() => {
   // Cargar la racha del usuario
-  // loadUserStreak(); // <-- COMENTA ESTO
-
-  // FUERZA EL POP-UP PARA PROBAR
-  rachaData.value.dias = 3 // Pon los días que quieras
-  nextTick(() => {
-    showStreakDialog.value = true
-  })
+  loadUserStreak();
 })
 </script>
 
