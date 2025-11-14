@@ -19,7 +19,10 @@ app.use(session(sessionConfig));
 // Rutes de l'API
 app.use('/api', authRoutes); // Ex: /api/register, /api/login
 app.use('/api/sala', salaRoutes); // Ex: /api/sala/crear
-app.use('/api', userRoutes); // Ex: /api/ranking
+
+// --- LÍNEA CORREGIDA ---
+// Totes les rutes de 'userRoutes' començaran amb /api/user
+app.use('/api/user', userRoutes); // Ex: /api/user/ranking, /api/user/streak
 
 // Creació del servidor HTTP
 const server = app.listen(port, () => {

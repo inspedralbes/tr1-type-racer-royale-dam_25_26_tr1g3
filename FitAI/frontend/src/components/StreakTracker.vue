@@ -116,7 +116,10 @@ const rachaActual = computed(() => {
 // Función para cargar y actualizar la racha del usuario
 const loadUserStreak = async () => {
   try {
-    const response = await fetch('/api/user/streak')
+    const response = await fetch('/api/user/streak', {
+      credentials: 'include'
+    })
+    
     
     if (response.ok) {
       const data = await response.json()
@@ -142,7 +145,8 @@ const updateUserStreak = async () => {
   try {
     const response = await fetch('/api/user/streak', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
     })
     
     if (response.ok) {
