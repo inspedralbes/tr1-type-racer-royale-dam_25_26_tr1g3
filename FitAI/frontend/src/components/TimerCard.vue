@@ -109,7 +109,8 @@ function startMainTimer() {
   if (timerActive.value) return
   
   timerActive.value = true
-  emit('mainTimerStart') // Informa el pare
+  emit('main-timer-start')
+ // Informa el pare
   
   timerInterval = setInterval(() => {
     timeRemaining.value--

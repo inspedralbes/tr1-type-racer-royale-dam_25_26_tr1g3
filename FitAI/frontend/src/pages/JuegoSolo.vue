@@ -65,8 +65,8 @@
             <TimerCard 
               class="mt-6"
               style="width: 85%;"
-              @main-timer-start="timerActive = true"
-              @timer-stop="timerActive = false"
+              @main-timer-start="startTempsCounter"
+              @timer-stop="handleTimerStop"
               @timer-reset="handleTimerReset"
               @timer-finished="handleTimerFinished"
               ref="timerCardRef"
@@ -166,6 +166,10 @@ const timerCardRef = ref(null)
 // Estat per comunicar el temporitzador amb la càmera
 const timerActive = ref(false)
 
+// ===== NOVES VARIABLES PER AL TEMPS TOTAL =====
+const tempsActiuTotal = ref(0) // Comptador de segons totals
+let tempsInterval = null       // Variable per guardar l'interval
+
 
 // ===================================================================
 // 3. LIFECYCLE HOOKS
@@ -201,16 +205,43 @@ function selectVideo() {
   detecting.value = true; // El fill ho gestionarà internament
 }
 
+// ===== NOVES FUNCIONS PER CONTROLAR EL TEMPS =====
+function startTempsCounter() {
+  timerActive.value = true
+  if (tempsInterval) clearInterval(tempsInterval) // Neteja l'anterior
+  
+  // Suma 1 segon cada segon
+  tempsInterval = setInterval(() => {
+    tempsActiuTotal.value++
+  }, 1000)
+}
+
+function stopTempsCounter() {
+  timerActive.value = false
+  // Atura l'interval
+  if (tempsInterval) {
+    clearInterval(tempsInterval)
+    tempsInterval = null
+  }
+}
+
+// Funció per a l'esdeveniment @timer-stop
+function handleTimerStop() {
+  stopTempsCounter()
+}
+// ==================================================
+
 function handleTimerFinished() {
-  timerActive.value = false;
+  stopTempsCounter() // <-- CANVIAT
   if (detecting.value) {
-    stopCamera();
+    stopCamera()
   }
 }
 
 function handleTimerReset() {
-  timerActive.value = false;
-  count.value = 0; // <-- AQUESTA ÉS LA LÍNIA CLAU
+  stopTempsCounter() // <-- CANVIAT
+  count.value = 0 
+  tempsActiuTotal.value = 0 // <-- AFEGIT
 }
 
 // ===================================================================
@@ -218,6 +249,9 @@ function handleTimerReset() {
 // ===================================================================
 
 function handleRepCount() {
+  // ===== LÍNIA AFEGIDA =====
+  if (!timerActive.value) return; // Si el temporitzador està aturat, no comptis.
+
   count.value++;
   up.value = false;
   if (ws.value?.readyState === WebSocket.OPEN) {
@@ -348,9 +382,16 @@ function connectWebSocket() {
 function tornar() {
   stopCamera();
   timerCardRef.value?.stopTimer(); // Atura el temporitzador del fill
+  stopTempsCounter(); // <-- AFEGIT per seguretat
   
   const repsFinals = count.value;
   const exerciciNormalitzat = exercici.toLowerCase();
+
+  // ===== LÍNIES AFEGIDES =====
+  const tempsFinal = tempsActiuTotal.value // Agafa el temps comptat
+  // Càlcul simple de calories (ajusta la fórmula com vulguis)
+  const caloriesFinals = Math.round(repsFinals * 0.35) 
+  // ============================
 
   if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({
@@ -364,11 +405,14 @@ function tornar() {
     ws.value = null; 
   }
   
+  // ===== PARÀMETRES AFEGITS AL ROUTER =====
   router.push({ 
     name: 'EstadistiquesSessio', 
     params: { 
       ejercicio: exercici,
-      reps: repsFinals 
+      reps: repsFinals,
+      tempsTotal: tempsFinal,
+      calories: caloriesFinals
     } 
   });
 }
