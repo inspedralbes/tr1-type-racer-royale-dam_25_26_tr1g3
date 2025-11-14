@@ -36,7 +36,7 @@
             <v-img
               :src="exercici.imatge"
               :alt="exercici.label"
-              height="200"
+              height="250"
               cover
               class="transition-img"
             />
@@ -53,7 +53,7 @@
               </p>
             </v-overlay>
 
-            <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-3">
+            <div class="exercise-label-bottom text-white font-weight-bold text-h6 text-center pa-1">
               {{ exercici.label }}
             </div>
           </v-card>
@@ -156,7 +156,7 @@ const anarAExercici = (nom) => {
   transition: transform 0.6s ease;
 }
 .exercise-card:hover .transition-img {
-  transform: scale(1.05);
+  transform: scale(1.00);
 }
 
 /* Franja inferior para el nombre */
@@ -165,9 +165,9 @@ const anarAExercici = (nom) => {
   bottom: 0;
   left: 0;
   width: 100%;
-  background: rgba(139, 92, 246, 0.7);
+  background: rgba(98, 0, 255, 0.7);
   backdrop-filter: blur(6px);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
