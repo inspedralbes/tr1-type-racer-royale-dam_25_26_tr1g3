@@ -26,6 +26,8 @@
 
       <GlobalRanking />
 
+      <StreakTracker />
+
     </v-main>
   </v-app>
 </template>
@@ -34,6 +36,7 @@
 // Importar els nous components
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
+import StreakTracker from '@/components/StreakTracker.vue'
 </script>
 
 <style>
