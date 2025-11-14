@@ -23,13 +23,11 @@
         class="ga-4 ga-md-6"
       >
         <v-col
-          v-for="exercici in filteredExercicis"
-          :key="exercici.nom"
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-          class="d-flex justify-center"
+ v-for="exercici in filteredExercicis"
+    :key="exercici.nom"
+    cols="12"
+    sm="6"
+    md="4"   lg="3"   class="d-flex justify-center"
         >
           <v-card
             class="exercise-card elevation-12"
@@ -185,7 +183,7 @@ const anarAExercici = (nom) => {
 }
 
 .search-bar :deep(.v-field__input) {
-  color: white !important;
+  color: rgb(0, 0, 0) !important;
   font-size: 1rem;
 }
 .search-bar :deep(.v-field__overlay) {

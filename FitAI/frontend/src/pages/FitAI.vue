@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <ExerciseList />
+      <ExerciseList class="w-100" />
 
       <v-divider class="divider-glow mx-auto my-8"></v-divider>
 
