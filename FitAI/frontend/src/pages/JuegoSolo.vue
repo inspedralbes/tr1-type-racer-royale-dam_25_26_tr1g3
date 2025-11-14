@@ -67,7 +67,7 @@
               style="width: 85%;"
               @main-timer-start="timerActive = true"
               @timer-stop="timerActive = false"
-              @timer-reset="timerActive = false"
+              @timer-reset="handleTimerReset"
               @timer-finished="handleTimerFinished"
               ref="timerCardRef"
             />
@@ -206,6 +206,11 @@ function handleTimerFinished() {
   if (detecting.value) {
     stopCamera();
   }
+}
+
+function handleTimerReset() {
+  timerActive.value = false;
+  count.value = 0; // <-- AQUESTA ÉS LA LÍNIA CLAU
 }
 
 // ===================================================================

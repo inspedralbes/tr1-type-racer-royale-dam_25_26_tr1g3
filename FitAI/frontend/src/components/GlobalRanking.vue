@@ -116,7 +116,7 @@ onMounted(() => {
 .text-brown-lighten-2 {
     color: #a1887f !important; /* Bronce */
     text-shadow: 0 0 5px #a1887f;
-}
+}leade
 
 /* Estilo para el campo de puntos (destacado) */
 .text-blue-lighten-2 {
