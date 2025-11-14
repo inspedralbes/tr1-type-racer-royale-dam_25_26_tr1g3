@@ -5,40 +5,25 @@
         class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
         style="max-width: 1400px;"
       >
-      
+        
         <v-btn
           class="top-left-back-btn rectangular-btn" 
           variant="flat"
           size="large"
-          prepend-icon="mdi-check-circle-outline"  color="success" @click="tornar"
+          prepend-icon="mdi-check-circle-outline" color="success" @click="tornar"
         >
-          Finalitzar Sessió </v-btn>
+          Finalitzar Sessió
+        </v-btn>
 
         <v-row class="mt-16 mt-md-0">
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center order-md-1 order-2">
             
-            <v-card 
-              class="rounded-xl overflow-hidden shadow-card video-card"
-              elevation="12"
-              width="100%"
-              style="background-color: #000; position: relative;"
-            >
-              <video
-                ref="video"
-                autoplay
-                playsinline
-                muted
-                width="100%"
-                class="rounded-xl"
-                style="object-fit: cover;"
-              ></video>
-              <canvas
-                ref="canvas"
-                width="640"
-                height="480"
-                style="position:absolute; top:0; left:0;"
-              ></canvas>
-            </v-card>
+            <CameraView 
+              ref="cameraViewRef"
+              :timer-active="timerActive"
+              :on-check-moviment="checkMoviment"
+              @video-ended="detecting = false"
+            />
 
             <div class="mt-6 d-flex flex-wrap justify-center gap-2 small-btn-group">
               <v-btn
@@ -75,162 +60,40 @@
               >
                 <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="22" height="22" />Vídeo
               </v-btn>
-
-              <input
-                ref="fileInput"
-                type="file"
-                accept="video/*"
-                @change="loadVideoFromFile"
-                style="display: none"
-              />
             </div>
 
-            <!-- ==================================== -->
-            <!-- ======== TEMPORITZADOR MODIFICAT ======== -->
-            <!-- ==================================== -->
-            <v-card
-              class="mt-6 py-4 px-5 text-center rounded-xl timer-card"
-              color="transparent"
-              elevation="10"
-              style="width: 85%; border: 2px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px); background: rgba(139, 92, 246, 0.1);"
-            >
-              <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
-              
-              <!-- NOU: Lògica de Pre-compte -->
-              <div v-if="preCount > 0" class="text-center">
-                <h2 class="text-h1 font-weight-black text-red-lighten-1 mb-2 pre-count-value">{{ preCount }}</h2>
-                <p class="text-h6 text-red-lighten-2 font-weight-bold">¡Prepárate!</p>
-              </div>
-              
-              <!-- NOU: Lògica de Compte Principal -->
-              <div v-else>
-                <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
-              </div>
+            <TimerCard 
+              class="mt-6"
+              style="width: 85%;"
+              @main-timer-start="timerActive = true"
+              @timer-stop="timerActive = false"
+              @timer-reset="handleTimerReset"
+              @timer-finished="handleTimerFinished"
+              ref="timerCardRef"
+            />
+            
+            <RepetitionCounter 
+              class="mt-8"
+              style="width: 85%;"
+              :count="count"
+            />
 
-              <!-- NOU: Lògica de Botons -->
-              <div class="d-flex justify-center gap-2 mb-3 mt-4">
-                <v-btn
-                  v-if="!timerActive && preCount === 0 && !timerFinished"
-                  color="green-darken-1"
-                  variant="flat"
-                  size="small"
-                  rounded="lg"
-                  @click="startPreCount"
-                  :disabled="timerActive || preCount > 0"
-                >
-                  <v-icon start>mdi-timer-1</v-icon>
-                  1 Minuto
-                </v-btn>
-                
-                <v-btn
-                  v-if="timerActive || preCount > 0"
-                  color="red-darken-1"
-                  variant="outlined"
-                  size="small"
-                  rounded="lg"
-                  @click="stopTimer"
-                >
-                  <v-icon start>mdi-pause</v-icon>
-                  Parar
-                </v-btn>
-                
-                <v-btn
-                  v-if="!timerActive && timeRemaining < 60 || timerFinished"
-                  color="blue-grey-lighten-2"
-                  variant="outlined"
-                  size="small"
-                  rounded="lg"
-                  @click="resetTimer"
-                >
-                  <v-icon start>mdi-refresh</v-icon>
-                  Restablecer
-                </v-btn>
-              </div>
-
-              <!-- NOU: Lògica de Missatges d'Estat -->
-              <p v-if="!timerActive && preCount === 0 && !timerFinished && timeRemaining === 60" class="text-caption text-grey-lighten-1 mt-2">
-                Premeu 1 Minuto per començar
-              </p>
-              <p v-if="timerActive" class="text-caption text-green-lighten-2 mt-2 font-weight-bold">
-                🟢 Comptant...
-              </p>
-              <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
-                ✅ Temps completat!
-              </p>
-              <p v-if="!timerActive && preCount === 0 && !timerFinished && timeRemaining < 60" class="text-caption text-red-lighten-2 mt-2 font-weight-bold">
-                ⏸️ Temporitzador aturat
-              </p>
-            </v-card>
-            <!-- ==================================== -->
-            <!-- ======== FI TEMPORITZADOR ======== -->
-            <!-- ==================================== -->
-
-            <v-card
-              class="mt-8 py-5 px-6 text-center rounded-xl count-card"
-              color="transparent"
-              elevation="10"
-              style="width: 85%; border: 2px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); background: rgba(0, 0, 0, 0.3);"
-            >
-              <h3 class="text-h6 font-weight-regular mb-2 text-grey-lighten-2">REPETICIONS</h3>
-              <h1 class="text-h1 font-weight-black text-cyan-lighten-2 counter-value">{{ count }}</h1>
-            </v-card>
           </v-col>
 
           <v-col cols="12" md="6" class="d-flex flex-column align-center justify-center text-center order-md-2 order-1 mb-10">
             
-            <h2 class="exercise-title mb-8">
-              {{ exerciciLabel }}
-            </h2>
+            <ExerciseInfo 
+              :label="exerciciLabel"
+              :gif="exerciciGif"
+            />
 
-            <v-card class="rounded-xl overflow-hidden shadow-card" elevation="8" width="100%" max-width="450">
-              <img
-                :src="exerciciGif"
-                :alt="exerciciLabel"
-                class="rounded-lg"
-                width="100%"
-                style="object-fit: cover; max-height: 400px;"
-              />
-            </v-card>
-
-            <p class="text-body-1 text-grey-lighten-3 mb-6 font-italic info-text">
-              Segueix l’exemple o utilitza la teva pròpia càmera.
-            </p>
-
-            <v-card
-              class="pa-4 pa-sm-5 rounded-xl mb-6 bg-light-card leaderboard-card"
-              elevation="8"
+            <LeaderboardCard 
+              class="mt-6"
               width="100%"
               max-width="450"
-            >
-              <h3 class="text-h6 font-weight-bold text-teal-accent-3 mb-4 ranking-title">
-                🏆 CLASSIFICACIÓ
-              </h3>
+              :users="leaderboard"
+            />
 
-              <v-list density="compact" class="text-grey-lighten-3 bg-transparent ranking-list">
-                <v-list-item
-                  v-for="(user, index) in leaderboard"
-                  :key="user.userId"
-                  class="rounded-lg mb-2 pa-2 list-item-glow"
-                  :class="index === 0 ? 'bg-top1' : index === 1 ? 'bg-top2' : index === 2 ? 'bg-top3' : 'bg-standard'"
-                  style="border: 1px solid rgba(255, 255, 255, 0.05);"
-                >
-                  <div class="d-flex justify-space-between align-center text-body-1 font-weight-medium">
-                    <div>
-                      <v-icon size="small" class="mr-3" :color="index === 0 ? 'yellow-accent-4' : 'grey-lighten-2'">
-                        {{ index === 0 ? 'mdi-trophy-variant' : 'mdi-account-circle' }}
-                      </v-icon>
-                      <strong class="mr-2">{{ index + 1 }}.</strong> {{ user.userName }}
-                    </div>
-                    <span class="font-weight-black" :class="index < 3 ? 'text-h6 text-teal-accent-3' : 'text-body-1'">
-                      {{ user.reps }} <span class="text-caption font-weight-light">reps</span>
-                    </span>
-                  </div>
-                </v-list-item>
-              </v-list>
-              <div v-if="!leaderboard.length" class="text-center text-grey-darken-1 pt-3">
-                  No hi ha dades a la classificació. Comença a entrenar!
-              </div>
-            </v-card>
           </v-col>
         </v-row>
       </v-container>
@@ -239,11 +102,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue' // AFEGIT 'computed'
-import * as tf from '@tensorflow/tfjs'
-import * as poseDetection from '@tensorflow-models/pose-detection'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore';
+
+// Imports dels nous components 
+import CameraView from '../components/CameraView.vue'
+import TimerCard from '../components/TimerCard.vue'
+import RepetitionCounter from '../components/RepetitionCounter.vue'
+import ExerciseInfo from '../components/ExerciseInfo.vue'
+import LeaderboardCard from '../components/LeaderboardCard.vue'
 
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
@@ -267,129 +135,37 @@ const authStore = useAuthStore();
 const exercici = route.params.ejercicio
 const codi_acces = route.params.codi_acces 
 
-const noms = {
-  Flexions: 'FLEXIONS',
-  Squats: 'SQUATS',
-  Salts: 'SALTS',
-  Abdominals: 'ABDOMINALS',
-  Fons: 'FONS',
-  Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS',
-  sentadillas: 'ESQUATS',
-  saltos: 'SALTS',
-  abdominales: 'ABDOMINALS',
-  fons: 'FONS',
-  pujades: 'PUJADES',
+const noms = { 
+  Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES',
+  flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES',
 }
-
-const gifs = {
-  Flexions: flexionesGif,
-  Squats: sentadillasGif,
-  Salts: saltosGif,
-  Abdominals: abdominalesGif,
-  Fons: fonsGif,
-  Pujades: pujadesGif,
-  flexiones: flexionesGif,
-  sentadillas: sentadillasGif,
-  saltos: saltosGif,
-  abdominales: abdominalesGif,
-  fons: fonsGif,
-  pujades: pujadesGif,
+const gifs = { 
+  Flexions: flexionesGif, Squats: sentadillasGif, Salts: saltosGif, Abdominals: abdominalesGif, Fons: fonsGif, Pujades: pujadesGif,
+  flexiones: flexionesGif, sentadillas: sentadillasGif, saltos: saltosGif, abdominales: abdominalesGif, fons: fonsGif, pujades: pujadesGif,
 }
 
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
-
 // ===================================================================
-// 2. ESTADO
+// 2. ESTADO (Lògica que es queda al pare)
 // ===================================================================
-const video = ref(null)
-const canvas = ref(null)
-const fileInput = ref(null)
 const count = ref(0)
 const leaderboard = ref([])
-
-let detector = null
-let up = false
-let streamRef = null
-let detecting = false
+const up = ref(false) // Canviat 'let' per 'ref' per mantenir estat
+const detecting = ref(false) // Canviat 'let' per 'ref'
 
 const ws = ref(null)
 const userId = authStore.user.id;
 const userName = authStore.userName;
 
+// Referències als components fills
+const cameraViewRef = ref(null)
+const timerCardRef = ref(null)
 
-// ===================================================================
-// NOU: LÒGICA DEL TEMPORITZADOR (MODIFICADA)
-// ===================================================================
+// Estat per comunicar el temporitzador amb la càmera
 const timerActive = ref(false)
-const timerFinished = ref(false)
-const timeRemaining = ref(60) // 1 minuto por defecto
-const preCount = ref(0) // Cuenta regresiva de 5 segundos
-let timerInterval = null
-let preCountInterval = null
 
-const formattedTime = computed(() => {
-  const minutes = Math.floor(timeRemaining.value / 60)
-  const seconds = timeRemaining.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-})
-
-function startPreCount() {
-  if (timerActive.value || preCountInterval) return
-  
-  preCount.value = 5 // Iniciar en 5
-  timerFinished.value = false
-  
-  preCountInterval = setInterval(() => {
-    preCount.value--
-    
-    if (preCount.value <= 0) {
-      clearInterval(preCountInterval)
-      preCountInterval = null
-      startMainTimer()
-    }
-  }, 1000)
-}
-
-function startMainTimer() {
-  if (timerActive.value) return
-  
-  timerActive.value = true
-  
-  timerInterval = setInterval(() => {
-    timeRemaining.value--
-    
-    if (timeRemaining.value <= 0) {
-      stopTimer()
-      timerFinished.value = true
-      // Aturar la detecció quan el temps acaba
-      if (detecting) {
-        stopCamera()
-      }
-    }
-  }, 1000)
-}
-
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-  if (preCountInterval) {
-    clearInterval(preCountInterval)
-    preCountInterval = null
-  }
-  timerActive.value = false
-}
-
-function resetTimer() {
-  stopTimer()
-  timeRemaining.value = 60 // Reiniciar a 1 minuto
-  preCount.value = 0
-  timerFinished.value = false
-}
 
 // ===================================================================
 // 3. LIFECYCLE HOOKS
@@ -400,383 +176,179 @@ onBeforeUnmount(() => {
   tornar(); 
 })
 
-
 // ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO
+// 4. FUNCIONES DE CÁMARA/VIDEO (Ara deleguen al fill)
 // ===================================================================
 async function startCamera() {
+  if (!cameraViewRef.value) return;
   try {
-    if (video.value?.offsetWidth && video.value?.offsetHeight) {
-      canvas.value.width = video.value.offsetWidth;
-      canvas.value.height = video.value.offsetHeight;
-    } else {
-      canvas.value.width = 640;
-      canvas.value.height = 480;
-    }
-
-    streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    video.value.srcObject = streamRef
-    await video.value.play()
-    if (!detector) await initMoveNet()
-    if (!detecting) {
-      detecting = true
-      detectPose()
-    }
+    await cameraViewRef.value.start();
+    detecting.value = true;
   } catch (e) {
     console.error('No es pot obrir la càmera:', e.message)
   }
 }
 
 function stopCamera() {
-  if (streamRef) {
-    streamRef.getTracks().forEach((t) => t.stop())
-    if (video.value) video.value.srcObject = null;
-    streamRef = null
-  }
-  detecting = false
-  const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+  if (!cameraViewRef.value) return;
+  cameraViewRef.value.stop();
+  detecting.value = false;
 }
 
 function selectVideo() {
-  stopCamera()
-  fileInput.value?.click()
+  if (!cameraViewRef.value) return;
+  cameraViewRef.value.select();
+  detecting.value = true; // El fill ho gestionarà internament
 }
 
-async function loadVideoFromFile(event) {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  const ctx = canvas.value?.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-
-  const url = URL.createObjectURL(file)
-  video.value.srcObject = null
-  stopCamera() 
-  video.value.src = url
-  
-  video.value.onloadedmetadata = () => {
-    canvas.value.width = video.value.videoWidth;
-    canvas.value.height = video.value.videoHeight;
-  };
-  
-  await video.value.play()
-  if (!detector) await initMoveNet()
-  detecting = true
-  detectVideoFrame()
+function handleTimerFinished() {
+  timerActive.value = false;
+  if (detecting.value) {
+    stopCamera();
+  }
 }
 
-async function initMoveNet() {
-  await tf.ready()
-  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-  })
+function handleTimerReset() {
+  timerActive.value = false;
+  count.value = 0; // <-- AQUESTA ÉS LA LÍNIA CLAU
 }
-
-async function detectPose() {
-  const ctx = canvas.value?.getContext('2d')
-  async function poseDetectionFrame() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) return
-    
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
-    }
-
-    const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
-
-    if (poses.length > 0) {
-      drawPose(ctx, poses[0])
-      // MODIFICAT: Només comprovar moviment si el temporitzador (principal) està actiu
-      if (timerActive.value) {
-        checkMoviment(poses[0])
-      }
-    }
-    requestAnimationFrame(poseDetectionFrame)
-  }
-  requestAnimationFrame(poseDetectionFrame)
-}
-
-async function detectVideoFrame() {
-  const ctx = canvas.value?.getContext('2d')
-  async function frameLoop() {
-    if (!detecting || !video.value || video.value.paused || video.value.ended) {
-        if (video.value?.ended) {
-             detecting = false;
-        }
-        return
-    }
-
-    if (canvas.value.width !== video.value.videoWidth || canvas.value.height !== video.value.videoHeight) {
-        canvas.value.width = video.value.videoWidth || 640;
-        canvas.value.height = video.value.videoHeight || 480;
-    }
-    
-    const poses = await detector.estimatePoses(video.value)
-    if (poses.length > 0) {
-      drawPose(ctx, poses[0])
-      // MODIFICAT: Només comprovar moviment si el temporitzador (principal) està actiu
-      if (timerActive.value) {
-        checkMoviment(poses[0])
-      }
-    }
-    requestAnimationFrame(frameLoop)
-  }
-  requestAnimationFrame(frameLoop)
-}
-
-function drawPose(ctx, pose) {
-  const videoElement = video.value;
-  const canvasElement = canvas.value;
-
-  if (!videoElement || !canvasElement || !pose || !pose.keypoints) return;
-  const videoDisplayedWidth = videoElement.offsetWidth;
-  const videoDisplayedHeight = videoElement.offsetHeight;
-  
-  const videoNaturalWidth = videoElement.videoWidth;
-  const videoNaturalHeight = videoElement.videoHeight;
-  
-  if (canvasElement.width !== videoDisplayedWidth || canvasElement.height !== videoDisplayedHeight) {
-    canvasElement.width = videoDisplayedWidth;
-    canvasElement.height = videoDisplayedHeight;
-  }
- 
-  ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-  const videoAspectRatio = videoNaturalWidth / videoNaturalHeight;
-  const canvasAspectRatio = videoDisplayedWidth / videoDisplayedHeight;
-  
-  let scaleFactor;
-  let offsetX = 0;
-  let offsetY = 0;
-
-  if (videoAspectRatio > canvasAspectRatio) {
-    scaleFactor = videoDisplayedHeight / videoNaturalHeight;
-    offsetX = (videoDisplayedWidth - videoNaturalWidth * scaleFactor) / 2;
-  } else {
-    scaleFactor = videoDisplayedWidth / videoNaturalWidth;
-    offsetY = (videoDisplayedHeight - videoNaturalHeight * scaleFactor) / 2;
-  }
-
-  const transformPoint = (kp) => {
-    if (!kp) return null;
-    return {
-      x: kp.x * scaleFactor + offsetX,
-      y: kp.y * scaleFactor + offsetY
-    };
-  };
-  
-  ctx.fillStyle = '#00ffaa'; 
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = '#00ffaa';
-  
-  for (const kp of pose.keypoints) {
-    if (kp.score > 0.4) {
-      const transformed = transformPoint(kp);
-      ctx.beginPath();
-      ctx.arc(transformed.x, transformed.y, 6, 0, 2 * Math.PI);
-      ctx.fill();
-    }
-  }
-
-  const connections = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#8b5cf6'; 
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#8b5cf6';
-  
-  for (const [i, j] of connections) {
-    const kp1 = pose.keypoints[i];
-    const kp2 = pose.keypoints[j];
-
-    if (kp1.score > 0.4 && kp2.score > 0.4) {
-      const p1 = transformPoint(kp1);
-      const p2 = transformPoint(kp2);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-    }
-  }
-
-  ctx.shadowBlur = 0; 
-}
-
 
 // ===================================================================
-// 5. LÓGICA DE MOVIMIENTO
+// 5. LÓGICA DE MOVIMIENTO (Es queda al pare)
 // ===================================================================
 
 function handleRepCount() {
-    count.value++;
-    up = false;
-    if (ws.value?.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
-    }
+  count.value++;
+  up.value = false;
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
+  }
 }
 
 function checkMoviment(pose) {
-    // Convertim el nom de l'exercici (que pot ser 'Flexions' o 'flexiones')
-    // al nom que espera el backend (ex: 'flexiones', 'sentadillas')
-    const exerciciNormalitzat = exercici.toLowerCase();
+  // Aquesta funció es passa com a 'prop' a CameraView
+  const exerciciNormalitzat = exercici.toLowerCase();
 
-    switch (exerciciNormalitzat) {
-        case 'flexiones':
-            checkFlexio(pose); 
-            break;
-        case 'sentadillas':
-            checkEsquat(pose); 
-            break;
-        case 'saltos':
-            checkSalt(pose); 
-            break;
-        case 'abdominales':
-            checkAbdominal(pose);
-            break;
-        case 'fons':
-            checkFons(pose);
-            break;
-        case 'pujades':
-            checkPujades(pose);
-            break;
-        // Afegim els noms en català per si de cas
-        case 'flexions':
-             checkFlexio(pose); 
-            break;
-        case 'squats':
-            checkEsquat(pose); 
-            break;
-        case 'salts':
-            checkSalt(pose); 
-            break;
-    }
+  switch (exerciciNormalitzat) {
+    case 'flexiones': checkFlexio(pose); break;
+    case 'sentadillas': checkEsquat(pose); break;
+    case 'saltos': checkSalt(pose); break;
+    case 'abdominales': checkAbdominal(pose); break;
+    case 'fons': checkFons(pose); break;
+    case 'pujades': checkPujades(pose); break;
+    case 'flexions': checkFlexio(pose); break;
+    case 'squats': checkEsquat(pose); break;
+    case 'salts': checkSalt(pose); break;
+  }
 }
 
 function checkFlexio(pose) {
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
-    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
-    const dist = Math.abs(espatlla.y - canell.y)
-    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+  const canell = pose.keypoints.find(k => k.name === 'left_wrist')
+  if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
+  const dist = Math.abs(espatlla.y - canell.y)
+  const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
 function checkEsquat(pose) {
-    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
-    const dist = Math.abs(maluc.y - genoll.y)
-    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  const maluc = pose.keypoints.find(k => k.name === 'left_hip')
+  const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+  if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
+  const dist = Math.abs(maluc.y - genoll.y)
+  const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
 let initialY = null;
 let jumping = false;
 function checkSalt(pose) {
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!peu || peu.score < 0.4) return
-    if (initialY === null) initialY = peu.y
-    const delta = initialY - peu.y
-    const UMBRAL_SALT = 60
-    if (delta > UMBRAL_SALT && !jumping) {
-        jumping = true
-    } else if (delta < 10 && jumping) {
-        jumping = false; 
-        handleRepCount(); 
-    }
+  const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+  if (!peu || peu.score < 0.4) return
+  if (initialY === null) initialY = peu.y
+  const delta = initialY - peu.y
+  const UMBRAL_SALT = 60
+  if (delta > UMBRAL_SALT && !jumping) {
+    jumping = true
+  } else if (delta < 10 && jumping) {
+    jumping = false; 
+    handleRepCount(); 
+  }
 }
 
 function checkAbdominal(pose) {
- const nas = pose.keypoints.find((k) => k.name === 'nose')
- const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
- if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return
-
- const distancia = Math.abs(nas.y - maluc.y)
- const UMBRAL_ARRIBA = 150; 
- const UMBRAL_ABAJO = 100;
-
- if (distancia < UMBRAL_ABAJO && !up) {
-   up = true; 
- }
-
- if (distancia > UMBRAL_ARRIBA && up) {
-   handleRepCount(); 
- }
+  const nas = pose.keypoints.find((k) => k.name === 'nose')
+  const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+  if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return
+  const distancia = Math.abs(nas.y - maluc.y)
+  const UMBRAL_ARRIBA = 150; 
+  const UMBRAL_ABAJO = 100;
+  if (distancia < UMBRAL_ABAJO && !up.value) { up.value = true; }
+  if (distancia > UMBRAL_ARRIBA && up.value) { handleRepCount(); }
 }
 
 function checkFons(pose) {
-    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-    const colze = pose.keypoints.find(k => k.name === 'left_elbow')
-    if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
-    const dist = Math.abs(espatlla.y - colze.y)
-    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+  const colze = pose.keypoints.find(k => k.name === 'left_elbow')
+  if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
+  const dist = Math.abs(espatlla.y - colze.y)
+  const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
 function checkPujades(pose) {
-    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
-    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-    if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
-    const dist = Math.abs(genoll.y - peu.y)
-    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
-    if (dist < UMBRAL_ABAJO && !up) up = true
-    if (dist > UMBRAL_ARRIBA && up) handleRepCount()
+  const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+  const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+  if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
+  const dist = Math.abs(genoll.y - peu.y)
+  const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
 // ===================================================================
-// 6. WEBSOCKET (MODIFICAT PER CORREGIR EL TIMING)
+// 6. WEBSOCKET (Es queda al pare)
 // ===================================================================
 
 function connectWebSocket() {
- const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
- const wsHost = window.location.host;
- const wsUrl = `${wsProtocol}//${wsHost}/ws`;
- 
- console.log(`Connectant a WebSocket a: ${wsUrl}`);
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.host;
+  const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+  
+  console.log(`Connectant a WebSocket a: ${wsUrl}`);
+  ws.value = new WebSocket(wsUrl); 
 
- ws.value = new WebSocket(wsUrl); 
+  ws.value.onopen = () => {
+    console.log('Connectat al servidor WebSocket');
+    ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
+  };
 
- ws.value.onopen = () => {
-   console.log('Connectat al servidor WebSocket');
-   
-   // 1. S'uneix a la sala (NOMÉS AIXÒ)
-   ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
-   
-   // ❌ NO ENVIEM 'START' AQUÍ
- };
-
- ws.value.onmessage = (event) => {
-   const message = JSON.parse(event.data);
-
-   if (message.type === 'leaderboard') {
-     leaderboard.value = message.leaderboard;
-   }
-
-   // ‼️ CANVI CLAU AQUÍ ‼️
-   // Quan el servidor confirmi que ens hem unit ('joined')...
-   if (message.type === 'joined') {
-     // ...llavors, i només llavors, enviem el missatge 'start'.
-     console.log('Confirmat: Unit a la sala. Enviant "start"...');
-     ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
-   }
- };
- 
- ws.value.onclose = () => console.log('Desconnectat del servidor');
- ws.value.onerror = (err) => console.error('Error WebSocket:', err);
+  ws.value.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.type === 'leaderboard') {
+      leaderboard.value = message.leaderboard;
+    }
+    if (message.type === 'joined') {
+      console.log('Confirmat: Unit a la sala. Enviant "start"...');
+      ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
+    }
+  };
+  
+  ws.value.onclose = () => console.log('Desconnectat del servidor');
+  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
 // ===================================================================
-// 7. NAVEGACIÓN (MODIFICADA)
+// 7. NAVEGACIÓN (Es queda al pare)
 // ===================================================================
 
 function tornar() {
   stopCamera();
-  stopTimer(); 
+  timerCardRef.value?.stopTimer(); // Atura el temporitzador del fill
   
-  // Guardem els valors finals abans de tancar res
   const repsFinals = count.value;
   const exerciciNormalitzat = exercici.toLowerCase();
 
@@ -787,20 +359,16 @@ function tornar() {
       exercici: exerciciNormalitzat,
       codi_acces: codi_acces
     }));
-    
     ws.value.send(JSON.stringify({ type: 'leave' }));
     ws.value.close();
     ws.value = null; 
   }
   
-  // ‼️ CANVI AQUÍ:
-  // En lloc de 'router.back()', redirigim a la pàgina d'estadístiques
-  // passant els paràmetres que espera.
   router.push({ 
     name: 'EstadistiquesSessio', 
     params: { 
-      ejercicio: exercici, // Passem el nom (ex: 'Flexions')
-      reps: repsFinals       // Passem el comptador final
+      ejercicio: exercici,
+      reps: repsFinals 
     } 
   });
 }
@@ -811,7 +379,7 @@ function tornar() {
 /* ======== FONDO Y LAYOUT ======== */
 /* ==================================== */
 .bg-fitai-deep-space {
-  background:
+  background: 
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
     linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
@@ -819,22 +387,15 @@ function tornar() {
   background-size: cover;
   min-height: 100vh;
 }
-
 .fade-in-container {
   animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
 }
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .position-relative {
-    position: relative;
+  position: relative;
 }
 
 /* ==================================== */
@@ -862,31 +423,7 @@ function tornar() {
 /* ==================================== */
 /* ======== TÍTULO EXERCICI (ANIMADO) ======== */
 /* ==================================== */
-.exercise-title {
-  font-size: 2.2rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-size: 200% 200%;
-  animation: gradientShift 6s ease infinite;
-  position: relative;
-  line-height: 1.1;
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-@media (min-width: 600px) {
-  .exercise-title {
-    font-size: 3rem;
-  }
-}
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
+/* Movido a ExerciseInfo.vue */
 
 /* ==================================== */
 /* ======== CÁMARA Y CONTADOR ======== */
@@ -900,32 +437,13 @@ function tornar() {
     transform: translateY(-2px);
 }
 
-.count-card {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-}
-.counter-value {
-    letter-spacing: 3px;
-    text-shadow: 0px 0px 18px rgba(59, 130, 246, 0.9); 
-    font-size: 4rem !important;
-}
-@media (min-width: 600px) {
-  .counter-value {
-    font-size: 5rem !important;
-  }
-}
+/* Movido a RepetitionCounter.vue */
+/* .count-card { ... } */
+/* .counter-value { ... } */
 
-/* NOU: Estils per al temporitzador */
-.timer-card {
-  animation: timerPulse 2.5s ease-in-out infinite;
-}
-@keyframes timerPulse {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
-  }
-}
+/* Movido a TimerCard.vue */
+/* .timer-card { ... } */
+/* @keyframes timerPulse { ... } */
 
 /* ==================================== */
 /* ======== BOTONES DE ACCIÓN ======== */
@@ -942,7 +460,6 @@ function tornar() {
   transition: all 0.25s ease-in-out;
   border-radius: 8px !important;
 }
-
 @media (max-width: 450px) {
   .control-btn-large {
     min-width: 120px;
@@ -950,51 +467,17 @@ function tornar() {
     padding: 6px 12px !important;
   }
 }
-
 .action-btn {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
-
 .action-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(130, 90, 255, 0.6);
   filter: brightness(1.1); 
 }
 
-
 /* ==================================== */
 /* ======== CLASIFICACIÓN (LEADERBOARD) ======== */
 /* ==================================== */
-.leaderboard-card {
-  background: rgba(255, 255, 255, 0.05); 
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.ranking-title {
-    text-shadow: 0 0 8px rgba(0, 255, 170, 0.7); 
-}
-
-.bg-top1 {
-  background: rgba(255, 215, 0, 0.15) !important; 
-  border-left: 5px solid #ffd700 !important;
-}
-.bg-top2 {
-  background: rgba(192, 192, 192, 0.15) !important; 
-  border-left: 5px solid #c0c0c0 !important;
-}
-.bg-top3 {
-  background: rgba(176, 141, 87, 0.15) !important; 
-  border-left: 5px solid #b08d57 !important;
-}
-.bg-standard {
-     background: rgba(255, 255, 255, 0.03) !important;
-}
-.list-item-glow {
-    transition: all 0.3s ease;
-}
-.list-item-glow:hover {
-    transform: translateX(4px);
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
-}
-
+/* Movido a LeaderboardCard.vue */
 </style>
