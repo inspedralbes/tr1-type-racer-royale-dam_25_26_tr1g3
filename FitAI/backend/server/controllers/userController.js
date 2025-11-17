@@ -14,7 +14,7 @@ import path from 'path';
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // IMPORTANT: Assegura't que la carpeta 'public/uploads/profiles' existeixi!
-    cb(null, 'public/uploads/profiles/');
+    cb(null, '../../../frontend/public/uploads/profiles/');
   },
   filename: function (req, file, cb) {
     // Canvia el nom del fitxer per evitar conflictes
