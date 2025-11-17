@@ -183,7 +183,7 @@ const onFileSelected = (event) => {
 
 /**
  * 3. Lògica per a pujar la foto al servidor.
- * NOTA: Aquesta funció REQUEREIX una funció al teu authStore i un endpoint al teu backend.
+ * La funció **`uploadPhoto`** és la que gestiona el guardat de la foto seleccionada.
  */
 const uploadPhoto = async () => {
     if (!selectedFile.value) return;
@@ -198,7 +198,8 @@ const uploadPhoto = async () => {
         formData.append('profilePicture', selectedFile.value);
         
         // **!!! CRIDA A L'ACCIÓ D'ACTUALITZACIÓ DEL STORE (cal implementar-la) !!!**
-        await authStore.updateProfilePicture(formData);
+        // Aquesta funció ha d'estar implementada en el teu `authStore` per enviar la imatge al backend.
+        await authStore.updateProfilePicture(formData); 
         
         uploadMessage.value = 'Foto de perfil actualitzada correctament!';
         uploadMessageType.value = 'success';
@@ -228,9 +229,13 @@ const cancelUpload = () => {
     fileInput.value.value = '';
 }
 
+/**
+ * 5. Funció per tornar a la pàgina d'inici.
+ * Redirigeix a la ruta amb el nom 'FitAi'.
+ */
 const goToHome = () => {
-    // Asume que tu ruta de inicio se llama 'Home' en el Vue Router
-    router.push({ name: 'FitAi' });
+    // Asume que tu ruta de inicio se llama 'FitAi' en el Vue Router
+    router.push({ name: 'Home' });
 }
 
 const handleLogout = async () => {
