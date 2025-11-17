@@ -35,5 +35,3 @@ EXPOSE 80
 
 # Nginx se inicia por defecto al correr el contenedor
 CMD ["nginx", "-g", "daemon off;"]
-
-

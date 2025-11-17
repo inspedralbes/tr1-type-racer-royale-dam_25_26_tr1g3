@@ -177,7 +177,11 @@ let tempsInterval = null       // Variable per guardar l'interval
 onMounted(() => connectWebSocket())
 
 onBeforeUnmount(() => {
-  tornar(); 
+  stopCamera();
+  timerCardRef.value?.stopTimer();
+  stopTempsCounter();
+
+  finalitzarSessio(); 
 })
 
 // ===================================================================
@@ -232,17 +236,27 @@ function handleTimerStop() {
 // ==================================================
 
 function handleTimerFinished() {
-  stopTempsCounter() // <-- CANVIAT
+  stopTempsCounter() 
   if (detecting.value) {
     stopCamera()
   }
 }
 
+// ===================================================================
+// ===== CANVI A LA FUNCIÓ handleTimerReset =====
+// ===================================================================
 function handleTimerReset() {
-  stopTempsCounter() // <-- CANVIAT
+  stopTempsCounter() 
   count.value = 0 
-  tempsActiuTotal.value = 0 // <-- AFEGIT
+  tempsActiuTotal.value = 0
+  
+  // ===== CANVI AFEGIT =====
+  // Reinicia la 'Y' inicial per al detector de salts (`checkSalt`),
+  // en cas que la persona s'hagi mogut a la pantalla.
+  initialY = null; 
+  // =========================
 }
+// ===================================================================
 
 // ===================================================================
 // 5. LÓGICA DE MOVIMIENTO (Es queda al pare)
@@ -276,15 +290,38 @@ function checkMoviment(pose) {
   }
 }
 
+// ===================================================================
+// ===== CANVI A LA FUNCIÓ checkFlexio =====
+// ===================================================================
 function checkFlexio(pose) {
+  // ===== LÒGICA CANVIADA =====
+  // Abans mesuraves la distància vertical 'espatlla' <-> 'canell',
+  // la qual cosa detectava erròniament els jumping jacks.
+  //
+  // Ara fem servir una lògica (similar a la de 'Fons') que mesura
+  // la distància vertical entre l'espatlla i el colze.
+  // Això és molt més fiable per a una flexió vista de costat.
+  
   const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-  const canell = pose.keypoints.find(k => k.name === 'left_wrist')
-  if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
-  const dist = Math.abs(espatlla.y - canell.y)
-  const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
+  const colze = pose.keypoints.find(k => k.name === 'left_elbow') // <-- Punt clau!
+  
+  if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
+  
+  const dist = Math.abs(espatlla.y - colze.y)
+  
+  // Aquests llindars són una còpia dels de 'Fons'.
+  // POTSER NECESSITES AJUSTAR-LOS (p.ex., 120 i 60)
+  // Experimenta amb els valors per al teu vídeo de prova.
+  const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
+  
+  // Quan l'espatlla baixa a prop del colze (posició avall)
   if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+  // Quan l'espatlla puja lluny del colze (posició amunt)
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
+  // =================================================
 }
+// ===================================================================
+
 
 function checkEsquat(pose) {
   const maluc = pose.keypoints.find(k => k.name === 'left_hip')
@@ -296,21 +333,37 @@ function checkEsquat(pose) {
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
+// ===================================================================
+// ===== CANVI A LA FUNCIÓ checkSalt =====
+// ===================================================================
 let initialY = null;
 let jumping = false;
 function checkSalt(pose) {
   const peu = pose.keypoints.find(k => k.name === 'left_ankle')
   if (!peu || peu.score < 0.4) return
   if (initialY === null) initialY = peu.y
-  const delta = initialY - peu.y
-  const UMBRAL_SALT = 60
-  if (delta > UMBRAL_SALT && !jumping) {
+  
+  const delta = initialY - peu.y // Canvi vertical del turmell
+  
+  // ===== LLINDAR CANVIAT =====
+  // S'ha reduït de 60 a 30.
+  // El valor '60' era massa alt per a un "jumping jack", ja que
+  // en aquest exercici els peus gairebé no s'aixequen del terra.
+  // Un valor més baix com '30' hauria de ser suficient per detectar
+  // el petit salt vertical d'un jumping jack.
+  //
+  // Si vols detectar salts verticals (ex: squat jumps), torna a pujar-lo (ex: 60 o més).
+  const UMBRAL_SALT = 30 
+  // ===========================
+  
+  if (delta > UMBRAL_SALT && !jumping) { // Si puja més del llindar
     jumping = true
-  } else if (delta < 10 && jumping) {
+  } else if (delta < 10 && jumping) { // Si torna a prop del terra
     jumping = false; 
     handleRepCount(); 
   }
 }
+// ===================================================================
 
 function checkAbdominal(pose) {
   const nas = pose.keypoints.find((k) => k.name === 'nose')
@@ -333,15 +386,26 @@ function checkFons(pose) {
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
+// ===================================================================
+// AQUEST BLOC ESTAVA TRENCAT. ARA ESTÀ CORREGIT.
+// ===================================================================
 function checkPujades(pose) {
   const genoll = pose.keypoints.find(k => k.name === 'left_knee')
   const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+  // S'ha completat la condició 'if' que estava trencada
   if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
+  
+  // S'ha afegit la lògica que estava barrejada amb la funció 'tornar'
   const dist = Math.abs(genoll.y - peu.y)
   const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
   if (dist < UMBRAL_ABAJO && !up.value) up.value = true
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
+// ===================================================================
+// S'HA ELIMINAT TOT EL CODI CORRUPTE QUE HI HAVIA AQUÍ
+// (Funcions 'tornar' i 'ws.onclose' duplicades i barrejades)
+// ===================================================================
+
 
 // ===================================================================
 // 6. WEBSOCKET (Es queda al pare)
@@ -375,37 +439,52 @@ function connectWebSocket() {
   ws.value.onerror = (err) => console.error('Error WebSocket:', err);
 }
 
+// Funcio tancar sessió
+
+function finalitzarSessio() {
+  if (ws.value?.readyState !== WebSocket.OPEN) {
+    console.warn("Intentant finalitzar sessió sense connexió WS activa.");
+    return;
+  }
+  
+  const repsFinals = count.value;
+  const exerciciNormalitzat = exercici.toLowerCase();
+
+  console.log(`Enviant 'finish' al backend: ${repsFinals} reps de ${exerciciNormalitzat}`);
+
+  // Envia les dades finals
+  ws.value.send(JSON.stringify({
+    type: 'finish',
+    reps: repsFinals,
+    exercici: exerciciNormalitzat,
+    codi_acces: codi_acces
+  }));
+
+  // Envia el missatge per marxar i tanca la connexió
+  ws.value.send(JSON.stringify({ type: 'leave' }));
+  ws.value.close();
+  ws.value = null; 
+}
+
 // ===================================================================
 // 7. NAVEGACIÓN (Es queda al pare)
 // ===================================================================
 
 function tornar() {
+  // 1. Atura totes les operacions locals
   stopCamera();
-  timerCardRef.value?.stopTimer(); // Atura el temporitzador del fill
-  stopTempsCounter(); // <-- AFEGIT per seguretat
+  timerCardRef.value?.stopTimer();
+  stopTempsCounter();
   
+  // 2. Envia les dades al backend (funció que acabem de crear)
+  finalitzarSessio();
+  
+  // 3. Prepara les dades per a la navegació
   const repsFinals = count.value;
-  const exerciciNormalitzat = exercici.toLowerCase();
+  const tempsFinal = tempsActiuTotal.value;
+  const caloriesFinals = Math.round(repsFinals * 0.35);
 
-  // ===== LÍNIES AFEGIDES =====
-  const tempsFinal = tempsActiuTotal.value // Agafa el temps comptat
-  // Càlcul simple de calories (ajusta la fórmula com vulguis)
-  const caloriesFinals = Math.round(repsFinals * 0.35) 
-  // ============================
-
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'finish',
-      reps: repsFinals,
-      exercici: exerciciNormalitzat,
-      codi_acces: codi_acces
-    }));
-    ws.value.send(JSON.stringify({ type: 'leave' }));
-    ws.value.close();
-    ws.value = null; 
-  }
-  
-  // ===== PARÀMETRES AFEGITS AL ROUTER =====
+  // 4. Navega a la següent pàgina
   router.push({ 
     name: 'EstadistiquesSessio', 
     params: { 

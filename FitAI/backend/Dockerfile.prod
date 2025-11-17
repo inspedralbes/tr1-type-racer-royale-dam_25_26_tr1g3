@@ -36,6 +36,3 @@ EXPOSE 4000
 
 # Comando para iniciar la aplicación
 CMD [ "node", "server.js" ]
-
-
-

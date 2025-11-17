@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # --- SERVEI DE BASE DE DADES (MariaDB) ---
   db:
