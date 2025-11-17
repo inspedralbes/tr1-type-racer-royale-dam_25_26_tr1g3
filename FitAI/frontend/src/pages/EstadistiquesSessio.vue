@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
-      <v-container class="text-center text-white pa-4" style="max-width: 700px;">
+      <v-container class="text-center text-white pa-4" style="max-width: 500px;">
         
         <h1 class="results-title-neon text-h4 text-sm-h3 font-weight-bold mb-10 mt-6">
             SESSIÓ COMPLETADA
@@ -13,37 +13,33 @@
           
           <h2 class="text-h6 font-weight-bold mb-6 text-white ranking-title">RESUM D'ESTADÍSTIQUES</h2>
 
-          <v-row class="mb-4 ga-3">
-            
-            <v-col cols="6" class="d-flex">
-              <v-card class="data-card pa-3 rounded-lg flex-grow-1 blue-glow-card" color="#0e111d">
-                <h3 class="text-caption font-weight-light text-blue-lighten-2">EXERCICI</h3>
-                <p class="text-subtitle-1 font-weight-bold text-uppercase">{{ exerciciLabel }}</p>
-              </v-card>
-            </v-col>
-            
-            <v-col cols="6" class="d-flex">
-              <v-card class="data-card reps-card pa-3 rounded-lg flex-grow-1 purple-glow-card" color="#0e111d">
-                <h3 class="text-caption font-weight-light text-purple-lighten-2">REPETICIONS TOTALS</h3>
-                <p class="text-h6 font-weight-black reps-number">{{ reps }}</p>
-              </v-card>
-            </v-col>
-          </v-row>
-          
-          <v-row class="mb-8 ga-3"> 
-            
-            <v-col cols="6" class="d-flex">
-              <v-card class="data-card time-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
-                <h3 class="text-caption font-weight-light text-cyan-lighten-2">TEMPS TOTAL</h3>
-                <p class="text-h6 font-weight-black time-value">{{ formattedTime }}</p>
-              </v-card>
-            </v-col>
-            
-            <v-col cols="6" class="d-flex">
-              <v-card class="data-card cal-card pa-3 rounded-lg flex-grow-1 red-glow-card" color="#0e111d">
-                <h3 class="text-caption font-weight-light text-red-lighten-2">CALORIES CREMADES</h3>
-                <p class="text-h6 font-weight-black cal-value">{{ calories }} <span class="text-subtitle-2 font-weight-light">Kcal</span></p>
-              </v-card>
+          <v-row class="justify-center">
+            <v-col cols="12" sm="8" md="6" class="px-0"> <v-row class="mb-4 ga-3">
+                <v-col cols="12" class="d-flex">
+                  <v-card class="data-card pa-3 rounded-lg flex-grow-1 blue-glow-card" color="#0e111d">
+                    <h3 class="text-caption font-weight-light text-blue-lighten-2">EXERCICI</h3>
+                    <p class="text-subtitle-1 font-weight-bold text-uppercase">{{ exerciciLabel }}</p>
+                  </v-card>
+                </v-col>
+              </v-row>
+              
+              <v-row class="mb-4 ga-3">
+                <v-col cols="12" class="d-flex">
+                  <v-card class="data-card reps-card pa-3 rounded-lg flex-grow-1 purple-glow-card" color="#0e111d">
+                    <h3 class="text-caption font-weight-light text-purple-lighten-2">REPETICIONS TOTALS</h3>
+                    <p class="text-h6 font-weight-black reps-number">{{ reps }}</p>
+                  </v-card>
+                </v-col>
+              </v-row>
+              
+              <v-row class="mb-8 ga-3"> 
+                <v-col cols="12" class="d-flex">
+                  <v-card class="data-card time-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
+                    <h3 class="text-caption font-weight-light text-cyan-lighten-2">TEMPS TOTAL</h3>
+                    <p class="text-h6 font-weight-black time-value">{{ formattedTime }}</p>
+                  </v-card>
+                </v-col>
+              </v-row>
             </v-col>
           </v-row>
           <v-divider class="divider-subtle mx-auto my-6"></v-divider>
@@ -71,7 +67,6 @@ const route = useRoute()
 const reps = route.params.reps || 0
 const exercici = route.params.ejercicio || 'EXERCICI'
 const tempsTotal = route.params.tempsTotal || 0 // Nou: Temps total en segons
-const calories = route.params.calories || 0 // Nou: Calories cremades
 
 // Diccionari per mapejar els noms dels exercicis
 const noms = {
@@ -225,15 +220,6 @@ const formattedTime = computed(() => {
     box-shadow: 0 0 15px rgba(0, 255, 170, 1);
 }
 
-.red-glow-card { /* CALORIES */
-    border: 1px solid #ff8a80;
-    box-shadow: 0 0 8px rgba(255, 138, 128, 0.5); 
-}
-.red-glow-card:hover {
-    box-shadow: 0 0 15px rgba(255, 138, 128, 1);
-}
-
-
 /* Estilo para los números grandes (Colores mantenidos) */
 .reps-number {
     color: #81d4fa !important;
@@ -243,11 +229,6 @@ const formattedTime = computed(() => {
 .time-value {
     color: #00ffaa !important; /* Verd Neón */
     text-shadow: 0 0 5px rgba(0, 255, 170, 0.6);
-}
-
-.cal-value {
-    color: #ff8a80 !important; /* Vermell/Rosa Clar */
-    text-shadow: 0 0 5px rgba(255, 138, 128, 0.6);
 }
 
 
@@ -264,10 +245,7 @@ const formattedTime = computed(() => {
     color: #00ffaa !important;
     opacity: 0.9;
 }
-.text-red-lighten-2 { 
-    color: #ff8a80 !important;
-    opacity: 0.9;
-}
+
 
 /* ==================================== */
 /* ======== DIVIDER Y BOTÓN LIMPIO ======== */
