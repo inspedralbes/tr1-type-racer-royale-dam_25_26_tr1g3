@@ -22,64 +22,50 @@ export const getRanking = async (req, res) => {
 // ======================================================
 
 /**
- * Esta función es llamada por el frontend con POST /api/user/streak
- * Calcula la racha usando las columnas `ratxa` y `ultima_sessio`
+ * Aquesta funció és cridada pel frontend amb POST /api/user/streak
+ * Calcula la ratxa utilitzant lògica SQL, que és més robusta contra
+ * problemes de zona horària.
  */
 export const updateStreak = async (req, res) => {
   try {
-    // 1. OBTENER EL USUARIO DE LA SESIÓN
-    // (Asegúrate de que 'req.session.userId' se guarda correctamente en tu authController)
-    const userId = req.session.userId; 
-    
+    // 1. OBTENIR L'USUARI DE LA SESSIÓ
+    const userId = req.session.userId;
     if (!userId) {
       return res.status(401).json({ message: 'No autorizado. Inicie sesión.' });
     }
 
-    // 2. OBTENER FECHAS
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Pone la hora a medianoche para comparar solo días
+    // 2. EXECUTAR LA LÒGICA D'ACTUALITZACIÓ DIRECTAMENT A SQL
+    // Aquesta consulta gestiona tots els casos:
+    // - Si 'ultima_sessio' és AVUI (CURDATE()) -> 'ratxa' no canvia.
+    // - Si 'ultima_sessio' és AHIR (CURDATE() - 1 dia) -> 'ratxa' s'incrementa.
+    // - Si 'ultima_sessio' és més antiga o NULL -> 'ratxa' es reinicia a 1.
+    // En tots els casos, 'ultima_sessio' s'actualitza a AVUI.
+    await pool.execute(
+      `UPDATE usuaris SET
+          ratxa = CASE
+            WHEN ultima_sessio = CURDATE() THEN ratxa
+            WHEN ultima_sessio = (CURDATE() - INTERVAL 1 DAY) THEN ratxa + 1
+            ELSE 1
+          END,
+          ultima_sessio = CURDATE()
+        WHERE id = ?`,
+      [userId]
+    );
 
-    // 3. OBTENER DATOS ACTUALES (¡NOMBRES ACTUALIZADOS!)
-    const [rows] = await pool.execute('SELECT ratxa, ultima_sessio FROM usuaris WHERE id = ?', [userId]);
-    
+    // 3. OBTENIR LES DADES ACTUALITZADES PER TORNAR-LES AL FRONTEND
+    const [rows] = await pool.execute(
+      'SELECT ratxa, ultima_sessio FROM usuaris WHERE id = ?',
+      [userId]
+    );
+
     if (rows.length === 0) {
+      // Això no hauria de passar si el pas 2 ha funcionat, però és una bona comprovació
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // 4. DESESTRUCTURAR (¡NOMBRES ACTUALIZADOS!)
-    let { ratxa, ultima_sessio } = rows[0];
-    let newStreak = ratxa || 0; // Si es null, empieza en 0
-
-    if (ultima_sessio) {
-      // 5. EL USUARIO YA HA INICIADO SESIÓN ANTES
-      const lastLogin = new Date(ultima_sessio);
-      // No hace falta .setHours(0,0,0,0) porque la BD ya guarda solo DATE
-
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1); // Calcula la fecha de ayer
-
-      if (lastLogin.getTime() === today.getTime()) {
-        // 5a. Ya ha iniciado sesión hoy. No hacer nada.
-        // newStreak se queda igual
-      } else if (lastLogin.getTime() === yesterday.getTime()) {
-        // 5b. Inició sesión ayer. ¡Es una racha! Incrementar.
-        newStreak++;
-      } else {
-        // 5c. Ha faltado días. Resetear la racha a 1.
-        newStreak = 1;
-      }
-    } else {
-      // 6. ESTE ES EL PRIMER INICIO DE SESIÓN
-      newStreak = 1;
-    }
-
-    // 7. ACTUALIZAR LA BASE DE DATOS (¡NOMBRES ACTUALIZADOS Y CURDATE()!)
-    // Usamos CURDATE() porque la columna `ultima_sessio` es de tipo DATE
-    await pool.execute('UPDATE usuaris SET ratxa = ?, ultima_sessio = CURDATE() WHERE id = ?', [newStreak, userId]);
-
-    // 8. DEVOLVER LA NUEVA RACHA AL FRONTEND
-    // (El frontend no cambia, sigue esperando 'dias')
-    res.json({ dias: newStreak, ultimoAcceso: new Date() });
+    // 4. TORNAR LA NOVA RATXA
+    // (El frontend segueix rebent 'dias')
+    res.json({ dias: rows[0].ratxa, ultimoAcceso: rows[0].ultima_sessio });
 
   } catch (error) {
     console.error('Error al actualizar la racha:', error);

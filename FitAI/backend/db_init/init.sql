@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS participacions (
     FOREIGN KEY (sala_id) REFERENCES sales(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dades d'exemple
 INSERT INTO usuaris (nom, email, password, sessions_completades, repeticions_totals) 
 VALUES 
 ('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400),

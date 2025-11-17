@@ -28,7 +28,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Login
+// Login (CORREGIT)
 export const loginUser = async (req, res) => {
   const { email: loginInput, password } = req.body;
   if (!loginInput || !password) {
@@ -52,8 +52,27 @@ export const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: 'Credencials incorrectes' });
     }
+
+    // ===== CANVI CLAU AQUÍ =====
+    // Desem les claus individuals que l'altre controlador espera
+    req.session.userId = user.id;
+    req.session.userName = user.nom;
+
+    // També desem l'objecte 'user' que les funcions d'AQUEST arxiu esperen
+    // (com getCurrentUser i updateUser)
     req.session.user = { id: user.id, nom: user.nom, email: user.email };
-    res.json(req.session.user);
+
+    // Fem servir .save() per assegurar que la sessió es desa abans de respondre
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error en desar la sessió:', err);
+        return res.status(500).json({ message: 'Error en iniciar sessió' });
+      }
+      // Responem al client un cop la sessió està desada
+      res.json(req.session.user);
+    });
+    // ===========================
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error del servidor' });

@@ -100,7 +100,6 @@
     </v-main>
   </v-app>
 </template>
-
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
