@@ -31,12 +31,11 @@ CREATE TABLE IF NOT EXISTS participacions (
     FOREIGN KEY (sala_id) REFERENCES sales(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dades d'exemple
 INSERT INTO usuaris (nom, email, password, sessions_completades, repeticions_totals) 
 VALUES 
-('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400), --nodepass
-('1', '1@fit.ai', '$2b$10$srE4ojgoCYxoEqlO1Uhqbe4y434PpbM/cxAAh3jwFKKGJ91m6HoRu', 18, 12100), --1
-('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350); --(este no funciona)
+('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400),
+('1', '1@fit.ai', '$2b$10$srE4ojgoCYxoEqlO1Uhqbe4y434PpbM/cxAAh3jwFKKGJ91m6HoRu', 18, 12100),
+('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350);
 
 INSERT INTO sales (creador_id, codi_acces, estat) VALUES (1, 'FITAI1', 'finalitzada');
 

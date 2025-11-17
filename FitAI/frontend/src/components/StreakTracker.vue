@@ -168,10 +168,41 @@ const updateUserStreak = async () => {
   }
 }
 
+// Funció per actualitzar I OBTENIR la ratxa
+const checkAndUpdateUserStreak = async () => {
+  try {
+    // Aquesta crida POST hauria de fer tota la feina:
+    // 1. Comprovar si és un nou dia.
+    // 2. Actualitzar la ratxa si cal.
+    // 3. Retornar la ratxa actualitzada (o la d'avui si no s'ha actualitzat).
+    const response = await fetch('/api/user/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      rachaData.value = data;
+
+      // Mostrar el diàleg
+      if (rachaData.value.dias >= 1) {
+        nextTick(() => {
+          showStreakDialog.value = true;
+        });
+      }
+    } else {
+      console.error('Error al comprovar/actualitzar la ratxa:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error de xarxa en comprovar/actualitzar la ratxa:', error);
+  }
+}
+
 onMounted(() => {
-  // Cargar la racha del usuario
-  loadUserStreak();
-})
+  // Cridem només a la funció POST
+  checkAndUpdateUserStreak();
+});
 </script>
 
 <style scoped>
