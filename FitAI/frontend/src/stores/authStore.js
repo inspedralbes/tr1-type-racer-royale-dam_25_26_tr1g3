@@ -4,6 +4,7 @@ export const useAuthStore = defineStore('auth', {
 
   state: () => ({
     user: null,
+    hasShownStreakPopup: false // <-- 1. AFEGEIX AIXÒ
   }),
 
   getters: {
@@ -12,8 +13,9 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    // ... (login, register... tot això queda igual) ...
     async login(email, password) {
-      // ... (código existente de login)
+      // ... (código existente)
       try {
         const response = await fetch('/api/login', {
           method: 'POST',
@@ -36,7 +38,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async register(nom, email, password) {
-      // ... (código existente de register)
+      // ... (código existente)
       try {
         const response = await fetch('/api/register', {
           method: 'POST',
@@ -54,17 +56,18 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
-      // ... (código existente de logout)
+      // ... (código existente)
       try {
         await fetch('/api/logout', { method: 'POST' });
       } catch (error) {
         console.error('Error en tancar la sessió al servidor:', error);
       }
       this.user = null; 
+      this.hasShownStreakPopup = false; // <-- 2. AFEGEIX AIXÒ (per reiniciar)
     },
 
     async checkAuth() {
-      // ... (código existente de checkAuth)
+      // ... (código existente)
       try {
         const response = await fetch('/api/me');
         if (!response.ok) {
@@ -77,14 +80,10 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     
-    // ===============================================
-    // !!! NOU CÀNVI: ACCIÓ PER PUJAR LA FOTO DE PERFIL !!!
-    // ===============================================
     async updateProfilePicture(formData) {
+       // ... (el teu codi de pujar foto queda igual) ...
       try {
-        // L'argument 'formData' conté el fitxer d'imatge.
-        // La petició no necessita la capçalera Content-Type, ja que FormData la genera.
-        const response = await fetch('/api/profile/picture', { // <-- Assegura't que l'endpoint del teu backend sigui correcte
+        const response = await fetch('/api/profile/picture', { 
           method: 'POST',
           body: formData,
         });
@@ -95,8 +94,6 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const updatedUser = await response.json();
-        
-        // El backend ha de retornar l'objecte d'usuari actualitzat amb la nova foto_url.
         this.user = updatedUser; 
 
       } catch (error) {
@@ -104,6 +101,10 @@ export const useAuthStore = defineStore('auth', {
         throw error;
       }
     },
-    // ===============================================
+    
+    // 3. AFEGEIX AQUESTA NOVA ACCIÓ SENCERA
+    setStreakPopupShown() {
+      this.hasShownStreakPopup = true;
+    },
   },
 });

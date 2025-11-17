@@ -69,9 +69,9 @@
     </v-card>
   </v-dialog>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useAuthStore } from '@/stores/authStore'; // <-- 1. IMPORTA EL STORE
 
 // --- LÓGICA DE RACHAS ---
 const rachaData = ref({
@@ -79,6 +79,7 @@ const rachaData = ref({
   ultimoAcceso: null
 })
 const showStreakDialog = ref(false)
+const authStore = useAuthStore(); // <-- 2. INSTANCIA EL STORE
 
 // Imágenes de rachas
 const rachaImagenes = [
@@ -113,68 +114,16 @@ const rachaActual = computed(() => {
   }
 })
 
-// Función para cargar y actualizar la racha del usuario
-const loadUserStreak = async () => {
-  try {
-    const response = await fetch('/api/user/streak', {
-      credentials: 'include'
-    })
-    
-    
-    if (response.ok) {
-      const data = await response.json()
-      rachaData.value = data
-      
-      // Llama a updateUserStreak para registrar el inicio de sesión y actualizar la racha
-      // El backend debe devolver la racha actualizada, y updateUserStreak se encarga de mostrar el diálogo
-      await updateUserStreak()
+// Les funcions 'loadUserStreak' i 'updateUserStreak' ja no s'utilitzen
+// perquè 'checkAndUpdateUserStreak' fa tota la feina. Les pots esborrar
+// si vols, o deixar-les (no molesten).
+const loadUserStreak = async () => { /* ... */ }
+const updateUserStreak = async () => { /* ... */ }
 
-    } else {
-      // Si no existe racha (404), o hay otro error, intenta crear/actualizar la racha
-      await updateUserStreak()
-    }
-  } catch (error) {
-    console.error('Error al cargar la racha:', error)
-    // Si hay un error de red, intenta crear/actualizar la racha
-    await updateUserStreak()
-  }
-}
-
-// Función para actualizar la racha del usuario
-const updateUserStreak = async () => {
-  try {
-    const response = await fetch('/api/user/streak', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      rachaData.value = data
-      
-      // Mostrar el diálogo después de actualizar/crear la racha
-      if (rachaData.value.dias >= 1) {
-        nextTick(() => {
-          showStreakDialog.value = true
-        })
-      }
-    } else {
-      // Si el backend falla, mostramos un error en consola, pero no forzamos el incremento
-      console.error('Error al actualizar la racha en el backend:', response.statusText)
-    }
-  } catch (error) {
-    console.error('Error de red al actualizar la racha:', error)
-  }
-}
 
 // Funció per actualitzar I OBTENIR la ratxa
 const checkAndUpdateUserStreak = async () => {
   try {
-    // Aquesta crida POST hauria de fer tota la feina:
-    // 1. Comprovar si és un nou dia.
-    // 2. Actualitzar la ratxa si cal.
-    // 3. Retornar la ratxa actualitzada (o la d'avui si no s'ha actualitzat).
     const response = await fetch('/api/user/streak', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -185,12 +134,19 @@ const checkAndUpdateUserStreak = async () => {
       const data = await response.json();
       rachaData.value = data;
 
-      // Mostrar el diàleg
-      if (rachaData.value.dias >= 1) {
+      // ===============================================
+      // <-- 3. AQUEST ÉS EL CANVI DE LÒGICA
+      // ===============================================
+      // Comprova si hi ha racha I si NO s'ha mostrat el popup en aquesta sessió
+      if (rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
         nextTick(() => {
           showStreakDialog.value = true;
-        });
+          // Avisa al store de que ja s'ha mostrat
+          authStore.setStreakPopupShown(); 
+        })
       }
+      // ===============================================
+
     } else {
       console.error('Error al comprovar/actualitzar la ratxa:', response.statusText);
     }
