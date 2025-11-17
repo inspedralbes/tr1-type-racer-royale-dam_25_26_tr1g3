@@ -65,10 +65,12 @@
                             </div>
 
                             <!-- Càmera remota per a altres jugadors -->
-                            <div v-if="jugador.hasCamera" class="relative w-full">
+                            <div v-else-if="jugador.hasCamera" class="relative w-full">
                                 <video :ref="el => remoteVideos[jugador.userId] = el"
                                     :id="`remoteVideo_${jugador.userId}`" autoplay playsinline muted
                                     class="rounded-xl w-full" style="object-fit: cover; background: black;"></video>
+                                <RemotePlayerCanvas v-if="remotePoses[jugador.userId]"
+                                    :pose="remotePoses[jugador.userId]" :width="640" :height="480" />
                             </div>
 
                             <!-- Si no hi ha càmera -->
@@ -103,7 +105,8 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
-import EstadistiquesSessioMultiplayer from './EstadistiquesSessioMultiplayer.vue' // NOU: Importar el component d'estadístiques
+import EstadistiquesSessioMultiplayer from './EstadistiquesSessioMultiplayer.vue'
+import RemotePlayerCanvas from './RemotePlayerCanvas.vue' // NOU: Importar el component d'estadístiques
 import { useRoute, useRouter } from 'vue-router'
 import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
@@ -116,7 +119,6 @@ const sessionId = route.params.sessionId
 const userId = route.params.userId || `usuari_${Math.floor(Math.random() * 10000)}`
 const userName = 'Tu' // S'ha d'obtenir el nom real de l'usuari si és possible
 
-// L'etiqueta de l'exercici es calcula ara dins del component EstadistiquesSessioMultiplayer
 const exerciciLabel = computed(() => exercici.toUpperCase()) // Mantinc una versió simple per al títol principal, si cal.
 
 // ===================================================================
@@ -180,11 +182,12 @@ const canvas = ref(null)
 const count = ref(0)
 const leaderboard = ref([{ userId, reps: 0, stream: null }])
 const remoteVideos = ref({})
+const remotePoses = ref({}) // { userId: poseData }
 
 let detector = null
-let up = false
+const up = ref(false)
 let streamRef = null
-let detecting = false
+const detecting = ref(false)
 
 // WebSocket
 const ws = ref(null)
@@ -220,7 +223,7 @@ function connectWebSocket() {
     }
     ws.value.onmessage = async (event) => {
         const message = JSON.parse(event.data)
-        const { type, from, sdp, candidate } = message
+        const { type, from, sdp, candidate, pose, reps } = message
         switch (type) {
             case 'offer':
                 const pc = createPeerConnection(from)
@@ -234,6 +237,15 @@ function connectWebSocket() {
                 break
             case 'ice':
                 await peers.value[from].addIceCandidate(new RTCIceCandidate(candidate))
+                break
+            case 'pose_update':
+                if (from !== userId) {
+                    remotePoses.value[from] = pose
+                    const jugador = leaderboard.value.find(j => j.userId === from)
+                    if (jugador && reps !== undefined) {
+                        jugador.reps = reps
+                    }
+                }
                 break
             case 'leaderboard':
                 leaderboard.value = message.leaderboard.map(j => ({
@@ -308,7 +320,7 @@ watch(leaderboard, async () => {
 async function startCamera() {
     try {
         await initMoveNet()
-        detecting = true
+        detecting.value = true
         detectPose()
     } catch (e) {
         console.error('Error obrint càmera:', e)
@@ -321,7 +333,7 @@ function stopCamera() {
         streamRef = null
         video.value.srcObject = null
     }
-    detecting = false
+    detecting.value = false
     const ctx = canvas.value?.getContext('2d')
     if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
 }
@@ -336,7 +348,7 @@ async function initMoveNet() {
 async function detectPose() {
     const ctx = canvas.value.getContext('2d')
     async function loop() {
-        if (!detecting || video.value.paused || video.value.ended) return
+        if (!detecting.value || video.value.paused || video.value.ended) return
         const poses = await detector.estimatePoses(video.value)
         if (poses.length > 0) {
             drawPose(ctx, poses[0])
@@ -361,89 +373,201 @@ function drawPose(ctx, pose) {
     }
 }
 
-// Funció checkMoviment (no proporcionada, assumim que existeix)
-function checkMoviment(pose) {
-    // Lògica de detecció de moviment
-    // Aquesta funció hauria d'actualitzar 'count' i enviar la nova repeticions al servidor
-    // Per exemple:
-    // if (movimentCompletat) {
-    //     count.value++
-    //     ws.value.send(JSON.stringify({ type: 'reps', reps: count.value }))
-    // }
+// ===================================================================
+// 3. LÒGICA DE MOVIMENT (Traslladada del primer codi)
+// ===================================================================
+
+function handleRepCount() {
+    if (!timerActive.value) return; // Si el temporitzador està aturat, no comptis.
+
+    const jugador = leaderboard.value.find(j => j.userId === userId)
+    if (jugador) {
+        jugador.reps++
+    }
+    up.value = false;
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ type: 'update', reps: jugador.reps }));
+    }
 }
 
-
-// ---------- SORTIR ----------
-function sortir() {
-    console.log('Sortint de la sessió...')
-    try {
-        stopTimer() // Assegurar que el temporitzador s'aturi
-        stopCamera()
-        localStream.value?.getTracks().forEach(t => t.stop())
-        Object.values(peers.value).forEach(pc => pc.close())
-        if (ws.value?.readyState === WebSocket.OPEN) {
-            ws.value.send(JSON.stringify({ type: 'leave' }))
-            ws.value.close()
-        }
-    } catch (e) {
-        console.error('Error tancant recursos:', e)
+function checkMoviment(pose) {
+    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({
+            type: 'pose_update',
+            sessionId,
+            userId,
+            pose: {
+                keypoints: pose.keypoints.map(kp => ({ x: kp.x, y: kp.y, score: kp.score }))
+            },
+            reps: count.value
+        }))
     }
-    router.push('/')
+    const exerciciNormalitzat = exercici.toLowerCase();
+
+    switch (exerciciNormalitzat) {
+        case 'flexiones': checkFlexio(pose); break;
+        case 'sentadillas': checkEsquat(pose); break;
+        case 'saltos': checkSalt(pose); break;
+        case 'abdominales': checkAbdominal(pose); break;
+        case 'fons': checkFons(pose); break;
+        case 'pujades': checkPujades(pose); break;
+        case 'flexions': checkFlexio(pose); break;
+        case 'squats': checkEsquat(pose); break;
+        case 'salts': checkSalt(pose); break;
+    }
+}
+
+function checkFlexio(pose) {
+    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+    const canell = pose.keypoints.find(k => k.name === 'left_wrist')
+    if (!espatlla || !canell || espatlla.score < 0.4 || canell.score < 0.4) return
+    const dist = Math.abs(espatlla.y - canell.y)
+    const UMBRAL_ARRIBA = 200, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
+}
+
+function checkEsquat(pose) {
+    const maluc = pose.keypoints.find(k => k.name === 'left_hip')
+    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+    if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return
+    const dist = Math.abs(maluc.y - genoll.y)
+    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100
+    if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
+}
+
+let initialY = null;
+let jumping = false;
+function checkSalt(pose) {
+    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+    if (!peu || peu.score < 0.4) return
+    if (initialY === null) initialY = peu.y
+    const delta = initialY - peu.y
+    const UMBRAL_SALT = 60
+    if (delta > UMBRAL_SALT && !jumping) {
+        jumping = true
+    } else if (delta < 10 && jumping) {
+        jumping = false;
+        handleRepCount();
+    }
+}
+
+function checkAbdominal(pose) {
+    const nas = pose.keypoints.find((k) => k.name === 'nose')
+    const maluc = pose.keypoints.find((k) => k.name === 'left_hip')
+    if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return
+    const distancia = Math.abs(nas.y - maluc.y)
+    const UMBRAL_ARRIBA = 150;
+    const UMBRAL_ABAJO = 100;
+    if (distancia < UMBRAL_ABAJO && !up.value) { up.value = true; }
+    if (distancia > UMBRAL_ARRIBA && up.value) { handleRepCount(); }
+}
+
+function checkFons(pose) {
+    const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
+    const colze = pose.keypoints.find(k => k.name === 'left_elbow')
+    if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
+    const dist = Math.abs(espatlla.y - colze.y)
+    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50
+    if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
+}
+
+function checkPujades(pose) {
+    const genoll = pose.keypoints.find(k => k.name === 'left_knee')
+    const peu = pose.keypoints.find(k => k.name === 'left_ankle')
+    if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
+    const dist = Math.abs(genoll.y - peu.y)
+    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300
+    if (dist < UMBRAL_ABAJO && !up.value) up.value = true
+    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
+}
+
+function sortir() {
+    router.push('/menu')
 }
 </script>
 
 <style scoped>
 .bg-fitai-deep-space {
-    background: linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
+    background-color: #1a1a2e;
 }
 
-.player-card {
-    backdrop-filter: blur(12px);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.fade-in-container {
+    animation: fadeIn 1.5s ease-in-out forwards;
 }
 
-.neon-player-name {
-    text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 
-.bg-dark {
-    background: rgba(0, 0, 0, 0.3);
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .top-left-back-btn {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    color: white !important;
-    background: #8b5cf6 !important;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.rectangular-btn {
     border-radius: 8px !important;
-    z-index: 1000;
 }
 
 .exercise-title {
-    background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 900;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    animation: gradientShift 6s ease infinite;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #e0e0e0;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes gradientShift {
-    0% {
-        background-position: 0% 50%;
-    }
+.timer-card .text-h1 {
+    font-size: 4rem;
+}
 
-    50% {
-        background-position: 100% 50%;
-    }
+.player-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
 
-    100% {
-        background-position: 0% 50%;
-    }
+.neon-player-name {
+    color: #4dd0e1;
+    text-shadow: 0 0 5px #4dd0e1, 0 0 10px #4dd0e1;
+}
+
+.bg-dark {
+    background-color: #212121;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.top-0 {
+    top: 0;
+}
+
+.left-0 {
+    left: 0;
 }
 </style>
