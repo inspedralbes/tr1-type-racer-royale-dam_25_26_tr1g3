@@ -50,42 +50,89 @@
 
       <GlobalRanking />
 
-      <StreakTracker />
+      <StreakPopup 
+        v-model="showStreakDialog"
+        :racha-actual="rachaActual"
+      />
 
     </v-main>
   </v-app>
 </template>
 
 <script setup>
-import { computed } from 'vue' // <-- 1. Importar 'computed'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore' // <-- 2. Importar l'store d'autenticació
-// Importar els nous components
+import { useAuthStore } from '@/stores/authStore'
+
+// Componentes
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
-import StreakTracker from '@/components/StreakTracker.vue'
+import StreakPopup from '@/components/StreakPopup.vue' // <--- Importamos solo el Popup visual
 
 const router = useRouter()
-const authStore = useAuthStore() // <-- 3. Inicialitzar l'store
+const authStore = useAuthStore()
 
+// --- 1. LÓGICA DE RACHAS (Traída aquí directamente) ---
+const rachaData = ref({ dias: 1, ultimoAcceso: null })
+const showStreakDialog = ref(false)
+
+const rachaImagenes = [
+  { dias: 1, imagen: new URL('@/assets/racha1.png', import.meta.url).href, size: 120 },
+  { dias: 2, imagen: new URL('@/assets/racha2.png', import.meta.url).href, size: 140 },
+  { dias: 3, imagen: new URL('@/assets/racha3.png', import.meta.url).href, size: 160 }
+]
+
+const rachaActual = computed(() => {
+  const dias = rachaData.value.dias
+  if (dias >= 3) return { ...rachaImagenes[2], dias }
+  if (dias === 2) return rachaImagenes[1]
+  return rachaImagenes[0]
+})
+
+const checkAndUpdateUserStreak = async () => {
+  try {
+    const response = await fetch('/api/user/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      rachaData.value = data;
+
+      // Si tiene racha y no se ha mostrado el popup hoy -> Mostrarlo
+      if (rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
+        nextTick(() => {
+          showStreakDialog.value = true;
+          authStore.setStreakPopupShown(); 
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error checking streak:', error);
+  }
+}
+
+// --- 2. LÓGICA DE PERFIL (Existente) ---
 const defaultAvatar = 'https://cdn.vuetifyjs.com/images/cards/halcyon.png' 
 
-// 4. Crear una propietat computada per obtenir la URL de la foto
 const profilePhotoUrl = computed(() => {
     const user = authStore.user;
     if (user && user.foto_url) {
-        // Afegim el Date.now() per forçar la recàrrega després d'una pujada
         return user.foto_url + '?' + Date.now(); 
     }
     return defaultAvatar;
 });
 
-/**
- * Funció per navegar a la pàgina de perfil.
- */
 const goToProfile = () => {
   router.push({ name: 'Profile' });
 }
+
+// --- ON MOUNTED ---
+onMounted(() => {
+  checkAndUpdateUserStreak(); // Ejecutamos la comprobación al cargar la página
+});
 </script>
 
 <style>

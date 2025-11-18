@@ -95,7 +95,7 @@
         
  <v-divider class="divider-glow mx-auto my-6"></v-divider>
         
-        <StreakTracker class="w-100 mb-4" /> 
+        <StreakWidget class="w-100 mb-4" :enable-popup="false" />
         
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
 
@@ -139,7 +139,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import StreakTracker from '@/components/StreakTracker.vue' 
+import StreakWidget from '@/components/StreakWidget.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
