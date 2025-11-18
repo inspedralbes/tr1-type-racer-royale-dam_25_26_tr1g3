@@ -47,7 +47,7 @@ VALUES
 ('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350, 0, NULL, NULL);
 
 -- Inserta una sala (igual que antes, está perfecto)
-INSERT INTO sales (creador_id, codi_acces, estat) VALUES (1, 'FITAI1', 'finalizada');
+INSERT INTO sales (creador_id, codi_acces, estat) VALUES (1, 'FITAI1', 'finalitzada');
 
 -- Inserta participaciones
 -- Ahora el usuari_id = 1 puede tener dos entradas en la misma sala,
