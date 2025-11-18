@@ -108,9 +108,6 @@ const rachaActual = computed(() => {
   }
 })
 
-const loadUserStreak = async () => { /* ... */ }
-const updateUserStreak = async () => { /* ... */ }
-
 const checkAndUpdateUserStreak = async () => {
   try {
     const response = await fetch('/api/user/streak', {
