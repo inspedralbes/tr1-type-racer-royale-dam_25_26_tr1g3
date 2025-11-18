@@ -43,6 +43,9 @@
       <v-divider class="divider-glow mx-auto my-8"></v-divider>
 
       <GlobalRanking />
+
+      <StreakTracker />
+
     </v-main>
   </v-app>
 </template>
