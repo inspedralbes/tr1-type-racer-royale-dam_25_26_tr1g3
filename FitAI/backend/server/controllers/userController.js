@@ -1,5 +1,36 @@
 import pool from '../config/database.js';
 
+// ======================================================
+// IMPORTS NOUS PER PUJAR IMATGES
+// ======================================================
+import multer from 'multer';
+import path from 'path';
+
+// ======================================================
+// CONFIGURACIÓ DE MULTER (PER PUJAR IMATGES)
+// ======================================================
+
+// Defineix on es desaran els fitxers
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // IMPORTANT: Assegura't que la carpeta 'public/uploads/profiles' existeixi!
+    cb(null, '../../../frontend/public/uploads/profiles/');
+  },
+  filename: function (req, file, cb) {
+    // Canvia el nom del fitxer per evitar conflictes
+    const userId = req.session.userId; // Obtenim l'ID de la sessió
+    const fileExt = path.extname(file.originalname); // Extensió (ex: .jpg)
+    cb(null, `user-${userId}-${Date.now()}${fileExt}`);
+  }
+});
+
+// Crea la instància de Multer amb la configuració d'emmagatzematge
+const upload = multer({ storage: storage });
+
+// ======================================================
+// CONTROLADORS EXISTENTS (Ranking i Ratxa)
+// ======================================================
+
 // --- Función de Ranking (Sin cambios) ---
 export const getRanking = async (req, res) => {
   try {
@@ -17,29 +48,14 @@ export const getRanking = async (req, res) => {
   }
 };
 
-// ======================================================
-// LÓGICA DE RACHA (ACTUALIZADA A TU NUEVO SCHEMA)
-// ======================================================
-
-/**
- * Aquesta funció és cridada pel frontend amb POST /api/user/streak
- * Calcula la ratxa utilitzant lògica SQL, que és més robusta contra
- * problemes de zona horària.
- */
+// --- Lógica de Ratxa (Sin cambios) ---
 export const updateStreak = async (req, res) => {
   try {
-    // 1. OBTENIR L'USUARI DE LA SESSIÓ
     const userId = req.session.userId;
     if (!userId) {
       return res.status(401).json({ message: 'No autorizado. Inicie sesión.' });
     }
 
-    // 2. EXECUTAR LA LÒGICA D'ACTUALITZACIÓ DIRECTAMENT A SQL
-    // Aquesta consulta gestiona tots els casos:
-    // - Si 'ultima_sessio' és AVUI (CURDATE()) -> 'ratxa' no canvia.
-    // - Si 'ultima_sessio' és AHIR (CURDATE() - 1 dia) -> 'ratxa' s'incrementa.
-    // - Si 'ultima_sessio' és més antiga o NULL -> 'ratxa' es reinicia a 1.
-    // En tots els casos, 'ultima_sessio' s'actualitza a AVUI.
     await pool.execute(
       `UPDATE usuaris SET
           ratxa = CASE
@@ -52,19 +68,15 @@ export const updateStreak = async (req, res) => {
       [userId]
     );
 
-    // 3. OBTENIR LES DADES ACTUALITZADES PER TORNAR-LES AL FRONTEND
     const [rows] = await pool.execute(
       'SELECT ratxa, ultima_sessio FROM usuaris WHERE id = ?',
       [userId]
     );
 
     if (rows.length === 0) {
-      // Això no hauria de passar si el pas 2 ha funcionat, però és una bona comprovació
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // 4. TORNAR LA NOVA RATXA
-    // (El frontend segueix rebent 'dias')
     res.json({ dias: rows[0].ratxa, ultimoAcceso: rows[0].ultima_sessio });
 
   } catch (error) {
@@ -73,27 +85,20 @@ export const updateStreak = async (req, res) => {
   }
 };
 
-
-/**
- * Esta función es llamada por el frontend con GET /api/user/streak
- * Simplemente devuelve la racha guardada en la BD.
- */
+// --- Lógica de Ratxa (Sin cambios) ---
 export const getStreak = async (req, res) => {
   try {
-    // 1. OBTENER EL USUARIO DE LA SESIÓN
     const userId = req.session.userId;
     if (!userId) {
       return res.status(401).json({ message: 'No autorizado. Inicie sesión.' });
     }
 
-    // 2. BUSCAR DATOS (¡NOMBRES ACTUALIZADOS!)
     const [rows] = await pool.execute('SELECT ratxa, ultima_sessio FROM usuaris WHERE id = ?', [userId]);
     
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // 3. DEVOLVER DATOS (¡NOMBRES ACTUALIZADOS!)
     const streak = rows[0].ratxa || 0;
     res.json({ dias: streak, ultimoAcceso: rows[0].ultima_sessio });
 
@@ -102,3 +107,65 @@ export const getStreak = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor al obtener la racha' });
   }
 };
+
+// ======================================================
+// NOVA FUNCIÓ PER PUJAR LA FOTO DE PERFIL
+// ======================================================
+export const updateProfilePicture = [
+  // 1. Comprova que l'usuari està autenticat
+  (req, res, next) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: 'No autoritzat' });
+    }
+    next();
+  },
+  
+  // 2. Multer processa el fitxer anomenat 'profileImage'
+  // (Aquest nom ha de coincidir amb el FormData del frontend)
+  upload.single('profileImage'), 
+
+  // 3. Executa la lògica per desar la ruta a la BD
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No s\'ha pujat cap fitxer.' });
+      }
+
+      // Aquesta és la ruta que es desarà a la BD (ex: /uploads/profiles/user-1-12345.jpg)
+      const fotoUrl = `/uploads/profiles/${req.file.filename}`;
+
+      // 4. Actualitza la BD amb la nova ruta de la foto
+      await pool.execute(
+        'UPDATE usuaris SET foto_url = ? WHERE id = ?',
+        [fotoUrl, req.session.userId]
+      );
+
+      // 5. Obtenir l'usuari actualitzat per retornar-lo al frontend
+      // (L'authStore espera que li retornis l'objecte d'usuari)
+      const [rows] = await pool.execute(
+        // Seleccionem només els camps segurs, SENSE la contrasenya
+        'SELECT id, nom, email, foto_url, sessions_completades, repeticions_totals, ratxa, ultima_sessio FROM usuaris WHERE id = ?',
+        [req.session.userId]
+      );
+      
+      if (rows.length === 0) {
+          return res.status(404).json({ message: 'Usuari no trobat després d\'actualitzar' });
+      }
+
+      const updatedUser = rows[0];
+
+      // 6. Actualitza també la sessió del servidor
+      req.session.user = updatedUser; 
+      req.session.save((err) => {
+        if (err) console.error("Error en desar la sessió:", err);
+        
+        // 7. Respon al frontend amb l'usuari actualitzat
+        res.json(updatedUser);
+      });
+
+    } catch (error) {
+      console.error('Error al pujar la imatge:', error);
+      res.status(500).json({ message: 'Error del servidor' });
+    }
+  }
+];

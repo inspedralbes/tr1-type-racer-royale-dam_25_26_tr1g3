@@ -190,6 +190,9 @@ const onFileSelected = (event) => {
  * 3. Lògica per a pujar la foto al servidor.
  * La funció **`uploadPhoto`** és la que gestiona el guardat de la foto seleccionada.
  */
+/**
+ * 3. Lògica per a pujar la foto al servidor.
+ */
 const uploadPhoto = async () => {
     if (!selectedFile.value) return;
 
@@ -198,18 +201,19 @@ const uploadPhoto = async () => {
     uploadMessageType.value = 'info';
 
     try {
-        // Envia el fitxer a través de FormData
         const formData = new FormData();
-        formData.append('profilePicture', selectedFile.value);
         
-        // **!!! CRIDA A L'ACCIÓ D'ACTUALITZACIÓ DEL STORE (cal implementar-la) !!!**
-        // Aquesta funció ha d'estar implementada en el teu `authStore` per enviar la imatge al backend.
+        // ===================================================
+        // === LÍNIA CORREGIDA ===
+        // Ha de ser 'profileImage' per coincidir amb Multer al backend
+        formData.append('profileImage', selectedFile.value); 
+        // ===================================================
+        
         await authStore.updateProfilePicture(formData); 
         
         uploadMessage.value = 'Foto de perfil actualitzada correctament!';
         uploadMessageType.value = 'success';
         
-        // Neteja l'estat i actualitza la URL de l'usuari (això ho faria l'authStore després de la resposta del backend)
         selectedFile.value = null;
         previewImage.value = null;
 
@@ -219,7 +223,6 @@ const uploadPhoto = async () => {
         uploadMessageType.value = 'error';
     } finally {
         uploading.value = false;
-        // Reinicia el camp de fitxer perquè es pugui tornar a seleccionar el mateix fitxer
         fileInput.value.value = ''; 
     }
 }
@@ -239,8 +242,7 @@ const cancelUpload = () => {
  * Redirigeix a la ruta amb el nom 'FitAi'.
  */
 const goToHome = () => {
-    // Asume que tu ruta de inicio se llama 'FitAi' en el Vue Router
-    router.push({ name: 'Home' });
+    router.push('/');
 }
 
 const handleLogout = async () => {

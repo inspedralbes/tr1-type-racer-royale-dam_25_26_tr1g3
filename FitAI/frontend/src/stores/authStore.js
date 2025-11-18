@@ -83,7 +83,7 @@ export const useAuthStore = defineStore('auth', {
     async updateProfilePicture(formData) {
        // ... (el teu codi de pujar foto queda igual) ...
       try {
-        const response = await fetch('/api/profile/picture', { 
+        const response = await fetch('/api/user/profile/picture', { 
           method: 'POST',
           body: formData,
         });

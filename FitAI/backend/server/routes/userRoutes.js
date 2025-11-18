@@ -1,23 +1,26 @@
 import express from 'express';
-// ¡Importa las nuevas funciones del controlador!
-import { getRanking, getStreak, updateStreak } from '../controllers/userController.js';
+// Importa TOTES les funcions del controlador, inclosa la nova
+import { 
+  getRanking, 
+  getStreak, 
+  updateStreak, 
+  updateProfilePicture // <-- AFEGIDA
+} from '../controllers/userController.js';
 
 const router = express.Router();
 
-// Ruta de ranking (la que ya tenías)
+// --- Ruta de rànquing ---
 router.get('/ranking', getRanking);
 
-// ======================================================
-// AÑADE ESTAS RUTAS NUEVAS PARA LA RACHA
-// ======================================================
-
-// Ruta GET para obtener la racha actual
-// (El frontend llama a: GET /api/user/streak)
+// --- Rutes de ratxa (Streak) ---
 router.get('/streak', getStreak);
-
-// Ruta POST para actualizar la racha (al iniciar sesión)
-// (El frontend llama a: POST /api/user/streak)
 router.post('/streak', updateStreak);
+
+// ===============================================
+// AFEGEIX LA NOVA RUTA PER LA FOTO DE PERFIL
+// ===============================================
+// (El frontend truca a: POST /api/user/profile/picture)
+router.post('/profile/picture', updateProfilePicture);
 
 
 export default router;
