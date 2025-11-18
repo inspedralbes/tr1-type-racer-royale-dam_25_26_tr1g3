@@ -160,22 +160,55 @@ export const handleConnection = (ws) => {
         case 'finish': {
           const { reps, exercici, codi_acces } = message;
           const session = sessions[codi_acces];
-          if (!session || !currentUserId || !exercici || reps === undefined) return;
+          
+          // Assegurem que tenim l'ID de l'usuari guardat a la connexió ws
+          const userId = ws.userId || currentUserId;
+
+          if (!session || !userId || !exercici || reps === undefined) {
+            console.error('Dades "finish" invàlides o sessió no trobada. Missatge:', message);
+            return;
+          }
 
           const repsFinals = parseInt(reps, 10) || 0;
+          if (repsFinals <= 0) {
+            return; // No fem res si no hi ha repeticions
+          }
 
-          if (repsFinals > 0) {
-            try {
-              await pool.execute(
-                'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)',
-                [currentUserId, session.sala_id, exercici, repsFinals]
-              );
-              await pool.execute(
-                'UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1 WHERE id = ?',
-                [repsFinals, currentUserId]
-              );
-            } catch (error) {
-              console.error("Error al guardar dades 'finish':", error);
+          let connection;
+          try {
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            // OPERACIÓ 1: Inserir la participació
+            // Tornem a la versió més simple i segura de l'ON DUPLICATE KEY
+            await connection.execute(
+              'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)',
+              [userId, session.sala_id, exercici, repsFinals]
+            );
+
+            // OPERACIÓ 2: Actualitzar les estadístiques de l'usuari
+            await connection.execute(
+              `UPDATE usuaris SET 
+                  repeticions_totals = repeticions_totals + ?, 
+                  sessions_completades = sessions_completades + 1,
+                  ultima_sessio = CURDATE()
+              WHERE id = ?`,
+              [repsFinals, userId]
+            );
+
+            await connection.commit();
+            console.log(`[Transacció ÈXIT] Dades de la sessió finalitzada per a l'usuari ${userId} guardades correctament.`);
+
+          } catch (error) {
+            if (connection) {
+              await connection.rollback();
+            }
+            // AQUEST ÉS L'ERROR QUE NECESSITEM VEURE A LA CONSOLA
+            console.error(`[Transacció ERROR] per a l'usuari ${userId}:`, error);
+
+          } finally {
+            if (connection) {
+              connection.release();
             }
           }
           break;
