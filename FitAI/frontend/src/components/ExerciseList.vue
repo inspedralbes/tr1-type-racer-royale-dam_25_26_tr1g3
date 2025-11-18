@@ -84,7 +84,7 @@ const exercicis = [
   {
     nom: 'Squats',
     label: 'Squats',
-    imatge: new URL('@/assets/sentadilla.jpg', import.meta.url).href,
+    imatge: new URL('@/assets/sentadilla.jpeg', import.meta.url).href,
     descripcio: 'Enforteix cames i glutis amb moviment controlat y profund.',
   },
   {
