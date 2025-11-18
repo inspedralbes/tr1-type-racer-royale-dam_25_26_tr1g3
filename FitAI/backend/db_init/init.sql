@@ -49,9 +49,9 @@ VALUES
 ('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350, 0, NULL, NULL),
 
 -- Usuaris addicionals (2, 3, 4)
-('2', '2@fit.ai', '$2b$10$uXSCUTeD2kmsg7AM0IvAVeW6TyRMClSYHIMJWZjege5JE9rpSBJMS', 0, 0, 0, NULL, NULL),
-('3', '3@fit.ai', '$2b$10$vWKhKShsaNE0yj14i.a3Ou7uiL7pRm2jIT1Z1Z7Olut6PsWSuA5ZS', 0, 0, 0, NULL, NULL),
-('4', '4@fit.ai', '$2b$10$1ISr1ZhcaPpC3yNN.ZoIZeNN1bpMjaoKiO.HiboE0Qabj7aOlHWlW', 0, 0, 0, NULL, NULL);
+('2', '2@fit.ai', '$2b$10$uXSCUTeD2kmsg7AM0IvAVeW6TyRMClSYHIMJWZjege5JE9rpSBJMS', 69, 690, 3, NULL, NULL),
+('3', '3@fit.ai', '$2b$10$vWKhKShsaNE0yj14i.a3Ou7uiL7pRm2jIT1Z1Z7Olut6PsWSuA5ZS', 420, 42069, 15, NULL, NULL),
+('4', '4@fit.ai', '$2b$10$1ISr1ZhcaPpC3yNN.ZoIZeNN1bpMjaoKiO.HiboE0Qabj7aOlHWlW', 5, 300, 2, NULL, NULL);
 
 -- Inserta una sala de prova
 INSERT INTO sales (creador_id, codi_acces, estat) VALUES (1, 'FITAI1', 'finalitzada');
