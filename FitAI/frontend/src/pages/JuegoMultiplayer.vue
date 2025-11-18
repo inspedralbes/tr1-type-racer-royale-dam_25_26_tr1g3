@@ -1,449 +1,377 @@
 <template>
-    <v-app>
-        <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
-            <v-container class="text-center text-white pa-4 pa-md-8 fade-in-container" style="max-width: 1400px;">
-                <!-- Botó per sortir -->
-                <v-btn class="top-left-back-btn rectangular-btn" variant="flat" size="large"
-                    prepend-icon="mdi-arrow-left" @click="sortir">
-                    Sortir
-                </v-btn>
-                <!-- Títol -->
-                <h2 class="exercise-title my-6">Multijugador - {{ exerciciLabel }}</h2>
+  <v-app>
+    <v-main class="d-flex flex-column align-center pa-4 bg-fitai-deep-space">
+      <v-container
+        class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
+        style="max-width: 1600px;"
+      >
+        <!-- Botó de finalitzar sessió -->
+        <v-btn
+          class="top-left-back-btn"
+          variant="flat"
+          size="large"
+          prepend-icon="mdi-check-circle-outline"
+          color="success"
+          @click="finalitzarSessio"
+        >
+          Finalitzar Sessió
+        </v-btn>
 
-                <!-- ==================================== -->
-                <!-- ======== TEMPORITZADOR AUTOMÀTIC ======== -->
-                <!-- ==================================== -->
-                <v-card class="mt-6 py-4 px-5 text-center rounded-xl timer-card mx-auto" color="transparent"
-                    elevation="10"
-                    style="width: 85%; max-width: 400px; border: 2px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px); background: rgba(139, 92, 246, 0.1);">
-                    <h3 class="text-h6 font-weight-regular mb-3 text-purple-lighten-2">⏱️ TEMPORITZADOR</h3>
+        <v-row class="mt-16 mt-md-0">
+          <!-- ============================================= -->
+          <!-- ===== COLUMNA ESQUERRA: JUGADOR LOCAL ===== -->
+          <!-- ============================================= -->
+          <v-col cols="12" md="7" class="d-flex flex-column align-center order-md-1 order-2">
+            <!-- Nom del jugador local -->
+            <h2 class="text-h5 font-weight-bold mb-3 neon-player-name">
+              <v-icon color="cyan-accent-3" start>mdi-account-circle</v-icon>
+              {{ authStore.userName }} (Tu)
+            </h2>
 
-                    <!-- Lògica de Pre-compte -->
-                    <div v-if="preCount > 0" class="text-center">
-                        <h2 class="text-h1 font-weight-black text-red-lighten-1 mb-2 pre-count-value">{{ preCount }}
-                        </h2>
-                        <p class="text-h6 text-red-lighten-2 font-weight-bold">¡Prepárate!</p>
-                    </div>
+            <!-- Vista de la càmera local -->
+            <CameraView
+              ref="cameraViewRef"
+              :timer-active="true"
+              :on-check-moviment="detectarIPublicarMoviment"
+              style="max-width: 95%; border-radius: 16px; overflow: hidden;"
+            />
 
-                    <!-- Lògica de Compte Principal -->
-                    <div v-else>
-                        <h2 class="text-h3 font-weight-bold text-purple-lighten-1 mb-2">{{ formattedTime }}</h2>
-                    </div>
+            <!-- Comptador de repeticions local (llegeix des de l'store) -->
+            <RepetitionCounter
+              class="mt-6"
+              style="width: 85%; max-width: 450px;"
+              :count="workoutStore.count"
+            />
+          </v-col>
 
-                    <!-- Lògica de Missatges d'Estat -->
-                    <p v-if="timerActive" class="text-caption text-green-lighten-2 mt-2 font-weight-bold">
-                        🟢 Comptant...
-                    </p>
-                    <p v-if="timerFinished" class="text-h6 text-green-lighten-2 mt-2 font-weight-bold">
-                        ✅ Temps completat!
-                    </p>
+          <!-- ============================================= -->
+          <!-- ===== COLUMNA DRETA: ALTRES JUGADORS I INFO ===== -->
+          <!-- ============================================= -->
+          <v-col cols="12" md="5" class="d-flex flex-column align-center order-md-2 order-1">
+            <!-- Informació de l'exercici -->
+            <ExerciseInfo :label="exerciciLabel" :gif="exerciciGif" class="mb-6"/>
+
+            <!-- Graella per als altres jugadors -->
+            <v-row dense class="justify-center" style="width: 100%;">
+              <v-col
+                v-for="jugador in altresJugadors"
+                :key="jugador.userId"
+                cols="12"
+                sm="6"
+              >
+                <v-card class="player-card pa-3 rounded-xl" elevation="8">
+                  <h4 class="text-body-1 font-weight-bold neon-player-name-remote mb-2">
+                    {{ jugador.userName }}
+                  </h4>
+                  <!-- Canvas per a l'esquelet remot -->
+                  <canvas
+                    :ref="el => canvasRemots[jugador.userId] = el"
+                    width="640"
+                    height="480"
+                    class="rounded-lg remote-canvas"
+                  ></canvas>
+                  <div class="text-h5 font-weight-black text-cyan-lighten-2 mt-2">
+                    {{ jugador.reps }} reps
+                  </div>
                 </v-card>
-                <!-- ==================================== -->
-                <!-- ======== FI TEMPORITZADOR ======== -->
-                <!-- ==================================== -->
-
-                <!-- Graella de jugadors -->
-                <v-row dense class="justify-center mt-6">
-                    <v-col v-for="(jugador, i) in leaderboard" :key="jugador.userId" cols="12" sm="6" md="6" lg="6"
-                        class="d-flex justify-center mb-6">
-                        <v-card class="rounded-xl overflow-hidden shadow-card player-card text-center pa-4"
-                            elevation="12" width="100%" max-width="550">
-                            <!-- Nom del jugador amb trofeu si és el primer -->
-                            <h3 class="text-h6 font-weight-bold mb-3 neon-player-name">
-                                <v-icon v-if="i === 0" color="yellow-accent-4" start>mdi-trophy-variant</v-icon>
-                                {{ jugador.userId === userId ? userName : jugador.userName }}
-                                <span v-if="jugador.userId === userId"
-                                    class="text-caption text-cyan-lighten-2">(Tu)</span>
-                            </h3>
-
-                            <!-- Càmera local només per al jugador actual -->
-                            <div v-if="jugador.userId === userId" class="relative w-full">
-                                <video ref="video" autoplay playsinline muted class="rounded-xl w-full"
-                                    style="object-fit: cover; background: black;"></video>
-                                <canvas ref="canvas" width="640" height="480"
-                                    class="absolute top-0 left-0 w-full h-full"></canvas>
-                            </div>
-
-                            <!-- Càmera remota per a altres jugadors -->
-                            <div v-if="jugador.hasCamera" class="relative w-full">
-                                <video :ref="el => remoteVideos[jugador.userId] = el"
-                                    :id="`remoteVideo_${jugador.userId}`" autoplay playsinline muted
-                                    class="rounded-xl w-full" style="object-fit: cover; background: black;"></video>
-                            </div>
-
-                            <!-- Si no hi ha càmera -->
-                            <div v-else class="text-grey-lighten-2 py-16 text-center bg-dark rounded-xl">
-                                <v-icon size="40">mdi-account-circle</v-icon>
-                                <p class="mt-2 text-body-2">Càmera no disponible</p>
-                            </div>
-
-                            <!-- Comptador de repeticions -->
-                            <v-card class="mt-6 py-4 px-4 text-center rounded-xl" color="transparent" elevation="10"
-                                style="border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); background: rgba(0,0,0,0.25);">
-                                <h4 class="text-h6 font-weight-regular text-grey-lighten-2">Repeticions</h4>
-                                <h1 class="text-h2 font-weight-black text-cyan-lighten-2">{{ jugador.reps }}</h1>
-                            </v-card>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-container>
-
-            <!-- ==================================== -->
-            <!-- ======== POPUP D'ESTADÍSTIQUES (Component Extern) ======== -->
-            <!-- ==================================== -->
-            <EstadistiquesSessioMultiplayer :model-value="showStatsDialog" :exercici="exercici" :total-reps="totalReps"
-                @close="sortir" />
-            <!-- ==================================== -->
-            <!-- ======== FI POPUP D'ESTADÍSTIQUES ======== -->
-            <!-- ==================================== -->
-
-        </v-main>
-    </v-app>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
-import EstadistiquesSessioMultiplayer from './EstadistiquesSessioMultiplayer.vue' // NOU: Importar el component d'estadístiques
-import { useRoute, useRouter } from 'vue-router'
-import * as tf from '@tensorflow/tfjs'
-import * as poseDetection from '@tensorflow-models/pose-detection'
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/authStore';
+import { useWorkoutStore } from '@/stores/workoutStore';
 
-const route = useRoute()
-const router = useRouter()
+// Components
+import CameraView from '../components/CameraView.vue';
+import RepetitionCounter from '../components/RepetitionCounter.vue';
+import ExerciseInfo from '../components/ExerciseInfo.vue';
 
-const exercici = route.params.ejercicio
-const sessionId = route.params.sessionId
-const userId = route.params.userId || `usuari_${Math.floor(Math.random() * 10000)}`
-const userName = 'Tu' // S'ha d'obtenir el nom real de l'usuari si és possible
+// GIFs
+import flexionesGif from '@/assets/flexiones.gif';
+import sentadillasGif from '@/assets/sentadillas.gif';
+import saltosGif from '@/assets/saltos.gif';
+import abdominalesGif from '@/assets/abdominales.gif';
+import fonsGif from '@/assets/fons.gif';
+import pujadesGif from '@/assets/pujades.gif';
 
-// L'etiqueta de l'exercici es calcula ara dins del component EstadistiquesSessioMultiplayer
-const exerciciLabel = computed(() => exercici.toUpperCase()) // Mantinc una versió simple per al títol principal, si cal.
+// --- SETUP INICIAL ---
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const workoutStore = useWorkoutStore(); // Instanciem l'store del joc
 
-// ===================================================================
-// 1. LÒGICA DEL TEMPORITZADOR
-// ===================================================================
-const initialTime = 60 // 1 minut
-const preCountInitial = 5 // 5 segons de preparació
-const timeRemaining = ref(initialTime)
-const preCount = ref(preCountInitial)
-const timerActive = ref(false)
-const timerFinished = ref(false)
-const showStatsDialog = ref(false) // NOU: Estat per controlar el diàleg d'estadístiques
-let timerInterval = null
-let preCountInterval = null
+const exercici = route.params.ejercicio;
+const codi_acces = route.params.codi_acces;
 
-const formattedTime = computed(() => {
-    const minutes = Math.floor(timeRemaining.value / 60)
-    const seconds = timeRemaining.value % 60
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-})
+// --- GESTIÓ DE NOMS I GIFS ---
+const noms = { Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES', flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES' };
+const gifs = { Flexions: flexionesGif, Squats: sentadillasGif, Salts: saltosGif, Abdominals: abdominalesGif, Fons: fonsGif, Pujades: pujadesGif, flexiones: flexionesGif, sentadillas: sentadillasGif, saltos: saltosGif, abdominales: abdominalesGif, fons: fonsGif, pujades: pujadesGif };
+const exerciciLabel = noms[exercici] || 'EXERCICI';
+const exerciciGif = gifs[exercici] || '';
 
-function startPreCount() {
-    timerFinished.value = false
-    showStatsDialog.value = false // Assegurar que el diàleg estigui tancat
-    preCount.value = preCountInitial
-    preCountInterval = setInterval(() => {
-        preCount.value--
-        if (preCount.value <= 0) {
-            clearInterval(preCountInterval)
-            startTimer()
-        }
-    }, 1000)
-}
+// --- ESTAT LOCAL DEL COMPONENT (Mínim i només per a la UI) ---
+const up = ref(false); // Per a la lògica de detecció de moviment
+const cameraViewRef = ref(null);
+const canvasRemots = ref({});
 
-function startTimer() {
-    timeRemaining.value = initialTime
-    timerActive.value = true
-    timerInterval = setInterval(() => {
-        timeRemaining.value--
-        if (timeRemaining.value <= 0) {
-            stopTimer()
-            timerFinished.value = true
-            showStatsDialog.value = true // NOU: Mostrar el diàleg quan el temps s'acaba
-        }
-    }, 1000)
-}
+// --- PROPIETATS COMPUTADES (Llegeixen l'estat des de l'store de Pinia) ---
+const altresJugadors = computed(() => {
+  return workoutStore.leaderboard.filter(j => j.userId !== authStore.user.id).slice(0, 3);
+});
 
-function stopTimer() {
-    clearInterval(timerInterval)
-    clearInterval(preCountInterval)
-    timerActive.value = false
-}
-
-// ===================================================================
-// 2. LÒGICA DE LA PÀGINA
-// ===================================================================
-
-// Refs
-const video = ref(null)
-const canvas = ref(null)
-const count = ref(0)
-const leaderboard = ref([{ userId, reps: 0, stream: null }])
-const remoteVideos = ref({})
-
-let detector = null
-let up = false
-let streamRef = null
-let detecting = false
-
-// WebSocket
-const ws = ref(null)
-const localStream = ref(null)
-const peers = ref({})
-
-// NOU: Càlcul de repeticions totals per a les estadístiques
-const totalReps = computed(() => {
-    const userEntry = leaderboard.value.find(j => j.userId === userId)
-    return userEntry ? userEntry.reps : 0
-})
-
+// --- CICLE DE VIDA (Delega la lògica a les accions de l'store) ---
 onMounted(async () => {
-    // Iniciar el temporitzador automàticament
-    startPreCount()
-
-    await startLocalStream()
-    connectWebSocket()
-    await nextTick()
-    await startCamera()
-})
+  workoutStore.connectWebSocket(codi_acces, exercici);
+  await nextTick();
+  startCamera();
+});
 
 onBeforeUnmount(() => {
-    stopTimer() // Aturar el temporitzador en sortir
-    sortir()
-})
+  workoutStore.cleanupSession(); // Neteja la sessió (desconnecta ws, reinicia comptadors, etc.)
+});
 
-function connectWebSocket() {
-    ws.value = new WebSocket('ws://localhost:4000')
-    ws.value.onopen = () => {
-        console.log('Connectat a la sessió', sessionId)
-        ws.value.send(JSON.stringify({ type: 'join', sessionId, userId }))
-    }
-    ws.value.onmessage = async (event) => {
-        const message = JSON.parse(event.data)
-        const { type, from, sdp, candidate } = message
-        switch (type) {
-            case 'offer':
-                const pc = createPeerConnection(from)
-                await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-                const answer = await pc.createAnswer()
-                await pc.setLocalDescription(answer)
-                ws.value.send(JSON.stringify({ type: 'answer', to: from, sdp: pc.localDescription }))
-                break
-            case 'answer':
-                await peers.value[from].setRemoteDescription(new RTCSessionDescription(sdp))
-                break
-            case 'ice':
-                await peers.value[from].addIceCandidate(new RTCIceCandidate(candidate))
-                break
-            case 'leaderboard':
-                leaderboard.value = message.leaderboard.map(j => ({
-                    ...j,
-                    userName: j.userName || j.userId,
-                    stream: leaderboard.value.find(old => old.userId === j.userId)?.stream || null
-                }))
-                break
-        }
-    }
-}
-
-async function startLocalStream() {
-    streamRef = await navigator.mediaDevices.getUserMedia({ video: true })
-    localStream.value = streamRef
-
-    const jugador = leaderboard.value.find(j => j.userId === userId)
-    if (jugador) {
-        jugador.stream = localStream.value
-    }
-
-    if (video.value) {
-        video.value.srcObject = localStream.value
-        await video.value.play()
-    }
-}
-
-// ---------- WEBRTC ----------
-function createPeerConnection(remoteUserId) {
-    const pc = new RTCPeerConnection()
-    pc.ontrack = (event) => {
-        const jugador = leaderboard.value.find(j => j.userId === remoteUserId)
-        if (jugador) jugador.stream = event.streams[0]
-    }
-    localStream.value.getTracks().forEach(track => pc.addTrack(track, localStream.value))
-    pc.onicecandidate = (event) => {
-        if (event.candidate) {
-            ws.value.send(JSON.stringify({ type: 'ice', to: remoteUserId, candidate: event.candidate }))
-        }
-    }
-    peers.value[remoteUserId] = pc
-    return pc
-}
-
-// ---------- ASSIGNACIÓ DE STREAMS ----------
-watch(leaderboard, async () => {
-    await nextTick()
-    leaderboard.value.forEach(j => {
-        // Si no hi ha stream, crear un placeholder negre
-        if (!j.stream) {
-            const canvasEl = document.createElement('canvas')
-            canvasEl.width = 640
-            canvasEl.height = 480
-            const ctx = canvasEl.getContext('2d')
-            ctx.fillStyle = '#222' // color placeholder
-            ctx.fillRect(0, 0, canvasEl.width, canvasEl.height)
-            j.stream = canvasEl.captureStream(15) // 15 fps
-        }
-
-        // Assignar el stream al video corresponent
-        const videoEl = document.querySelector(`#remoteVideo_${j.userId}`)
-        if (videoEl && videoEl.srcObject !== j.stream) {
-            videoEl.srcObject = j.stream
-            remoteVideos.value[j.userId] = videoEl
-        }
-    })
-}, { deep: true })
+// --- OBSERVADOR (Watcher): Aquesta és la clau per a la reactivitat remota ---
+// Cada cop que l'store rep un nou esquelet, aquest watcher s'activa.
+watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
+  if (newPoseData && newPoseData.from) {
+    dibuixarEsqueletRemot(newPoseData.from, newPoseData.pose);
+  }
+}, { deep: true });
 
 
-
-// ---------- CÀMERA ----------
+// --- LÒGICA DE LA CÀMERA LOCAL ---
 async function startCamera() {
+  if (cameraViewRef.value) {
     try {
-        await initMoveNet()
-        detecting = true
-        detectPose()
+      await cameraViewRef.value.start();
     } catch (e) {
-        console.error('Error obrint càmera:', e)
+      console.error('No es pot obrir la càmera:', e.message);
     }
+  }
 }
 
-function stopCamera() {
-    if (streamRef) {
-        streamRef.getTracks().forEach((t) => t.stop())
-        streamRef = null
-        video.value.srcObject = null
-    }
-    detecting = false
-    const ctx = canvas.value?.getContext('2d')
-    if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
+// --- LÒGICA DEL JOC I DETECCIÓ DE MOVIMENT ---
+
+// Aquesta funció es crida quan es completa una repetició
+function handleRepCount() {
+  workoutStore.incrementCount(); // Crida l'acció de l'store per sumar 1
+  up.value = false;
 }
 
-async function initMoveNet() {
-    await tf.ready()
-    detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-    })
+// Aquesta funció es crida a cada frame de la nostra càmera
+function detectarIPublicarMoviment(pose) {
+  // 1. Publica el nostre esquelet a la resta de jugadors
+  if (workoutStore.ws?.readyState === WebSocket.OPEN) {
+    workoutStore.ws.send(JSON.stringify({
+      type: 'pose_update',
+      pose: { keypoints: pose.keypoints.map(kp => ({ name: kp.name, x: kp.x, y: kp.y, score: kp.score })) }
+    }));
+  }
+
+  // 2. Comprova el nostre moviment per comptar repeticions localment
+  const exerciciNormalitzat = exercici.toLowerCase();
+  switch (exerciciNormalitzat) {
+    case 'flexiones': case 'flexions': checkFlexio(pose); break;
+    case 'sentadillas': case 'squats': checkEsquat(pose); break;
+    case 'saltos': case 'salts': checkSalt(pose); break;
+    case 'abdominales': checkAbdominal(pose); break;
+    case 'fons': checkFons(pose); break;
+    case 'pujades': checkPujades(pose); break;
+  }
 }
 
-async function detectPose() {
-    const ctx = canvas.value.getContext('2d')
-    async function loop() {
-        if (!detecting || video.value.paused || video.value.ended) return
-        const poses = await detector.estimatePoses(video.value)
-        if (poses.length > 0) {
-            drawPose(ctx, poses[0])
-            checkMoviment(poses[0])
+// Dibuixa l'esquelet rebut d'un altre jugador en el seu canvas
+function dibuixarEsqueletRemot(jugadorId, pose) {
+    const canvas = canvasRemots.value[jugadorId];
+    if (!canvas || !pose || !pose.keypoints) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const keypointsMap = new Map(pose.keypoints.map(kp => [kp.name, kp]));
+    const connections = [ ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'], ['right_shoulder', 'right_elbow'], ['left_elbow', 'left_wrist'], ['right_elbow', 'right_wrist'], ['left_shoulder', 'left_hip'], ['right_shoulder', 'right_hip'], ['left_hip', 'right_hip'], ['left_hip', 'left_knee'], ['right_hip', 'right_knee'], ['left_knee', 'left_ankle'], ['right_knee', 'right_ankle'] ];
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 5;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#3b82f6';
+    connections.forEach(([p1, p2]) => {
+        const kp1 = keypointsMap.get(p1);
+        const kp2 = keypointsMap.get(p2);
+        if (kp1 && kp2 && kp1.score > 0.4 && kp2.score > 0.4) {
+            ctx.beginPath();
+            ctx.moveTo(kp1.x, kp1.y);
+            ctx.lineTo(kp2.x, kp2.y);
+            ctx.stroke();
         }
-        requestAnimationFrame(loop)
-    }
-    requestAnimationFrame(loop)
-}
-
-function drawPose(ctx, pose) {
-    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
-    for (const kp of pose.keypoints) {
+    });
+    ctx.fillStyle = '#9b6bff';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#9b6bff';
+    pose.keypoints.forEach(kp => {
         if (kp.score > 0.4) {
-            ctx.beginPath()
-            ctx.arc(kp.x, kp.y, 6, 0, 2 * Math.PI)
-            ctx.fillStyle = '#00ffaa'
-            ctx.shadowBlur = 10
-            ctx.shadowColor = '#00ffaa'
-            ctx.fill()
+            ctx.beginPath();
+            ctx.arc(kp.x, kp.y, 7, 0, 2 * Math.PI);
+            ctx.fill();
         }
-    }
+    });
+    ctx.shadowBlur = 0;
 }
 
-// Funció checkMoviment (no proporcionada, assumim que existeix)
-function checkMoviment(pose) {
-    // Lògica de detecció de moviment
-    // Aquesta funció hauria d'actualitzar 'count' i enviar la nova repeticions al servidor
-    // Per exemple:
-    // if (movimentCompletat) {
-    //     count.value++
-    //     ws.value.send(JSON.stringify({ type: 'reps', reps: count.value }))
-    // }
+// --- FUNCIONS DE DETECCIÓ (Idèntiques a JuegoSolo.vue) ---
+function checkFlexio(pose) {
+  const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder');
+  const colze = pose.keypoints.find(k => k.name === 'left_elbow');
+  if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return;
+  const dist = Math.abs(espatlla.y - colze.y);
+  const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50;
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
 }
 
+function checkEsquat(pose) {
+  const maluc = pose.keypoints.find(k => k.name === 'left_hip');
+  const genoll = pose.keypoints.find(k => k.name === 'left_knee');
+  if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return;
+  const dist = Math.abs(maluc.y - genoll.y);
+  const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100;
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+}
 
-// ---------- SORTIR ----------
-function sortir() {
-    console.log('Sortint de la sessió...')
-    try {
-        stopTimer() // Assegurar que el temporitzador s'aturi
-        stopCamera()
-        localStream.value?.getTracks().forEach(t => t.stop())
-        Object.values(peers.value).forEach(pc => pc.close())
-        if (ws.value?.readyState === WebSocket.OPEN) {
-            ws.value.send(JSON.stringify({ type: 'leave' }))
-            ws.value.close()
-        }
-    } catch (e) {
-        console.error('Error tancant recursos:', e)
-    }
-    router.push('/')
+let initialY = null;
+let jumping = false;
+function checkSalt(pose) {
+  const peu = pose.keypoints.find(k => k.name === 'left_ankle');
+  if (!peu || peu.score < 0.4) return;
+  if (initialY === null) initialY = peu.y;
+  const delta = initialY - peu.y;
+  const UMBRAL_SALT = 30;
+  if (delta > UMBRAL_SALT && !jumping) {
+    jumping = true;
+  } else if (delta < 10 && jumping) {
+    jumping = false;
+    handleRepCount();
+  }
+}
+
+function checkAbdominal(pose) {
+  const nas = pose.keypoints.find((k) => k.name === 'nose');
+  const maluc = pose.keypoints.find((k) => k.name === 'left_hip');
+  if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return;
+  const distancia = Math.abs(nas.y - maluc.y);
+  const UMBRAL_ARRIBA = 150, UMBRAL_ABAJO = 100;
+  if (distancia < UMBRAL_ABAJO && !up.value) { up.value = true; }
+  if (distancia > UMBRAL_ARRIBA && up.value) { handleRepCount(); }
+}
+
+function checkFons(pose) {
+  const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder');
+  const colze = pose.keypoints.find(k => k.name === 'left_elbow');
+  if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return;
+  const dist = Math.abs(espatlla.y - colze.y);
+  const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50;
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+}
+
+function checkPujades(pose) {
+  const genoll = pose.keypoints.find(k => k.name === 'left_knee');
+  const peu = pose.keypoints.find(k => k.name === 'left_ankle');
+  if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return;
+  const dist = Math.abs(genoll.y - peu.y);
+  const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300;
+  if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
+  if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+}
+
+function finalitzarSessio(isUnmount = false) {
+  stopCamera();
+  const repsFinals = count.value;
+
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({
+      type: 'finish',
+      reps: repsFinals,
+      exercici: exercici.toLowerCase(),
+      codi_acces: codi_acces
+    }));
+    ws.value.send(JSON.stringify({ type: 'leave' }));
+    ws.value.close();
+    ws.value = null;
+  }
+
+  if (!isUnmount) {
+    router.push({
+      name: 'EstadistiquesSessio',
+      params: {
+        ejercicio: exercici,
+        reps: repsFinals,
+        tempsTotal: 0,
+        calories: Math.round(repsFinals * 0.35)
+      }
+    });
+  }
 }
 </script>
 
 <style scoped>
 .bg-fitai-deep-space {
-    background: linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
+    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
+  background-attachment: fixed;
 }
-
-.player-card {
-    backdrop-filter: blur(12px);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.fade-in-container {
+  animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
 }
-
-.neon-player-name {
-    text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-.bg-dark {
-    background: rgba(0, 0, 0, 0.3);
+.position-relative {
+  position: relative;
 }
-
 .top-left-back-btn {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    color: white !important;
-    background: #8b5cf6 !important;
-    border-radius: 8px !important;
-    z-index: 1000;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+  color: white !important;
+  background: #22c55e !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+  transition: all 0.3s ease;
 }
-
-.exercise-title {
-    background: linear-gradient(90deg, #8b5cf6, #3b82f6, #00ffaa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 900;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    animation: gradientShift 6s ease infinite;
+.top-left-back-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 1);
 }
-
-@keyframes gradientShift {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
+.player-card {
+  background: rgba(30, 30, 47, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+}
+.neon-player-name {
+  color: #4dd0e1;
+  text-shadow: 0 0 5px #4dd0e1, 0 0 10px #4dd0e1;
+}
+.neon-player-name-remote {
+    color: #a5b4fc;
+    text-shadow: 0 0 5px #a5b4fc;
+}
+.remote-canvas {
+    width: 100%;
+    height: auto;
+    background-color: #111827;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>

@@ -94,6 +94,10 @@
         </v-row>
         
  <v-divider class="divider-glow mx-auto my-6"></v-divider>
+        
+        <StreakTracker class="w-100 mb-4" /> 
+        
+        <v-divider class="divider-glow mx-auto my-6"></v-divider>
 
         <v-btn 
             @click="goToHome"
@@ -134,7 +138,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore' 
+import { useAuthStore } from '@/stores/authStore'
+import StreakTracker from '@/components/StreakTracker.vue' 
 
 const router = useRouter()
 const authStore = useAuthStore()

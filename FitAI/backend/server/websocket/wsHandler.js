@@ -62,9 +62,23 @@ async function netejarSessio(codi_acces) {
 }
 
 /**
- * Gestiona una nova connexió de WebSocket.
- * @param {WebSocket} ws - La instància del client WebSocket.
+ * Envia un missatge a tots els participants d'una sessió EXCEPTE a l'emissor.
+ * @param {string} codi_acces - El codi de la sala.
+ * @param {object} message - L'objecte del missatge a enviar.
+ * @param {string} senderId - L'ID de l'usuari que envia el missatge.
  */
+function broadcastToOthers(codi_acces, message, senderId) {
+  const session = sessions[codi_acces];
+  if (!session) return;
+  Object.entries(session.participants).forEach(([userId, { ws }]) => {
+    // Només envia si l'usuari no és l'emissor i la connexió està oberta
+    if (userId !== senderId.toString() && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+    }
+  });
+}
+
+
 export const handleConnection = (ws) => {
   console.log('Nou client WebSocket connectat');
   let currentCodiAcces = null;
@@ -73,48 +87,40 @@ export const handleConnection = (ws) => {
   ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
-      console.log('Missatge rebut:', message);
+      // Evitem omplir la consola amb les actualitzacions de l'esquelet
+      if (message.type !== 'pose_update') {
+          console.log('Missatge rebut:', message);
+      }
 
       switch (message.type) {
         case 'join': {
           const { codi_acces, userId, userName } = message;
 
           if (!codi_acces || !userId || !userName) {
-            return ws.send(JSON.stringify({ error: 'codi_acces, userId i userName requerits' }));
+            return ws.send(JSON.stringify({ type: 'error', message: 'Dades "join" incompletes' }));
           }
 
+          // Si la sessió no existeix a la memòria, la creem consultant la BBDD
           if (!sessions[codi_acces]) {
-            const [rows] = await pool.execute('SELECT id FROM sales WHERE codi_acces = ?', [codi_acces]);
+            const [rows] = await pool.execute('SELECT id FROM sales WHERE codi_acces = ? AND estat = ?', [codi_acces, 'esperant']);
             if (rows.length === 0) {
-              return ws.send(JSON.stringify({ type: 'error', message: 'La sala no existeix.' }));
+              return ws.send(JSON.stringify({ type: 'error', message: 'La sala no existeix o ja ha començat.' }));
             }
             sessions[codi_acces] = { sala_id: rows[0].id, participants: {} };
           }
 
           const session = sessions[codi_acces];
-          const numParticipants = Object.keys(session.participants).length;
-
-          if (numParticipants >= 4) {
-            return ws.send(JSON.stringify({
-              type: 'error',
-              message: 'La sessió està plena (màxim 4 jugadors).'
-            }));
+          if (Object.keys(session.participants).length >= 4) {
+            return ws.send(JSON.stringify({ type: 'error', message: 'La sala està plena.' }));
           }
 
+          // Afegim el participant
           session.participants[userId] = { ws, userName, reps: 0 };
           currentCodiAcces = codi_acces;
           currentUserId = userId;
 
+          // Notifiquem a tothom
           broadcastLeaderboard(codi_acces);
-
-          ws.send(JSON.stringify({
-            type: 'joined',
-            codi_acces,
-            userId,
-            message: 'T’has unit a la sessió correctament.'
-          }));
-
-          console.log(`Usuari ${userId} (${userName}) unit a la sessió ${codi_acces} (${numParticipants + 1}/4 jugadors)`);
           break;
         }
 
@@ -125,22 +131,26 @@ export const handleConnection = (ws) => {
           try {
             await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['en_curs', codi_acces]);
             console.log(`Partida iniciada a la sessió ${codi_acces}`);
-            broadcastToSession(codi_acces, {
-              type: 'start',
-              codi_acces
-            });
+            broadcastToSession(codi_acces, { type: 'start', codi_acces });
           } catch (error) {
             console.error("Error a l'iniciar la partida:", error);
           }
           break;
         }
+        
+        case 'pose_update': {
+            if (currentCodiAcces && currentUserId && message.pose) {
+              broadcastToOthers(currentCodiAcces, {
+                type: 'pose_update',
+                from: currentUserId,
+                pose: message.pose
+              }, currentUserId);
+            }
+            break;
+        }
 
         case 'update': {
-          if (
-            currentCodiAcces &&
-            currentUserId &&
-            sessions[currentCodiAcces]?.participants[currentUserId]
-          ) {
+          if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]?.participants[currentUserId]) {
             sessions[currentCodiAcces].participants[currentUserId].reps = message.reps || 0;
             broadcastLeaderboard(currentCodiAcces);
           }
@@ -150,23 +160,20 @@ export const handleConnection = (ws) => {
         case 'finish': {
           const { reps, exercici, codi_acces } = message;
           const session = sessions[codi_acces];
-          
           if (!session || !currentUserId || !exercici || reps === undefined) return;
 
-          const { sala_id } = session;
           const repsFinals = parseInt(reps, 10) || 0;
 
           if (repsFinals > 0) {
             try {
               await pool.execute(
-                'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = ?',
-                [currentUserId, sala_id, exercici, repsFinals, repsFinals]
+                'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)',
+                [currentUserId, session.sala_id, exercici, repsFinals]
               );
               await pool.execute(
                 'UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1 WHERE id = ?',
                 [repsFinals, currentUserId]
               );
-              console.log(`Dades guardades per usuari ${currentUserId} a sala ${sala_id}: ${repsFinals} ${exercici}`);
             } catch (error) {
               console.error("Error al guardar dades 'finish':", error);
             }
@@ -177,9 +184,9 @@ export const handleConnection = (ws) => {
         case 'leave': {
           if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
             delete sessions[currentCodiAcces].participants[currentUserId];
+            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentCodiAcces}`);
             broadcastLeaderboard(currentCodiAcces);
             netejarSessio(currentCodiAcces);
-            console.log(`Usuari ${currentUserId} ha sortit de la sessió ${currentCodiAcces}`);
             currentCodiAcces = null;
             currentUserId = null;
           }
@@ -187,10 +194,11 @@ export const handleConnection = (ws) => {
         }
 
         default:
-          ws.send(JSON.stringify({ error: 'Tipus de missatge desconegut' }));
+          ws.send(JSON.stringify({ type: 'error', message: 'Tipus de missatge desconegut' }));
       }
     } catch (error) {
       console.error('Error processant missatge WS:', error);
+      ws.send(JSON.stringify({ type: 'error', message: 'Error intern del servidor' }));
     }
   });
 
