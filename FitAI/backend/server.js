@@ -29,6 +29,9 @@ app.use(session(sessionConfig));
 // ======================================
 // Serveix fitxers estàtics (imatges, etc.) des de la carpeta 'public' DEL FRONTEND
 app.use(express.static(path.join(__dirname, '../frontend/public')));
+// Serve la carpeta uploads desde el backend
+app.use('/uploads', express.static(path.join(__dirname, '../frontend/public/uploads')));
+
 // ======================================
 
 // Rutes de l'API

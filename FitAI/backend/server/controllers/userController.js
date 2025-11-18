@@ -1,34 +1,54 @@
 import pool from '../config/database.js';
-
-// ======================================================
-// IMPORTS NOUS PER PUJAR IMATGES
-// ======================================================
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs'; // <--- 1. IMPORTANTE: Importar 'fs'
+import { fileURLToPath } from 'url';
+
+// Configuració de __dirname per a ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ======================================================
 // CONFIGURACIÓ DE MULTER (PER PUJAR IMATGES)
 // ======================================================
 
-// Defineix on es desaran els fitxers
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // IMPORTANT: Assegura't que la carpeta 'public/uploads/profiles' existeixi!
-    cb(null, '../../../frontend/public/uploads/profiles/');
+    // Ruta absoluta on volem guardar la imatge
+    const uploadPath = path.join(__dirname, '../../../', 'frontend/public/uploads');
+    
+    // 2. IMPORTANT: Comprovar si la carpeta existeix, si no, crear-la
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+      console.log(`Carpeta creada: ${uploadPath}`);
+    }
+
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    // Canvia el nom del fitxer per evitar conflictes
-    const userId = req.session.userId; // Obtenim l'ID de la sessió
-    const fileExt = path.extname(file.originalname); // Extensió (ex: .jpg)
+    const userId = req.session.userId; 
+    const fileExt = path.extname(file.originalname); 
     cb(null, `user-${userId}-${Date.now()}${fileExt}`);
   }
 });
 
 // Crea la instància de Multer amb la configuració d'emmagatzematge
-const upload = multer({ storage: storage });
+// Configuración completa de Multer
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // máximo 10MB
+  fileFilter: (req, file, cb) => {
+    // Permite cualquier tipo de imagen
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("El archivo no es una imagen. Solo se permiten imágenes."));
+    }
+    cb(null, true);
+  }
+});
+
 
 // ======================================================
-// CONTROLADORS EXISTENTS (Ranking i Ratxa)
+// CONTROLADORS EXISTENTS (Ranking i Ratxa) - SENSE CANVIS
 // ======================================================
 
 // --- Función de Ranking (Sin cambios) ---
@@ -112,59 +132,61 @@ export const getStreak = async (req, res) => {
 // NOVA FUNCIÓ PER PUJAR LA FOTO DE PERFIL
 // ======================================================
 export const updateProfilePicture = [
-  // 1. Comprova que l'usuari està autenticat
+  // 1. Comprobación de sesión
   (req, res, next) => {
     if (!req.session.userId) {
-      return res.status(401).json({ message: 'No autoritzat' });
+      return res.status(401).json({ message: 'No autorizado' });
     }
     next();
   },
-  
-  // 2. Multer processa el fitxer anomenat 'profileImage'
-  // (Aquest nom ha de coincidir amb el FormData del frontend)
-  upload.single('profileImage'), 
 
-  // 3. Executa la lògica per desar la ruta a la BD
+  // 2. Multer con gestión de errores
+  (req, res, next) => {
+    upload.single('profileImage')(req, res, function (err) {
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
+
+  // 3. Lógica para guardar la foto
   async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: 'No s\'ha pujat cap fitxer.' });
+        return res.status(400).json({ message: 'No se ha subido ninguna imagen.' });
       }
 
-      // Aquesta és la ruta que es desarà a la BD (ex: /uploads/profiles/user-1-12345.jpg)
-      const fotoUrl = `/uploads/profiles/${req.file.filename}`;
+      // URL accesible desde el frontend
+      const fotoUrl = `/uploads/${req.file.filename}`;
 
-      // 4. Actualitza la BD amb la nova ruta de la foto
+
       await pool.execute(
         'UPDATE usuaris SET foto_url = ? WHERE id = ?',
         [fotoUrl, req.session.userId]
       );
 
-      // 5. Obtenir l'usuari actualitzat per retornar-lo al frontend
-      // (L'authStore espera que li retornis l'objecte d'usuari)
       const [rows] = await pool.execute(
-        // Seleccionem només els camps segurs, SENSE la contrasenya
         'SELECT id, nom, email, foto_url, sessions_completades, repeticions_totals, ratxa, ultima_sessio FROM usuaris WHERE id = ?',
         [req.session.userId]
       );
-      
+
       if (rows.length === 0) {
-          return res.status(404).json({ message: 'Usuari no trobat després d\'actualitzar' });
+        return res.status(404).json({ message: 'Usuario no encontrado' });
       }
 
       const updatedUser = rows[0];
+      req.session.user = updatedUser;
 
-      // 6. Actualitza també la sessió del servidor
-      req.session.user = updatedUser; 
-      req.session.save((err) => {
-        if (err) console.error("Error en desar la sessió:", err);
-        
-        // 7. Respon al frontend amb l'usuari actualitzat
-        res.json(updatedUser);
+      req.session.save(() => {
+        res.json({
+          message: "Foto actualizada correctamente",
+          user: updatedUser
+        });
       });
 
     } catch (error) {
-      console.error('Error al pujar la imatge:', error);
+      console.error('Error al subir la imagen:', error);
       res.status(500).json({ message: 'Error del servidor' });
     }
   }

@@ -81,26 +81,26 @@ export const useAuthStore = defineStore('auth', {
     },
     
     async updateProfilePicture(formData) {
-       // ... (el teu codi de pujar foto queda igual) ...
-      try {
-        const response = await fetch('/api/user/profile/picture', { 
-          method: 'POST',
-          body: formData,
-        });
+  try {
+    const response = await fetch('/api/user/profile/picture', { 
+      method: 'POST',
+      body: formData,
+    });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Error al pujar la imatge.");
-        }
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Error al pujar la imatge.");
+    }
 
-        const updatedUser = await response.json();
-        this.user = updatedUser; 
+    const data = await response.json();
+    this.user = data.user; // <-- SOLO ESTE CAMBIO
 
-      } catch (error) {
-        console.error('Error al pujar la foto:', error);
-        throw error;
-      }
-    },
+  } catch (error) {
+    console.error('Error al pujar la foto:', error);
+    throw error;
+  }
+},
+
     
     // 3. AFEGEIX AQUESTA NOVA ACCIÓ SENCERA
     setStreakPopupShown() {

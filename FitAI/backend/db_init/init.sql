@@ -38,20 +38,25 @@ CREATE TABLE IF NOT EXISTS participacions (
     FOREIGN KEY (sala_id) REFERENCES sales(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Els teus INSERTs estan perfectes per començar
--- Inserta usuarios con datos en las nuevas columnas
+-- === INSERCIÓ DE DADES INICIALS ===
+
+-- Inserta TOTS els usuaris en una única comanda per a una inicialització eficient
 INSERT INTO usuaris (nom, email, password, sessions_completades, repeticions_totals, ratxa, ultima_sessio, foto_url) 
 VALUES 
-('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400, 5, '2025-11-16', '/uploads/profiles/default-user-1.png'),
+-- Usuaris predefinits
+('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400, 5, '2025-11-16', '/uploads/default-user-1.png'),
 ('1', '1@fit.ai', '$2b$10$srE4ojgoCYxoEqlO1Uhqbe4y434PpbM/cxAAh3jwFKKGJ91m6HoRu', 18, 12100, 2, '2025-11-14', NULL),
-('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350, 0, NULL, NULL);
+('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350, 0, NULL, NULL),
 
--- Inserta una sala (igual que antes, está perfecto)
+-- Usuaris addicionals (2, 3, 4)
+('2', '2@fit.ai', '$2b$10$uXSCUTeD2kmsg7AM0IvAVeW6TyRMClSYHIMJWZjege5JE9rpSBJMS', 0, 0, 0, NULL, NULL),
+('3', '3@fit.ai', '$2b$10$vWKhKShsaNE0yj14i.a3Ou7uiL7pRm2jIT1Z1Z7Olut6PsWSuA5ZS', 0, 0, 0, NULL, NULL),
+('4', '4@fit.ai', '$2b$10$1ISr1ZhcaPpC3yNN.ZoIZeNN1bpMjaoKiO.HiboE0Qabj7aOlHWlW', 0, 0, 0, NULL, NULL);
+
+-- Inserta una sala de prova
 INSERT INTO sales (creador_id, codi_acces, estat) VALUES (1, 'FITAI1', 'finalitzada');
 
--- Inserta participaciones
--- Ahora el usuari_id = 1 puede tener dos entradas en la misma sala,
--- porque tienen un 'exercici' diferente (prueba la nueva Primary Key)
+-- Inserta participacions de prova
 INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions)
 VALUES
 (1, 1, 'sentadillas', 50),

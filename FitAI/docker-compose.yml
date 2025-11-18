@@ -44,6 +44,7 @@ services:
       - "4000:4000"
     volumes:
       - ./backend:/usr/src/app
+      - ./frontend/public/uploads:/usr/src/app/../frontend/public/uploads
       - /usr/src/app/node_modules
     environment:
       DB_HOST: db
