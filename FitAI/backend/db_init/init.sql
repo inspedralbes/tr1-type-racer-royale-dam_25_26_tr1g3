@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS participacions (
 -- Inserta usuarios con datos en las nuevas columnas
 INSERT INTO usuaris (nom, email, password, sessions_completades, repeticions_totals, ratxa, ultima_sessio, foto_url) 
 VALUES 
-('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400, 5, '2025-11-16', '/uploads/profiles/default-user-1.png'),
+('nodeuser', 'nodeuser@fit.ai', '$2b$10$6O46vOctyIawTSgRv7kuVO3vkeyWguz7rZvTncDOv6tZJW8dF8Ssy', 25, 15400, 5, '2025-11-16', '/uploads/default-user-1.png'),
 ('1', '1@fit.ai', '$2b$10$srE4ojgoCYxoEqlO1Uhqbe4y434PpbM/cxAAh3jwFKKGJ91m6HoRu', 18, 12100, 2, '2025-11-14', NULL),
 ('TestUser', 'test@user.com', '$2a$10$K.j.7.n1.aC5.wB1.Xf1..O.1g.0.A2.bC3.dE4.fG5.hI6.jK7.', 5, 350, 0, NULL, NULL);
 

@@ -25,7 +25,7 @@
           >
 
           <v-avatar size="128" class="profile-avatar mb-4 elevation-6" @click="triggerFileInput">
-            <v-img :src="previewImage || user.foto_url || defaultAvatar" alt="Foto de perfil"></v-img>
+            <v-img :src="previewImage || (user.foto_url ? user.foto_url + '?' + Date.now() : defaultAvatar)" alt="Foto de perfil" />
             
             <div class="camera-overlay">
                 <v-icon size="36" color="white">mdi-camera-plus</v-icon>
@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore' 
 
@@ -150,24 +150,28 @@ const uploading = ref(false)
 const uploadMessage = ref(null)
 const uploadMessageType = ref('info')
 
+// ----------------------------
+// Al muntar el component
+// ----------------------------
+onMounted(async () => {
+  if (!authStore.user) {
+    // Crida al backend per carregar la sessió i l'usuari
+    await authStore.checkAuth()
+  }
+})
 
-/**
- * 1. Simula un clic al camp de fitxer ocult.
- */
+// ----------------------------
+// Funcions per pujar foto i altres
+// ----------------------------
 const triggerFileInput = () => {
     fileInput.value.click();
 }
 
-/**
- * 2. Gestiona la selecció del fitxer i crea una previsualització.
- */
 const onFileSelected = (event) => {
     const file = event.target.files[0];
     if (file) {
-        // Estableix el fitxer per a la càrrega
         selectedFile.value = file;
         
-        // Crea una URL local per a la previsualització
         const reader = new FileReader();
         reader.onload = (e) => {
             previewImage.value = e.target.result;
@@ -181,13 +185,6 @@ const onFileSelected = (event) => {
     }
 }
 
-/**
- * 3. Lògica per a pujar la foto al servidor.
- * La funció **`uploadPhoto`** és la que gestiona el guardat de la foto seleccionada.
- */
-/**
- * 3. Lògica per a pujar la foto al servidor.
- */
 const uploadPhoto = async () => {
     if (!selectedFile.value) return;
 
@@ -197,13 +194,8 @@ const uploadPhoto = async () => {
 
     try {
         const formData = new FormData();
-        
-        // ===================================================
-        // === LÍNIA CORREGIDA ===
-        // Ha de ser 'profileImage' per coincidir amb Multer al backend
         formData.append('profileImage', selectedFile.value); 
-        // ===================================================
-        
+
         await authStore.updateProfilePicture(formData); 
         
         uploadMessage.value = 'Foto de perfil actualitzada correctament!';
@@ -222,9 +214,6 @@ const uploadPhoto = async () => {
     }
 }
 
-/**
- * 4. Cancel·la la càrrega i neteja la previsualització.
- */
 const cancelUpload = () => {
     selectedFile.value = null;
     previewImage.value = null;
@@ -232,18 +221,12 @@ const cancelUpload = () => {
     fileInput.value.value = '';
 }
 
-/**
- * 5. Funció per tornar a la pàgina d'inici.
- * Redirigeix a la ruta amb el nom 'FitAi'.
- */
-const goToHome = () => {
-    router.push('/');
-}
-
+const goToHome = () => router.push('/')
 const handleLogout = async () => {
     await authStore.logout();
     router.push({ name: 'Login' });
 }
+
 </script>
 
 <style scoped>
