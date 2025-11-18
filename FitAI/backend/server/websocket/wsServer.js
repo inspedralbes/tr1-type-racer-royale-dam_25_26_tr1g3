@@ -13,6 +13,7 @@ export const createWebSocketServer = (httpServer) => {
     } else {
       socket.destroy();
     }
+    
   });
 
   wss.on('connection', handleConnection);
