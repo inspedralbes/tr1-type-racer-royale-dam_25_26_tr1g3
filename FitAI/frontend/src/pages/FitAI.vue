@@ -14,7 +14,13 @@
             class="profile-btn-glow"
             @click="goToProfile"
           >
-            <v-icon size="24">mdi-account-circle</v-icon>
+            <v-avatar size="40"> 
+                <v-img 
+                    :src="profilePhotoUrl" 
+                    alt="Foto de perfil" 
+                />
+            </v-avatar>
+            
             <v-tooltip activator="parent" location="bottom">
               El meu Perfil
             </v-tooltip>
@@ -51,17 +57,31 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router' // Importa useRouter per a la navegació
+import { computed } from 'vue' // <-- 1. Importar 'computed'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore' // <-- 2. Importar l'store d'autenticació
 // Importar els nous components
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
 import StreakTracker from '@/components/StreakTracker.vue'
 
 const router = useRouter()
+const authStore = useAuthStore() // <-- 3. Inicialitzar l'store
+
+const defaultAvatar = 'https://cdn.vuetifyjs.com/images/cards/halcyon.png' 
+
+// 4. Crear una propietat computada per obtenir la URL de la foto
+const profilePhotoUrl = computed(() => {
+    const user = authStore.user;
+    if (user && user.foto_url) {
+        // Afegim el Date.now() per forçar la recàrrega després d'una pujada
+        return user.foto_url + '?' + Date.now(); 
+    }
+    return defaultAvatar;
+});
 
 /**
  * Funció per navegar a la pàgina de perfil.
- * Assegura't que el nom de la ruta ('Profile') coincideix amb el teu router/index.js
  */
 const goToProfile = () => {
   router.push({ name: 'Profile' });
@@ -160,7 +180,7 @@ const goToProfile = () => {
 }
 
 /* ==================================== */
-/* ======== NOU ESTIL BOTÓ PERFIL ======== */
+/* ======== NOU ESTIL BOTÓ PERFIL (Mantenim l'estil exterior, canviem l'interior) ======== */
 /* ==================================== */
 .profile-btn-glow {
     /* Estil base del botó Vuetify (icon, tonal) */
