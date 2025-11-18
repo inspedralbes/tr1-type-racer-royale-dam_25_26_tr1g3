@@ -6,12 +6,18 @@
     </h3>
     
     <div class="d-flex justify-center align-center mb-6">
-      <div class="streak-container">
+      <div 
+        class="streak-container" 
+        @click="handleManualClick"
+        :style="enablePopup ? 'cursor: pointer' : ''"
+      >
         <v-img
           :src="rachaActual.imagen"
           :alt="`Racha día ${rachaActual.dias}`"
           class="streak-image"
-          :width="rachaActual.size / 1.5"   :height="rachaActual.size / 1.5"  />
+          :width="rachaActual.size / 1.5" 
+          :height="rachaActual.size / 1.5" 
+        />
         <div class="streak-text text-center mt-3">
           <p class="text-h5 font-weight-bold text-white mb-1">
             {{ rachaActual.dias }} {{ rachaActual.dias === 1 ? 'Día' : 'Días' }}
@@ -22,94 +28,53 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <v-dialog
-    v-model="showStreakDialog"
-    max-width="400"
-    persistent
-  >
-    <v-card class="pa-4 rounded-xl glass-card-futuristic text-center">
-      <v-card-title class="text-h5 font-weight-bold text-white">
-        ¡Bienvenido de nuevo!
-      </v-card-title>
-      <v-card-text class="text-white">
-        <p class="text-h6 mb-4">Tu racha actual es de:</p>
-        <div class="d-flex justify-center align-center mb-4">
-          <div class="streak-container-dialog">
-            <v-img
-              :src="rachaActual.imagen"
-              :alt="`Racha día ${rachaActual.dias}`"
-              class="streak-image"
-              :width="rachaActual.size"
-              :height="rachaActual.size"
-            />
-          </div>
-        </div>
-        <p class="text-h4 font-weight-bold text-amber-lighten-2">
-          {{ rachaActual.dias }} {{ rachaActual.dias === 1 ? 'Día' : 'Días' }}
-        </p>
-        <p class="text-caption text-white text-opacity-75 mt-1">
-          ¡Sigue así para mantener el fuego!
-        </p>
-      </v-card-text>
-      <v-card-actions class="justify-center">
-        <v-btn
-          color="green-lighten-1"
-          variant="flat"
-          @click="showStreakDialog = false"
-        >
-          ¡Entendido!
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <StreakPopup 
+      v-if="enablePopup"
+      v-model="showStreakDialog"
+      :racha-actual="rachaActual"
+    />
+    
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useAuthStore } from '@/stores/authStore'; 
+import { useAuthStore } from '@/stores/authStore'
+import StreakPopup from './StreakPopup.vue' // Tu componente Popup separado
 
-// --- LÓGICA DE RACHAS (Sense canvis, només funcionalitat) ---
-const rachaData = ref({
-  dias: 1,
-  ultimoAcceso: null
-})
-const showStreakDialog = ref(false)
-const authStore = useAuthStore(); 
-
-// Imatges (Mantenim les mides originals aquí, ja que es divideixen al template)
-const rachaImagenes = [
-  {
-    dias: 1,
-    imagen: new URL('@/assets/racha1.png', import.meta.url).href,
-    size: 120
-  },
-  {
-    dias: 2,
-    imagen: new URL('@/assets/racha2.png', import.meta.url).href,
-    size: 140
-  },
-  {
-    dias: 3,
-    imagen: new URL('@/assets/racha3.png', import.meta.url).href,
-    size: 160
+// --- DEFINIR PROPS ---
+const props = defineProps({
+  enablePopup: {
+    type: Boolean,
+    default: true // Por defecto, el popup funciona.
   }
+})
+
+const rachaData = ref({ dias: 1, ultimoAcceso: null })
+const showStreakDialog = ref(false)
+const authStore = useAuthStore()
+
+// Imágenes
+const rachaImagenes = [
+  { dias: 1, imagen: new URL('@/assets/racha1.png', import.meta.url).href, size: 120 },
+  { dias: 2, imagen: new URL('@/assets/racha2.png', import.meta.url).href, size: 140 },
+  { dias: 3, imagen: new URL('@/assets/racha3.png', import.meta.url).href, size: 160 }
 ]
 
 const rachaActual = computed(() => {
   const dias = rachaData.value.dias
-  if (dias >= 3) {
-    return { ...rachaImagenes[2], dias }
-  } else if (dias === 2) {
-    return rachaImagenes[1]
-  } else {
-    return rachaImagenes[0]
-  }
+  if (dias >= 3) return { ...rachaImagenes[2], dias }
+  else if (dias === 2) return rachaImagenes[1]
+  else return rachaImagenes[0]
 })
 
-const loadUserStreak = async () => { /* ... */ }
-const updateUserStreak = async () => { /* ... */ }
+const handleManualClick = () => {
+  // Solo abre el diálogo si el popup está habilitado
+  if (props.enablePopup) {
+    showStreakDialog.value = true
+  }
+}
 
 const checkAndUpdateUserStreak = async () => {
   try {
@@ -123,7 +88,9 @@ const checkAndUpdateUserStreak = async () => {
       const data = await response.json();
       rachaData.value = data;
 
-      if (rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
+      // LÓGICA CONDICIONAL:
+      // Solo mostramos el popup automático si enablePopup es TRUE
+      if (props.enablePopup && rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
         nextTick(() => {
           showStreakDialog.value = true;
           authStore.setStreakPopupShown(); 
@@ -131,10 +98,10 @@ const checkAndUpdateUserStreak = async () => {
       }
 
     } else {
-      console.error('Error al comprovar/actualitzar la ratxa:', response.statusText);
+      console.error('Error fetching streak');
     }
   } catch (error) {
-    console.error('Error de xarxa en comprovar/actualitzar la ratxa:', error);
+    console.error('Network error streak', error);
   }
 }
 
