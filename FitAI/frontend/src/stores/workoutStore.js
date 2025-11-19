@@ -3,6 +3,8 @@ import { defineStore } from 'pinia';
 import { useAuthStore } from '@/stores/authStore';
 
 export const useWorkoutStore = defineStore('workout', () => {
+  const authStore = useAuthStore();
+
   // ======================================================
   // === ESTAT (State) ===
   // ======================================================
@@ -13,16 +15,18 @@ export const useWorkoutStore = defineStore('workout', () => {
 
   // --- Estat del Joc ---
   const leaderboard = ref([]);
-  const count = ref(0); // El teu comptador personal de repeticions
-  const lastReceivedPose = ref(null); // Guarda l'últim esquelet rebut
+  const count = ref(0); 
+  const lastReceivedPose = ref(null); 
+  
+  // Estat per controlar si la partida ha començat
+  const gameStarted = ref(false); 
 
-  // --- Estat del Temporitzador (CONSERVAT) ---
+  // --- Estat del Temporitzador ---
   const timerActive = ref(false);
   const timerFinished = ref(false);
   const timeRemaining = ref(60);
   const preCount = ref(0);
   
-  // --- Referències internes (no reactives) ---
   let timerInterval = null;
   let preCountInterval = null;
 
@@ -42,11 +46,19 @@ export const useWorkoutStore = defineStore('workout', () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   });
 
+  // Determina si l'usuari actual és l'amfitrió (Host)
+  const isHost = computed(() => {
+    if (leaderboard.value.length > 0 && authStore.user) {
+        return leaderboard.value[0].userId === authStore.user.id;
+    }
+    return false;
+  });
+
   // ======================================================
   // === ACCIONS (Actions) ===
   // ======================================================
 
-  // --- 1. Lògica del Temporitzador (CONSERVADA) ---
+  // --- 1. Lògica del Temporitzador ---
   function startPreCount() {
     if (timerActive.value || preCountInterval) return;
     preCount.value = 5;
@@ -90,23 +102,28 @@ export const useWorkoutStore = defineStore('workout', () => {
     timerFinished.value = false;
   }
 
-  // --- 2. Lògica de Repeticions (AJUSTADA) ---
+  // --- 2. Lògica de Repeticions ---
   function incrementCount() {
-    // NOTA: He tret la condició 'if (!timerActive.value) return;'
-    // perquè el comptador funcioni sense que el temporitzador estigui actiu.
-    // Pots tornar a afegir-la quan implementis el botó per iniciar el temps.
-    
     count.value++;
     if (ws.value?.readyState === WebSocket.OPEN) {
       ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
     }
   }
 
-  // --- 3. Lògica de WebSocket (AMB LÒGICA D'ESQUELETS) ---
+  // 🔴 CORRECCIÓ: El backend espera 'start', no 'start_game'
+  function sendStartSignal() {
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ 
+            type: 'start', 
+            codi_acces: currentCodiAcces 
+        }));
+    }
+  }
+
+  // --- 3. Lògica de WebSocket ---
   function connectWebSocket(codi_acces, exercici) {
-    const authStore = useAuthStore();
     if (!authStore.user) {
-      console.error("No hi ha usuari autenticat per començar la sessió.");
+      console.error("No hi ha usuari autenticat.");
       return;
     }
     
@@ -114,6 +131,8 @@ export const useWorkoutStore = defineStore('workout', () => {
     currentExercici = exercici;
     currentUserId = authStore.user.id;
     currentUserName = authStore.userName;
+    
+    gameStarted.value = false; 
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
@@ -142,8 +161,12 @@ export const useWorkoutStore = defineStore('workout', () => {
           break;
         case 'joined':
           console.log('Confirmat: Unit a la sala.');
-          // Aquesta lògica de 'start' la pots activar aquí o des d'un botó
-          // ws.value.send(JSON.stringify({ type: 'start', codi_acces: currentCodiAcces }));
+          break;
+        
+        // 🔴 CORRECCIÓ: El backend respon amb 'start', no 'start_game'
+        case 'start':
+          console.log("Partida començada!");
+          gameStarted.value = true;
           break;
       }
     };
@@ -153,7 +176,7 @@ export const useWorkoutStore = defineStore('workout', () => {
   }
 
   function disconnectWebSocket() {
-    stopTimer(); // Aturem el temporitzador en desconnectar
+    stopTimer();
     if (ws.value?.readyState === WebSocket.OPEN) {
       ws.value.send(JSON.stringify({
         type: 'finish',
@@ -166,12 +189,13 @@ export const useWorkoutStore = defineStore('workout', () => {
     }
     ws.value = null;
     isConnected.value = false;
+    gameStarted.value = false; 
   }
   
   // --- 4. Neteja de l'Store ---
   function cleanupSession() {
     disconnectWebSocket();
-    resetTimer(); // Resetejem el temporitzador
+    resetTimer();
     count.value = 0;
     leaderboard.value = [];
     lastReceivedPose.value = null;
@@ -179,13 +203,10 @@ export const useWorkoutStore = defineStore('workout', () => {
     currentExercici = null;
     currentUserId = null;
     currentUserName = null;
+    gameStarted.value = false; 
   }
 
-  // ======================================================
-  // === Retornem l'API pública de l'store ===
-  // ======================================================
   return {
-    // Estat i Getters
     ws,
     isConnected,
     leaderboard,
@@ -196,14 +217,16 @@ export const useWorkoutStore = defineStore('workout', () => {
     preCount,
     formattedTime,
     lastReceivedPose,
+    gameStarted,
+    isHost,
     
-    // Accions
     startPreCount,
     stopTimer,
     resetTimer,
     incrementCount,
     connectWebSocket,
     disconnectWebSocket,
-    cleanupSession
+    cleanupSession,
+    sendStartSignal
   };
 });
