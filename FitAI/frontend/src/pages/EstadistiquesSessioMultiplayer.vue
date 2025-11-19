@@ -36,6 +36,15 @@
                 </v-col>
               </v-row>
 
+              <v-row class="mb-8 ga-3"> 
+                <v-col cols="12" class="d-flex">
+                  <v-card class="data-card time-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
+                    <h3 class="text-caption font-weight-light text-cyan-lighten-2">TEMPS TOTAL</h3>
+                    <p class="text-h6 font-weight-black time-value">{{ formattedTime }}</p>
+                  </v-card>
+                </v-col>
+              </v-row>
+
               <!-- SECCIÓ ALTRES JUGADORS -->
               <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
               <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
@@ -67,16 +76,30 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+
+const route = useRoute()
 const props = defineProps({
   exercici: { type: String, required: true },
   totalReps: { type: Number, default: 0 },
   jugador: { type: String, default: '' },
-  altresJugadors: { type: Array, default: () => [] }
+  altresJugadors: { type: Array, default: () => [] },
+  totalTime: { type: Number, default: 0 }
 })
 
 const noms = { Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES', flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES' }
 
 const exerciciLabel = noms[props.exercici] || props.exercici
+const tempsTotal = props.totalTime
+
+// Funció per formatar el temps de segons a MM:SS
+const formattedTime = computed(() => {
+  const minuts = Math.floor(tempsTotal / 60)
+  const segons = tempsTotal % 60
+  return `${minuts.toString().padStart(2, '0')}:${segons.toString().padStart(2, '0')}`
+})
+
 const reps = props.totalReps
 const jugador = props.jugador
 const altresJugadors = props.altresJugadors
