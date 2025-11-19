@@ -4,7 +4,8 @@ import {
   getRanking, 
   getStreak, 
   updateStreak, 
-  updateProfilePicture // <-- AFEGIDA
+  updateProfilePicture,
+  getMe // <-- NUEVA función que agregamos
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -16,11 +17,10 @@ router.get('/ranking', getRanking);
 router.get('/streak', getStreak);
 router.post('/streak', updateStreak);
 
-// ===============================================
-// AFEGEIX LA NOVA RUTA PER LA FOTO DE PERFIL
-// ===============================================
-// (El frontend truca a: POST /api/user/profile/picture)
-router.post('/profile/picture', updateProfilePicture);
+// --- Endpoint para obtener datos completos del usuario ---
+router.get('/me', getMe);  // <-- ESTA es la ruta que el frontend necesita: /api/me
 
+// --- Ruta para subir foto de perfil ---
+router.post('/profile/picture', updateProfilePicture);
 
 export default router;
