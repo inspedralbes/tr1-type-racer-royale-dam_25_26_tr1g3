@@ -5,9 +5,10 @@
                 class="text-center text-white pa-4 pa-md-8 fade-in-container expanded-container position-relative"
                 style="max-width: 1600px;">
 
-                <v-btn class="top-left-back-btn" variant="flat" size="large" prepend-icon="mdi-check-circle-outline"
-                    color="success" @click="tornar">
-                    Finalitzar Sessió
+                <!-- BOTÓ ENRERE ARREGLAT -->
+                <v-btn class="top-left-back-btn" variant="flat" size="large" prepend-icon="mdi-arrow-left"
+                    color="error" @click="tornar">
+                    Sortir de la Sala
                 </v-btn>
 
                 <div class="temps-counter">
@@ -15,6 +16,7 @@
                 </div>
 
                 <v-row class="mt-16 mt-md-0">
+                    <!-- COLUMNA ESQUERRA: CÀMERA LOCAL -->
                     <v-col cols="12" md="7" class="d-flex flex-column align-center order-md-1 order-2">
                         <h2 class="text-h5 font-weight-bold mb-3 neon-player-name">
                             <v-icon color="cyan-accent-3" start>mdi-account-circle</v-icon>
@@ -29,6 +31,7 @@
                             :count="workoutStore.count" />
                     </v-col>
 
+                    <!-- COLUMNA DRETA: RIVALS I INFO -->
                     <v-col cols="12" md="5" class="d-flex flex-column align-center order-md-2 order-1">
                         <ExerciseInfo :label="exerciciLabel" :gif="exerciciGif" class="mb-6" />
 
@@ -38,6 +41,7 @@
                                     <h4 class="text-body-1 font-weight-bold neon-player-name-remote mb-2">
                                         {{ jugador.userName }}
                                     </h4>
+                                    <!-- CANVAS PER DIBUIXAR ESQUELETS DELS RIVALS -->
                                     <canvas :ref="el => canvasRemots[jugador.userId] = el" width="640" height="480"
                                         class="rounded-lg remote-canvas"></canvas>
                                     <div class="text-h5 font-weight-black text-cyan-lighten-2 mt-2">
@@ -50,9 +54,15 @@
                 </v-row>
             </v-container>
 
+            <!-- DIÀLEG ESTADÍSTIQUES -->
+            <!-- Quan es tanca (emit close), cridem a tornar() per sortir -->
             <v-dialog v-model="mostrarPopup" width="600" persistent>
-                <EstadistiquesSessioMultiplayer :ejercicio="exercici" :reps="workoutStore.count" :tempsTotal="60"
-                    :calories="Math.round(workoutStore.count * 0.35)" />
+                <EstadistiquesSessioMultiplayer 
+                    :exercici="exercici" 
+                    :totalReps="workoutStore.count" 
+                    :modelValue="mostrarPopup"
+                    @close="tornar" 
+                />
             </v-dialog>
 
         </v-main>
@@ -65,11 +75,15 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useWorkoutStore } from '@/stores/workoutStore';
 
+// Components
 import CameraView from '../components/CameraView.vue';
 import RepetitionCounter from '../components/RepetitionCounter.vue';
 import ExerciseInfo from '../components/ExerciseInfo.vue';
-import EstadistiquesSessioMultiplayer from '../pages/EstadistiquesSessioMultiplayer.vue';
+// Assegura't que la ruta sigui correcta segons on has creat el fitxer (pages o components)
+// En el teu missatge anterior deies que l'havies mogut a 'pages', si és a components canvia-ho.
+import EstadistiquesSessioMultiplayer from '../pages/EstadistiquesSessioMultiplayer.vue'; 
 
+// GIFs
 import flexionesGif from '@/assets/flexiones.gif';
 import sentadillasGif from '@/assets/sentadillas.gif';
 import saltosGif from '@/assets/saltos.gif';
@@ -94,6 +108,7 @@ const up = ref(false);
 const cameraViewRef = ref(null);
 const canvasRemots = ref({});
 
+// Filtrem el leaderboard per no mostrar-nos a nosaltres mateixos a la llista de la dreta
 const altresJugadors = computed(() => {
     return workoutStore.leaderboard.filter(j => j.userId !== authStore.user.id);
 });
@@ -106,6 +121,8 @@ const minuts = computed(() => Math.floor(tempsRestant.value / 60));
 const segons = computed(() => tempsRestant.value % 60);
 const segonsFormat = computed(() => (segons.value < 10 ? "0" + segons.value : segons.value));
 
+// === LIFECYCLE ===
+
 onMounted(async () => {
     workoutStore.connectWebSocket(codi_acces, exercici);
     await nextTick();
@@ -114,9 +131,11 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-    workoutStore.cleanupSession();
-    clearInterval(intervalTemps.value);
+    // Assegurar neteja si es tanca el component bruscament
+    tornar();
 });
+
+// === WATCHERS ===
 
 watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     if (newPoseData && newPoseData.from) {
@@ -126,7 +145,28 @@ watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     }
 }, { deep: true });
 
+// === FUNCIÓ TORNAR CORREGIDA ===
+
+function tornar() {
+    // 1. Aturar Càmera Local
+    stopCamera();
+
+    // 2. Aturar Temporitzador Local
+    if (intervalTemps.value) {
+        clearInterval(intervalTemps.value);
+        intervalTemps.value = null;
+    }
+
+    // 3. Netejar Store (Tanca WebSocket, reseteja comptadors)
+    workoutStore.cleanupSession();
+
+    // 4. Navegar a l'inici (o Dashboard)
+    router.push('/'); 
+}
+
 function iniciarTemporitzador() {
+    if (intervalTemps.value) clearInterval(intervalTemps.value);
+    
     intervalTemps.value = setInterval(() => {
         if (tempsRestant.value > 0) {
             tempsRestant.value--;
@@ -139,23 +179,32 @@ function iniciarTemporitzador() {
 
 function obrirPopupFinal() {
     mostrarPopup.value = true;
-    tornar(true);
+    // No cridem 'tornar' aquí encara, esperem que l'usuari tanqui el popup
 }
 
 async function startCamera() {
     if (cameraViewRef.value) {
         try {
             await cameraViewRef.value.start();
-        } catch (e) { }
+        } catch (e) { console.error("Error càmera:", e); }
     }
 }
+
+function stopCamera() {
+    if (cameraViewRef.value) {
+        cameraViewRef.value.stop();
+    }
+}
+
+// === LÒGICA EXERCICIS ===
 
 function handleRepCount() {
     workoutStore.incrementCount();
     up.value = false;
 }
 
-function detectarIPublicarMoviment(pose) {
+function detectingIPublicarMoviment(pose) {
+    // Publicar esquelet per WebSocket (perquè els altres ens vegin)
     if (workoutStore.ws?.readyState === WebSocket.OPEN) {
         workoutStore.ws.send(JSON.stringify({
             type: 'pose_update',
@@ -164,27 +213,42 @@ function detectarIPublicarMoviment(pose) {
     }
 
     const exerciciNormalitzat = exercici.toLowerCase();
-    switch (exerciciNormalitzat) {
-        case 'flexiones': case 'flexions': checkFlexio(pose); break;
-        case 'sentadillas': case 'squats': checkEsquat(pose); break;
-        case 'saltos': case 'salts': checkSalt(pose); break;
-        case 'abdominales': checkAbdominal(pose); break;
-        case 'fons': checkFons(pose); break;
-        case 'pujades': checkPujades(pose); break;
+    // Només comptem reps si el temps no s'ha acabat
+    if (tempsRestant.value > 0) {
+        switch (exerciciNormalitzat) {
+            case 'flexiones': case 'flexions': checkFlexio(pose); break;
+            case 'sentadillas': case 'squats': checkEsquat(pose); break;
+            case 'saltos': case 'salts': checkSalt(pose); break;
+            case 'abdominales': checkAbdominal(pose); break;
+            case 'fons': checkFons(pose); break;
+            case 'pujades': checkPujades(pose); break;
+        }
     }
 }
+
+// Alias per al template
+const detectarIPublicarMoviment = detectingIPublicarMoviment;
+
+// === DIBUIX CANVAS ===
 
 function dibuixarEsqueletRemot(jugadorId, pose) {
     const canvas = canvasRemots.value[jugadorId];
     if (!canvas || !pose || !pose.keypoints) return;
+    
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Escalar punts si cal (la càmera ve a 640x480, el canvas també ho és al HTML)
+    // Si volguessis ajustar per targetes més petites, aquí aplicaries escales.
+    
     const keypointsMap = new Map(pose.keypoints.map(kp => [kp.name, kp]));
     const connections = [['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'], ['right_shoulder', 'right_elbow'], ['left_elbow', 'left_wrist'], ['right_elbow', 'right_wrist'], ['left_shoulder', 'left_hip'], ['right_shoulder', 'right_hip'], ['left_hip', 'right_hip'], ['left_hip', 'left_knee'], ['right_hip', 'right_knee'], ['left_knee', 'left_ankle'], ['right_knee', 'right_ankle']];
+    
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 5;
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#3b82f6';
+    
     connections.forEach(([p1, p2]) => {
         const kp1 = keypointsMap.get(p1);
         const kp2 = keypointsMap.get(p2);
@@ -195,6 +259,7 @@ function dibuixarEsqueletRemot(jugadorId, pose) {
             ctx.stroke();
         }
     });
+    
     ctx.fillStyle = '#9b6bff';
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#9b6bff';
@@ -208,14 +273,15 @@ function dibuixarEsqueletRemot(jugadorId, pose) {
     ctx.shadowBlur = 0;
 }
 
+// === RECONEIXEMENT EXERCICIS ===
+
 function checkFlexio(pose) {
     const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder');
     const colze = pose.keypoints.find(k => k.name === 'left_elbow');
     if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return;
     const dist = Math.abs(espatlla.y - colze.y);
-    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50;
-    if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
-    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+    if (dist < 50 && !up.value) up.value = true;
+    if (dist > 100 && up.value) handleRepCount();
 }
 
 function checkEsquat(pose) {
@@ -223,9 +289,8 @@ function checkEsquat(pose) {
     const genoll = pose.keypoints.find(k => k.name === 'left_knee');
     if (!maluc || !genoll || maluc.score < 0.4 || genoll.score < 0.4) return;
     const dist = Math.abs(maluc.y - genoll.y);
-    const UMBRAL_ARRIBA = 160, UMBRAL_ABAJO = 100;
-    if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
-    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+    if (dist < 100 && !up.value) up.value = true;
+    if (dist > 160 && up.value) handleRepCount();
 }
 
 let initialY = null;
@@ -235,8 +300,7 @@ function checkSalt(pose) {
     if (!peu || peu.score < 0.4) return;
     if (initialY === null) initialY = peu.y;
     const delta = initialY - peu.y;
-    const UMBRAL_SALT = 30;
-    if (delta > UMBRAL_SALT && !jumping) {
+    if (delta > 30 && !jumping) {
         jumping = true;
     } else if (delta < 10 && jumping) {
         jumping = false;
@@ -249,9 +313,8 @@ function checkAbdominal(pose) {
     const maluc = pose.keypoints.find((k) => k.name === 'left_hip');
     if (!nas || !maluc || nas.score < 0.4 || maluc.score < 0.4) return;
     const distancia = Math.abs(nas.y - maluc.y);
-    const UMBRAL_ARRIBA = 150, UMBRAL_ABAJO = 100;
-    if (distancia < UMBRAL_ABAJO && !up.value) up.value = true;
-    if (distancia > UMBRAL_ARRIBA && up.value) handleRepCount();
+    if (distancia < 100 && !up.value) up.value = true;
+    if (distancia > 150 && up.value) handleRepCount();
 }
 
 function checkFons(pose) {
@@ -259,9 +322,8 @@ function checkFons(pose) {
     const colze = pose.keypoints.find(k => k.name === 'left_elbow');
     if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return;
     const dist = Math.abs(espatlla.y - colze.y);
-    const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50;
-    if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
-    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
+    if (dist < 50 && !up.value) up.value = true;
+    if (dist > 100 && up.value) handleRepCount();
 }
 
 function checkPujades(pose) {
@@ -269,43 +331,8 @@ function checkPujades(pose) {
     const peu = pose.keypoints.find(k => k.name === 'left_ankle');
     if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return;
     const dist = Math.abs(genoll.y - peu.y);
-    const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300;
-    if (dist < UMBRAL_ABAJO && !up.value) up.value = true;
-    if (dist > UMBRAL_ARRIBA && up.value) handleRepCount();
-}
-
-function tornar() {
-  stopCamera();
-  timerCardRef.value?.stopTimer();
-  stopTempsCounter();
-  
-  const repsFinals = count.value;
-  const exerciciNormalitzat = exercici.toLowerCase();
-
-  const tempsFinal = tempsActiuTotal.value
-  const caloriesFinals = Math.round(repsFinals * 0.35) 
-
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'finish',
-      reps: repsFinals,
-      exercici: exerciciNormalitzat,
-      codi_acces: codi_acces
-    }));
-    ws.value.send(JSON.stringify({ type: 'leave' }));
-    ws.value.close();
-    ws.value = null; 
-  }
-  
-  router.push({ 
-    name: 'EstadistiquesSessioMultiplayer', 
-    params: { 
-      ejercicio: exercici,
-      reps: repsFinals,
-      tempsTotal: tempsFinal,
-      calories: caloriesFinals
-    } 
-  });
+    if (dist < 200 && !up.value) up.value = true;
+    if (dist > 300 && up.value) handleRepCount();
 }
 </script>
 
@@ -316,6 +343,7 @@ function tornar() {
         radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
         linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
     background-attachment: fixed;
+    min-height: 100vh;
 }
 
 .fade-in-container {
@@ -323,15 +351,8 @@ function tornar() {
 }
 
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .position-relative {
@@ -342,18 +363,18 @@ function tornar() {
     position: absolute;
     top: 15px;
     left: 15px;
-    z-index: 10;
+    z-index: 50;
     color: white !important;
-    background: #22c55e !important;
+    background: #ef4444 !important; /* Vermell per sortir */
     border-radius: 8px !important;
     font-weight: 700 !important;
-    box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
     transition: all 0.3s ease;
 }
 
 .top-left-back-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(34, 197, 94, 1);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
 }
 
 .player-card {
@@ -391,5 +412,6 @@ function tornar() {
     font-weight: bold;
     color: white;
     box-shadow: 0 0 15px rgba(14, 165, 233, 0.7);
+    z-index: 100;
 }
 </style>
