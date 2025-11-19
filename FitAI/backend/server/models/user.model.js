@@ -20,33 +20,39 @@ const User = sequelize.define('usuaris', {
   },
 
   // ===============================================
-  // ===== CAMPS NOUS AFEGITS =====
+  // ===== CAMPS FOTO I RATXA =====
   // ===============================================
-
-  // Camp per a la foto de perfil
   foto_url: {
     type: DataTypes.STRING,
-    allowNull: true, // Ha de ser 'true' per si l'usuari no té foto
+    allowNull: true, 
     defaultValue: null
   },
-
-  // Camps per a la ratxa (streak)
   ratxa: {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
   ultima_sessio: {
-    type: DataTypes.DATEONLY, // Perfecte per comparar amb CURDATE()
+    type: DataTypes.DATEONLY, 
     allowNull: true
   },
   
   // ===============================================
+  // ===== ESTADÍSTIQUES =====
   // ===============================================
 
   repeticions_totals: {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
+  
+  // 🔴 AFEGIT NOU: TEMPS TOTAL
+  temps_total: {
+    type: DataTypes.INTEGER, // Guardem segons com a enter
+    defaultValue: 0,         // Valor per defecte 0
+    allowNull: false         // O true, depèn de com tinguis la DB, però millor false amb default 0
+  },
+  // --------------------------
+
   sessions_completades: {
     type: DataTypes.INTEGER,
     defaultValue: 0

@@ -14,7 +14,9 @@
           <h2 class="text-h6 font-weight-bold mb-6 text-white ranking-title">RESUM D'ESTADÍSTIQUES</h2>
 
           <v-row class="justify-center">
-            <v-col cols="12" sm="8" md="6" class="px-0"> <v-row class="mb-4 ga-3">
+            <v-col cols="12" sm="8" md="6" class="px-0"> 
+              
+              <v-row class="mb-4 ga-3">
                 <v-col cols="12" class="d-flex">
                   <v-card class="data-card pa-3 rounded-lg flex-grow-1 blue-glow-card" color="#0e111d">
                     <h3 class="text-caption font-weight-light text-blue-lighten-2">EXERCICI</h3>
@@ -40,18 +42,20 @@
                   </v-card>
                 </v-col>
               </v-row>
+
             </v-col>
           </v-row>
+
           <v-divider class="divider-subtle mx-auto my-6"></v-divider>
 
           <v-btn
             color="#8b5cf6"
             class="mt-4 clean-button"
             height="48"
-            @click="$router.push('/')" 
+            @click="goHome" 
           >
             TORNAR A LA PANTALLA PRINCIPAL
-            <v-icon right class="ml-2">mdi-home-outline</v-icon>
+            <v-icon end class="ml-2">mdi-home-outline</v-icon>
           </v-btn>
         </v-card>
       </v-container>
@@ -60,38 +64,45 @@
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router'
-import { computed } from 'vue' // Necessari per a la funció computed
+import { computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
 
 const route = useRoute()
-const reps = route.params.reps || 0
+const router = useRouter()
+const authStore = useAuthStore()
+
+// ---------------------------------------------------------
+// OBTENCIÓN DE DATOS
+// ---------------------------------------------------------
+const reps = Number(route.params.reps) || 0
+const tempsTotal = Number(route.params.tempsTotal) || 0 
 const exercici = route.params.ejercicio || 'EXERCICI'
-const tempsTotal = route.params.tempsTotal || 0 // Nou: Temps total en segons
 
 // Diccionari per mapejar els noms dels exercicis
 const noms = {
-  Flexions: 'FLEXIONS',
-  Squats: 'SQUATS',
-  Salts: 'SALTS',
-  Abdominals: 'ABDOMINALS',
-  Fons: 'FONS',
-  Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS',
-  sentadillas: 'ESQUATS',
-  saltos: 'SALTS',
-  abdominales: 'ABDOMINALS',
-  fons: 'FONS',
-  pujades: 'PUJADES',
+  Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES',
+  flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES',
 }
 
-// Obtenir l'etiqueta correcta o utilitzar el valor per defecte
-const exerciciLabel = noms[exercici] || exercici
+const exerciciLabel = computed(() => noms[exercici] || exercici)
 
-// NOU: Funció per formatar el temps de segons a MM:SS
+// Funció per formatar el temps de segons a MM:SS
 const formattedTime = computed(() => {
   const minuts = Math.floor(tempsTotal / 60)
   const segons = tempsTotal % 60
   return `${minuts.toString().padStart(2, '0')}:${segons.toString().padStart(2, '0')}`
+})
+
+const goHome = () => {
+  router.push('/')
+}
+
+// Actualizar estadísticas globales del usuario en segundo plano
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    await authStore.refreshUser()
+  }
 })
 </script>
 

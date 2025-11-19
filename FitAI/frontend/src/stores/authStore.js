@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia';
 
 export const useAuthStore = defineStore('auth', {
-
   state: () => ({
     user: null,
-    hasShownStreakPopup: false // <-- 1. AFEGEIX AIXÒ
+    hasShownStreakPopup: false
   }),
 
   getters: {
@@ -13,9 +12,7 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    // ... (login, register... tot això queda igual) ...
     async login(email, password) {
-      // ... (código existente)
       try {
         const response = await fetch('/api/login', {
           method: 'POST',
@@ -29,7 +26,7 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const userData = await response.json();
-        this.user = userData; 
+        this.user = userData.user || userData; 
 
       } catch (error) {
         this.user = null; 
@@ -38,7 +35,6 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async register(nom, email, password) {
-      // ... (código existente)
       try {
         const response = await fetch('/api/register', {
           method: 'POST',
@@ -56,53 +52,73 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
-      // ... (código existente)
       try {
         await fetch('/api/logout', { method: 'POST' });
       } catch (error) {
         console.error('Error en tancar la sessió al servidor:', error);
       }
       this.user = null; 
-      this.hasShownStreakPopup = false; // <-- 2. AFEGEIX AIXÒ (per reiniciar)
+      this.hasShownStreakPopup = false;
     },
 
+    // ----------------------------
+    // CheckAuth
+    // ----------------------------
     async checkAuth() {
-      // ... (código existente)
       try {
-        const response = await fetch('/api/me');
+        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' en lugar de '/api/me'
+        const response = await fetch(`/api/user/me?t=${Date.now()}`);
+        
         if (!response.ok) {
           this.user = null;
           return;
         }
-        this.user = await response.json();
+        const data = await response.json();
+        this.user = data.user || data; 
+        
       } catch (error) {
         this.user = null;
       }
     },
-    
+
+    // ----------------------------
+    // RefreshUser
+    // ----------------------------
+    async refreshUser() {
+      try {
+        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' aquí también
+        const response = await fetch(`/api/user/me?t=${Date.now()}`);
+        
+        if (!response.ok) return;
+        const data = await response.json();
+        this.user = data.user || data;
+        
+      } catch (error) {
+        console.error('Error refrescando usuario:', error);
+      }
+    },
+
     async updateProfilePicture(formData) {
-  try {
-    const response = await fetch('/api/user/profile/picture', { 
-      method: 'POST',
-      body: formData,
-    });
+      try {
+        const response = await fetch('/api/user/profile/picture', { 
+          method: 'POST',
+          body: formData,
+        });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Error al pujar la imatge.");
-    }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Error al pujar la imatge.");
+        }
 
-    const data = await response.json();
-    this.user = data.user; // <-- SOLO ESTE CAMBIO
+        const data = await response.json();
+        this.user = data.user || data;
 
-  } catch (error) {
-    console.error('Error al pujar la foto:', error);
-    throw error;
-  }
-},
+      } catch (error) {
+        console.error('Error al pujar la foto:', error);
+        throw error;
+      }
+    },
 
-    
-    // 3. AFEGEIX AQUESTA NOVA ACCIÓ SENCERA
     setStreakPopupShown() {
       this.hasShownStreakPopup = true;
     },
