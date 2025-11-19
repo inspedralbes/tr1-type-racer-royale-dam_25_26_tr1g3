@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   # --- SERVEI DE BASE DE DADES (MariaDB) ---
   db:
@@ -87,3 +89,4 @@ volumes:
 networks:
   fitai_network:
     driver: bridge
+
