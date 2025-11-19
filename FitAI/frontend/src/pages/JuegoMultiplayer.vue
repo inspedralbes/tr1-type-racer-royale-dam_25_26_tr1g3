@@ -6,7 +6,7 @@
                 style="max-width: 1600px;">
 
                 <v-btn class="top-left-back-btn" variant="flat" size="large" prepend-icon="mdi-arrow-left"
-                    color="error" @click="tornar">
+                    color="error" @click="obrirPopupFinal">
                     Sortir
                 </v-btn>
 
@@ -96,6 +96,7 @@
                     :totalReps="workoutStore.count" 
                     :jugador="authStore.userName"
                     :altresJugadors="altresJugadors" 
+                    :totalTime="finalTime"
                 />
             </v-dialog>
 
@@ -139,13 +140,14 @@ const up = ref(false);
 const cameraViewRef = ref(null);
 const canvasRemots = ref({});
 
+const finalTime = ref(0);
 const tempsPreparacio = ref(5);
 const tempsRestant = ref(60);
 const intervalTemps = ref(null);
 const intervalPreparacio = ref(null);
 const mostrarPopup = ref(false);
 const enPreparacio = ref(false);
-const esFaseDeJoc = ref(false); // Controla quan es poden fer repeticions
+const esFaseDeJoc = ref(false);
 
 // Detecta si el joc ha rebut l'ordre d'inici
 const partidaEnCurs = computed(() => workoutStore.gameStarted);
@@ -193,7 +195,6 @@ watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     }
 }, { deep: true });
 
-
 // === 2. TEMPORITZADORS (5s -> 60s) ===
 
 function iniciarCompteEnrerePreparacio() {
@@ -234,7 +235,7 @@ function iniciarPartidaReial() {
 
 function obrirPopupFinal() {
     mostrarPopup.value = true;
-    // Enviem el resultat final
+    finalTime.value = 60 - tempsRestant.value;
     workoutStore.disconnectWebSocket(); 
 }
 
