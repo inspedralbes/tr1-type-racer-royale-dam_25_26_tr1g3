@@ -19,7 +19,7 @@ const routes = [
 
   {
     // ‼️ CANVI AQUÍ: Afegim els paràmetres
-    path: '/estadistiques/:ejercicio/:reps',
+    path: '/estadistiques/:ejercicio/:reps/:tempsTotal',
     name: 'EstadistiquesSessio',
     component: EstadistiquesSessio,
     props: true // Això és opcional, però és bona pràctica

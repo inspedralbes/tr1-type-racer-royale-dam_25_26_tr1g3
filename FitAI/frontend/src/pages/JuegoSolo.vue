@@ -10,7 +10,7 @@
           class="top-left-back-btn rectangular-btn" 
           variant="flat"
           size="large"
-          prepend-icon="mdi-check-circle-outline" color="success" @click="tornar"
+          prepend-icon="mdi-check-circle-outline" color="success" @click="tornar()"
         >
           Finalitzar Sessió
         </v-btn>
@@ -65,11 +65,11 @@
             <TimerCard 
               class="mt-6"
               style="width: 85%;"
+              ref="timerCardRef"
               @main-timer-start="startTempsCounter"
               @timer-stop="handleTimerStop"
               @timer-reset="handleTimerReset"
               @timer-finished="handleTimerFinished"
-              ref="timerCardRef"
             />
             
             <RepetitionCounter 
@@ -100,12 +100,13 @@
     </v-main>
   </v-app>
 </template>
+
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore';
 
-// Imports dels nous components 
+// Imports components
 import CameraView from '../components/CameraView.vue'
 import TimerCard from '../components/TimerCard.vue'
 import RepetitionCounter from '../components/RepetitionCounter.vue'
@@ -115,9 +116,7 @@ import LeaderboardCard from '../components/LeaderboardCard.vue'
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
-// ===================================================================
-// 1. GESTIÓN DE GIFS
-// ===================================================================
+// Assets
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
@@ -126,7 +125,6 @@ import fonsGif from '@/assets/fons.gif'
 import pujadesGif from '@/assets/pujades.gif'
 
 const pathCarregar = mdiFolderOutline
-
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore();
@@ -146,42 +144,34 @@ const gifs = {
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
-// ===================================================================
-// 2. ESTADO (Lògica que es queda al pare)
-// ===================================================================
+// Estado
 const count = ref(0)
 const leaderboard = ref([])
-const up = ref(false) // Canviat 'let' per 'ref' per mantenir estat
-const detecting = ref(false) // Canviat 'let' per 'ref'
+const up = ref(false) 
+const detecting = ref(false) 
 
 const ws = ref(null)
 const userId = authStore.user.id;
 const userName = authStore.userName;
 
-// Referències als components fills
 const cameraViewRef = ref(null)
 const timerCardRef = ref(null)
-
-// Estat per comunicar el temporitzador amb la càmera
 const timerActive = ref(false)
 
-// ===== NOVES VARIABLES PER AL TEMPS TOTAL =====
-const tempsActiuTotal = ref(0) // Comptador de segons totals
-let tempsInterval = null       // Variable per guardar l'interval
+// Contador manual de respaldo (para UI o por si se sale antes)
+const tempsActiuTotal = ref(0) 
+let tempsInterval = null       
 
-
-// ===================================================================
-// 3. LIFECYCLE HOOKS
-// ===================================================================
+// Lifecycle
 onMounted(() => connectWebSocket())
-
 onBeforeUnmount(() => {
-  tornar(); 
+    // Eliminamos la llamada automática a tornar() aquí para evitar dobles redirecciones
+    // Si es necesario limpiar, limpiar solo recursos:
+    stopCamera();
+    if (ws.value) ws.value.close();
 })
 
-// ===================================================================
-// 4. FUNCIONES DE CÁMARA/VIDEO (Ara deleguen al fill)
-// ===================================================================
+// Funciones Cámara
 async function startCamera() {
   if (!cameraViewRef.value) return;
   try {
@@ -201,15 +191,16 @@ function stopCamera() {
 function selectVideo() {
   if (!cameraViewRef.value) return;
   cameraViewRef.value.select();
-  detecting.value = true; // El fill ho gestionarà internament
+  detecting.value = true; 
 }
 
-// ===== NOVES FUNCIONS PER CONTROLAR EL TEMPS =====
+// ===================================================================
+// LÓGICA DEL TEMPORIZADOR Y FINALIZACIÓN (AQUÍ ESTÁN LOS CAMBIOS)
+// ===================================================================
+
 function startTempsCounter() {
   timerActive.value = true
-  if (tempsInterval) clearInterval(tempsInterval) // Neteja l'anterior
-  
-  // Suma 1 segon cada segon
+  if (tempsInterval) clearInterval(tempsInterval) 
   tempsInterval = setInterval(() => {
     tempsActiuTotal.value++
   }, 1000)
@@ -217,49 +208,106 @@ function startTempsCounter() {
 
 function stopTempsCounter() {
   timerActive.value = false
-  // Atura l'interval
   if (tempsInterval) {
     clearInterval(tempsInterval)
     tempsInterval = null
   }
 }
 
-// Funció per a l'esdeveniment @timer-stop
-function handleTimerStop() {
+// 1. Cuando el usuario para el timer manualmente
+function handleTimerStop(seconds) {
   stopTempsCounter()
+  // Opcional: Si quieres que "Parar" finalice la sesión descomenta esto:
+  // tornar(seconds) 
+  
+  // Si solo quieres pausar y guardar el tiempo parcial:
+  if (seconds) tempsActiuTotal.value = seconds;
 }
-// ==================================================
 
-function handleTimerFinished() {
+// 2. Cuando el timer llega a 0 (FINALIZACIÓN AUTOMÁTICA)
+function handleTimerFinished(seconds) {
   stopTempsCounter() 
   if (detecting.value) {
     stopCamera()
   }
+  // Enviamos los segundos exactos que nos da el TimerCard
+  tornar(seconds);
 }
 
-// ===================================================================
-// ===== CANVI A LA FUNCIÓ handleTimerReset =====
-// ===================================================================
 function handleTimerReset() {
   stopTempsCounter() 
   count.value = 0 
   tempsActiuTotal.value = 0
-  
-  // ===== CANVI AFEGIT =====
-  // Reinicia la 'Y' inicial per al detector de salts (`checkSalt`),
-  // en cas que la persona s'hagi mogut a la pantalla.
   initialY = null; 
-  // =========================
 }
-// ===================================================================
+
+// 3. FUNCIÓN CENTRAL DE NAVEGACIÓN (CORREGIDA)
+async function tornar(tempsRebut = null) { // <--- AHORA ES ASYNC
+  stopCamera();
+  timerCardRef.value?.stopTimer(); 
+  stopTempsCounter(); 
+  
+  const repsFinals = count.value;
+  const exerciciNormalitzat = exercici.toLowerCase();
+
+  // DECISIÓN DE TIEMPO
+  const tempsFinal = (tempsRebut !== null && tempsRebut !== undefined) 
+                      ? tempsRebut 
+                      : tempsActiuTotal.value;
+
+  // =======================================================
+  // 🔴 NUEVO: GUARDAR EN BASE DE DATOS
+  // =======================================================
+  try {
+      await fetch('/api/user/save-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              reps: repsFinals,
+              time: tempsFinal
+          })
+      });
+      
+      // Refrescamos el usuario localmente para que el perfil se actualice ya
+      await authStore.refreshUser(); 
+
+  } catch (error) {
+      console.error("Error al guardar las estadísticas:", error);
+  }
+  // =======================================================
+
+  // WebSocket cleanup
+  if (ws.value?.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({
+      type: 'finish',
+      reps: repsFinals,
+      exercici: exerciciNormalitzat,
+      codi_acces: codi_acces
+    }));
+    ws.value.send(JSON.stringify({ type: 'leave' }));
+    ws.value.close();
+    ws.value = null; 
+  }
+  
+  // ROUTER PUSH
+  router.push({ 
+    name: 'EstadistiquesSessio', 
+    params: { 
+      ejercicio: exercici,
+      reps: repsFinals,
+      tempsTotal: tempsFinal,
+      // Si tu router espera 'calories', añade: calories: 0 
+      // Si lo quitaste del router, déjalo así.
+    } 
+  });
+}
 
 // ===================================================================
-// 5. LÓGICA DE MOVIMIENTO (Es queda al pare)
+// LÓGICA DE MOVIMIENTO
 // ===================================================================
 
 function handleRepCount() {
-  // ===== LÍNIA AFEGIDA =====
-  if (!timerActive.value) return; // Si el temporitzador està aturat, no comptis.
+  if (!timerActive.value) return; 
 
   count.value++;
   up.value = false;
@@ -269,9 +317,7 @@ function handleRepCount() {
 }
 
 function checkMoviment(pose) {
-  // Aquesta funció es passa com a 'prop' a CameraView
   const exerciciNormalitzat = exercici.toLowerCase();
-
   switch (exerciciNormalitzat) {
     case 'flexiones': checkFlexio(pose); break;
     case 'sentadillas': checkEsquat(pose); break;
@@ -285,38 +331,15 @@ function checkMoviment(pose) {
   }
 }
 
-// ===================================================================
-// ===== CANVI A LA FUNCIÓ checkFlexio =====
-// ===================================================================
 function checkFlexio(pose) {
-  // ===== LÒGICA CANVIADA =====
-  // Abans mesuraves la distància vertical 'espatlla' <-> 'canell',
-  // la qual cosa detectava erròniament els jumping jacks.
-  //
-  // Ara fem servir una lògica (similar a la de 'Fons') que mesura
-  // la distància vertical entre l'espatlla i el colze.
-  // Això és molt més fiable per a una flexió vista de costat.
-  
   const espatlla = pose.keypoints.find(k => k.name === 'left_shoulder')
-  const colze = pose.keypoints.find(k => k.name === 'left_elbow') // <-- Punt clau!
-  
+  const colze = pose.keypoints.find(k => k.name === 'left_elbow') 
   if (!espatlla || !colze || espatlla.score < 0.4 || colze.score < 0.4) return
-  
   const dist = Math.abs(espatlla.y - colze.y)
-  
-  // Aquests llindars són una còpia dels de 'Fons'.
-  // POTSER NECESSITES AJUSTAR-LOS (p.ex., 120 i 60)
-  // Experimenta amb els valors per al teu vídeo de prova.
   const UMBRAL_ARRIBA = 100, UMBRAL_ABAJO = 50 
-  
-  // Quan l'espatlla baixa a prop del colze (posició avall)
   if (dist < UMBRAL_ABAJO && !up.value) up.value = true
-  // Quan l'espatlla puja lluny del colze (posició amunt)
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
-  // =================================================
 }
-// ===================================================================
-
 
 function checkEsquat(pose) {
   const maluc = pose.keypoints.find(k => k.name === 'left_hip')
@@ -328,37 +351,21 @@ function checkEsquat(pose) {
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
-// ===================================================================
-// ===== CANVI A LA FUNCIÓ checkSalt =====
-// ===================================================================
 let initialY = null;
 let jumping = false;
 function checkSalt(pose) {
   const peu = pose.keypoints.find(k => k.name === 'left_ankle')
   if (!peu || peu.score < 0.4) return
   if (initialY === null) initialY = peu.y
-  
-  const delta = initialY - peu.y // Canvi vertical del turmell
-  
-  // ===== LLINDAR CANVIAT =====
-  // S'ha reduït de 60 a 30.
-  // El valor '60' era massa alt per a un "jumping jack", ja que
-  // en aquest exercici els peus gairebé no s'aixequen del terra.
-  // Un valor més baix com '30' hauria de ser suficient per detectar
-  // el petit salt vertical d'un jumping jack.
-  //
-  // Si vols detectar salts verticals (ex: squat jumps), torna a pujar-lo (ex: 60 o més).
+  const delta = initialY - peu.y 
   const UMBRAL_SALT = 30 
-  // ===========================
-  
-  if (delta > UMBRAL_SALT && !jumping) { // Si puja més del llindar
+  if (delta > UMBRAL_SALT && !jumping) { 
     jumping = true
-  } else if (delta < 10 && jumping) { // Si torna a prop del terra
+  } else if (delta < 10 && jumping) { 
     jumping = false; 
     handleRepCount(); 
   }
 }
-// ===================================================================
 
 function checkAbdominal(pose) {
   const nas = pose.keypoints.find((k) => k.name === 'nose')
@@ -381,41 +388,25 @@ function checkFons(pose) {
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
-// ===================================================================
-// AQUEST BLOC ESTAVA TRENCAT. ARA ESTÀ CORREGIT.
-// ===================================================================
 function checkPujades(pose) {
   const genoll = pose.keypoints.find(k => k.name === 'left_knee')
   const peu = pose.keypoints.find(k => k.name === 'left_ankle')
-  // S'ha completat la condició 'if' que estava trencada
   if (!genoll || !peu || genoll.score < 0.4 || peu.score < 0.4) return
-  
-  // S'ha afegit la lògica que estava barrejada amb la funció 'tornar'
   const dist = Math.abs(genoll.y - peu.y)
   const UMBRAL_ABAJO = 200, UMBRAL_ARRIBA = 300 
   if (dist < UMBRAL_ABAJO && !up.value) up.value = true
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
-// ===================================================================
-// S'HA ELIMINAT TOT EL CODI CORRUPTE QUE HI HAVIA AQUÍ
-// (Funcions 'tornar' i 'ws.onclose' duplicades i barrejades)
-// ===================================================================
 
-
-// ===================================================================
-// 6. WEBSOCKET (Es queda al pare)
-// ===================================================================
-
+// WebSocket
 function connectWebSocket() {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.host;
   const wsUrl = `${wsProtocol}//${wsHost}/ws`;
   
-  console.log(`Connectant a WebSocket a: ${wsUrl}`);
   ws.value = new WebSocket(wsUrl); 
 
   ws.value.onopen = () => {
-    console.log('Connectat al servidor WebSocket');
     ws.value.send(JSON.stringify({ type: 'join', codi_acces, userId, userName }));
   };
 
@@ -425,55 +416,10 @@ function connectWebSocket() {
       leaderboard.value = message.leaderboard;
     }
     if (message.type === 'joined') {
-      console.log('Confirmat: Unit a la sala. Enviant "start"...');
       ws.value.send(JSON.stringify({ type: 'start', codi_acces: codi_acces }));
     }
   };
-  
   ws.value.onclose = () => console.log('Desconnectat del servidor');
-  ws.value.onerror = (err) => console.error('Error WebSocket:', err);
-}
-
-// ===================================================================
-// 7. NAVEGACIÓN (Es queda al pare)
-// ===================================================================
-
-function tornar() {
-  stopCamera();
-  timerCardRef.value?.stopTimer(); // Atura el temporitzador del fill
-  stopTempsCounter(); // <-- AFEGIT per seguretat
-  
-  const repsFinals = count.value;
-  const exerciciNormalitzat = exercici.toLowerCase();
-
-  // ===== LÍNIES AFEGIDES =====
-  const tempsFinal = tempsActiuTotal.value // Agafa el temps comptat
-  // Càlcul simple de calories (ajusta la fórmula com vulguis)
-  const caloriesFinals = Math.round(repsFinals * 0.35) 
-  // ============================
-
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'finish',
-      reps: repsFinals,
-      exercici: exerciciNormalitzat,
-      codi_acces: codi_acces
-    }));
-    ws.value.send(JSON.stringify({ type: 'leave' }));
-    ws.value.close();
-    ws.value = null; 
-  }
-  
-  // ===== PARÀMETRES AFEGITS AL ROUTER =====
-  router.push({ 
-    name: 'EstadistiquesSessio', 
-    params: { 
-      ejercicio: exercici,
-      reps: repsFinals,
-      tempsTotal: tempsFinal,
-      calories: caloriesFinals
-    } 
-  });
 }
 </script>
 

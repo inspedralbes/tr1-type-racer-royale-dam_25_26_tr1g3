@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS usuaris (
     
     sessions_completades INT DEFAULT 0,
     repeticions_totals INT DEFAULT 0,
+
+    temps_total INT DEFAULT 0,
+    
     ratxa INT DEFAULT 0,
     ultima_sessio DATE NULL,
     data_registre TIMESTAMP DEFAULT CURRENT_TIMESTAMP

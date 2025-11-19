@@ -26,7 +26,6 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const userData = await response.json();
-        // Nos aseguramos de coger el usuario correctamente sea cual sea el formato
         this.user = userData.user || userData; 
 
       } catch (error) {
@@ -63,21 +62,18 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // ----------------------------
-    // CheckAuth: carga usuario completo desde el backend
+    // CheckAuth
     // ----------------------------
     async checkAuth() {
       try {
-        // CAMBIO CLAVE: Añadimos ?t=Date.now() para romper la caché del navegador
-        const response = await fetch(`/api/me?t=${Date.now()}`);
+        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' en lugar de '/api/me'
+        const response = await fetch(`/api/user/me?t=${Date.now()}`);
         
         if (!response.ok) {
           this.user = null;
           return;
         }
         const data = await response.json();
-        
-        // A veces el backend devuelve { user: {...} } y otras veces {...} directo.
-        // Esto asegura que siempre cojamos el objeto correcto.
         this.user = data.user || data; 
         
       } catch (error) {
@@ -86,17 +82,15 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // ----------------------------
-    // RefreshUser: actualizar estadísticas después de cambios
+    // RefreshUser
     // ----------------------------
     async refreshUser() {
       try {
-        // CAMBIO CLAVE: Aquí también rompemos la caché
-        const response = await fetch(`/api/me?t=${Date.now()}`);
+        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' aquí también
+        const response = await fetch(`/api/user/me?t=${Date.now()}`);
         
         if (!response.ok) return;
         const data = await response.json();
-        
-        // Actualización segura
         this.user = data.user || data;
         
       } catch (error) {
@@ -117,7 +111,6 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const data = await response.json();
-        // Actualizamos con la respuesta del servidor que suele traer la URL nueva
         this.user = data.user || data;
 
       } catch (error) {
