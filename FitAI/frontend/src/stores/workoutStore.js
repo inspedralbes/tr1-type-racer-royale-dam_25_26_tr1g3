@@ -3,6 +3,8 @@ import { defineStore } from 'pinia';
 import { useAuthStore } from '@/stores/authStore';
 
 export const useWorkoutStore = defineStore('workout', () => {
+  const authStore = useAuthStore();
+
   // ======================================================
   // === ESTAT (State) ===
   // ======================================================
@@ -13,16 +15,19 @@ export const useWorkoutStore = defineStore('workout', () => {
 
   // --- Estat del Joc ---
   const leaderboard = ref([]);
-  const count = ref(0); // El teu comptador personal de repeticions
-  const lastReceivedPose = ref(null); // Guarda l'últim esquelet rebut
+  const count = ref(0);
+  const lastReceivedPose = ref(null);
+  const gameStarted = ref(false);
+  
+  // NOU ESTAT PER GUARDAR LA CLASSIFICACIÓ FINAL (SOLUCIÓ 'RACE CONDITION')
+  const finalLeaderboard = ref(null);
 
-  // --- Estat del Temporitzador (CONSERVAT) ---
+  // --- Estat del Temporitzador (per a mode solo, es manté per si de cas) ---
   const timerActive = ref(false);
   const timerFinished = ref(false);
   const timeRemaining = ref(60);
   const preCount = ref(0);
   
-  // --- Referències internes (no reactives) ---
   let timerInterval = null;
   let preCountInterval = null;
 
@@ -42,11 +47,18 @@ export const useWorkoutStore = defineStore('workout', () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   });
 
+  const isHost = computed(() => {
+    if (leaderboard.value.length > 0 && authStore.user) {
+        return leaderboard.value[0].userId === authStore.user.id;
+    }
+    return false;
+  });
+
   // ======================================================
   // === ACCIONS (Actions) ===
   // ======================================================
 
-  // --- 1. Lògica del Temporitzador (CONSERVADA) ---
+  // --- 1. Lògica del Temporitzador (per a mode solo) ---
   function startPreCount() {
     if (timerActive.value || preCountInterval) return;
     preCount.value = 5;
@@ -90,30 +102,39 @@ export const useWorkoutStore = defineStore('workout', () => {
     timerFinished.value = false;
   }
 
-  // --- 2. Lògica de Repeticions (AJUSTADA) ---
+  // --- 2. Lògica de Repeticions ---
   function incrementCount() {
-    // NOTA: He tret la condició 'if (!timerActive.value) return;'
-    // perquè el comptador funcioni sense que el temporitzador estigui actiu.
-    // Pots tornar a afegir-la quan implementis el botó per iniciar el temps.
-    
     count.value++;
     if (ws.value?.readyState === WebSocket.OPEN) {
       ws.value.send(JSON.stringify({ type: 'update', reps: count.value }));
     }
   }
 
-  // --- 3. Lògica de WebSocket (AMB LÒGICA D'ESQUELETS) ---
-  function connectWebSocket(codi_acces, exercici) {
-    const authStore = useAuthStore();
-    if (!authStore.user) {
-      console.error("No hi ha usuari autenticat per començar la sessió.");
-      return;
+  function sendStartSignal() {
+    if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ 
+            type: 'start', 
+            codi_acces: currentCodiAcces 
+        }));
     }
+  }
+
+  // --- 3. Lògica de WebSocket ---
+  function connectWebSocket(codi_acces, exercici) {
+    if (!authStore.user) return;
     
     currentCodiAcces = codi_acces;
     currentExercici = exercici;
     currentUserId = authStore.user.id;
     currentUserName = authStore.userName;
+    
+    // Assegurem que res està corrent en connectar-se al Lobby
+    stopTimer();
+    timeRemaining.value = 60;
+    timerActive.value = false;
+    gameStarted.value = false;
+    count.value = 0;
+    finalLeaderboard.value = null; // Neteja la classificació final anterior
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
@@ -142,68 +163,58 @@ export const useWorkoutStore = defineStore('workout', () => {
           break;
         case 'joined':
           console.log('Confirmat: Unit a la sala.');
-          // Aquesta lògica de 'start' la pots activar aquí o des d'un botó
-          // ws.value.send(JSON.stringify({ type: 'start', codi_acces: currentCodiAcces }));
+          break;
+        case 'start':
+          console.log("Rebut senyal START. Comença el joc.");
+          gameStarted.value = true;
           break;
       }
     };
 
-    ws.value.onclose = () => { isConnected.value = false; };
+    ws.value.onclose = () => { 
+        console.log("WebSocket tancat.");
+        isConnected.value = false; 
+    };
     ws.value.onerror = (err) => console.error('Error WebSocket:', err);
   }
 
   function disconnectWebSocket() {
-    stopTimer(); // Aturem el temporitzador en desconnectar
+    stopTimer();
     if (ws.value?.readyState === WebSocket.OPEN) {
-      ws.value.send(JSON.stringify({
-        type: 'finish',
-        reps: count.value,
-        exercici: currentExercici,
-        codi_acces: currentCodiAcces
-      }));
+      if (count.value > 0) {
+          // 🔴 CANVI CLAU: S'afegeix el temps a les dades enviades
+          const finalTime = 60; // El temps de partida multijugador sempre és 60 segons
+
+          ws.value.send(JSON.stringify({
+            type: 'finish',
+            reps: count.value,
+            time: finalTime, // AFEGIT PER DESAR EL TEMPS TOTAL
+            exercici: currentExercici,
+            codi_acces: currentCodiAcces
+          }));
+      }
       ws.value.send(JSON.stringify({ type: 'leave' }));
       ws.value.close();
     }
     ws.value = null;
     isConnected.value = false;
+    gameStarted.value = false;
   }
   
   // --- 4. Neteja de l'Store ---
   function cleanupSession() {
     disconnectWebSocket();
-    resetTimer(); // Resetejem el temporitzador
+    resetTimer();
     count.value = 0;
     leaderboard.value = [];
     lastReceivedPose.value = null;
-    currentCodiAcces = null;
-    currentExercici = null;
-    currentUserId = null;
-    currentUserName = null;
+    gameStarted.value = false;
+    finalLeaderboard.value = null; // Neteja la classificació final
   }
 
-  // ======================================================
-  // === Retornem l'API pública de l'store ===
-  // ======================================================
   return {
-    // Estat i Getters
-    ws,
-    isConnected,
-    leaderboard,
-    count,
-    timerActive,
-    timerFinished,
-    timeRemaining,
-    preCount,
-    formattedTime,
-    lastReceivedPose,
-    
-    // Accions
-    startPreCount,
-    stopTimer,
-    resetTimer,
-    incrementCount,
-    connectWebSocket,
-    disconnectWebSocket,
-    cleanupSession
+    ws, isConnected, leaderboard, count, timerActive, timerFinished, timeRemaining, preCount, formattedTime, lastReceivedPose,
+    gameStarted, isHost, finalLeaderboard, // EXPORTEM 'finalLeaderboard'
+    startPreCount, stopTimer, resetTimer, incrementCount, connectWebSocket, disconnectWebSocket, cleanupSession, sendStartSignal
   };
 });
