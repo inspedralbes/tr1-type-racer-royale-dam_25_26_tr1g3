@@ -10,11 +10,11 @@
           <v-btn
             icon
             size="large"
-            variant="tonal"
-            class="profile-btn-glow"
+            variant="plain"
+            class="profile-btn-clen"
             @click="goToProfile"
           >
-            <v-avatar size="40"> 
+            <v-avatar size="60" class="profile-avatar-border"> 
                 <v-img 
                     :src="profilePhotoUrl" 
                     alt="Foto de perfil" 
@@ -40,7 +40,7 @@
             </h1>
           </div>
           
-          <div style="width: 52px; height: 52px;"></div>
+<div style="width: 72px; height: 72px;"></div> 
         </div>
       </div>
 
@@ -227,19 +227,26 @@ onMounted(() => {
 }
 
 /* ==================================== */
-/* ======== NOU ESTIL BOTÓ PERFIL (Mantenim l'estil exterior, canviem l'interior) ======== */
+/* ======== ESTILO BOTÓN PERFIL PROFESIONAL ======== */
 /* ==================================== */
-.profile-btn-glow {
-    /* Estil base del botó Vuetify (icon, tonal) */
-    background-color: rgba(139, 92, 246, 0.15) !important;
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    color: #a78bfa !important;
-    transition: all 0.3s ease-in-out;
+
+/* Contenedor del Botón (V-BTN) */
+.profile-btn-clean {
+    /* Le damos un fondo sutil en hover si es 'plain' */
+    transition: background-color 0.2s ease-in-out;
+    border-radius: 50%; /* Asegurar que el botón sigue el contorno del avatar */
 }
 
-.profile-btn-glow:hover {
-    background-color: rgba(139, 92, 246, 0.3) !important;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8) !important;
-    transform: scale(1.05);
+.profile-btn-clean:hover {
+    /* Un ligero fondo oscuro en hover */
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Avatar (V-AVATAR) */
+.profile-avatar-border {
+    /* Borde sutil y profesional (similar a Discord o Slack) */
+    border: 3px solid #3b82f6; /* Usar el azul de tu paleta */
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); /* Sombra muy suave para destacarlo */
+    background-color: #1a2238; /* Fondo oscuro si la imagen no carga */
 }
 </style>
