@@ -1,91 +1,108 @@
-version: "3.9"
-
 services:
-  # --- SERVEI DE BASE DE DADES (MariaDB) ---
-  db:
-    image: mariadb:latest
-    container_name: fitai_mysql_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password_molt_segura
-      MYSQL_DATABASE: entrenador_virtual
-      MYSQL_USER: nodeuser
-      MYSQL_PASSWORD: nodepass
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./backend/db_init:/docker-entrypoint-initdb.d
-      - db_data:/var/lib/mysql
-    networks:
-      - fitai_network
+ # --- SERVEI DE BASE DE DADES (MariaDB) ---
+ db:
+   image: mariadb:latest
+   container_name: fitai_mysql_db
+   restart: always
+   environment:
+     MYSQL_ROOT_PASSWORD: root_password_molt_segura
+     MYSQL_DATABASE: entrenador_virtual
+     MYSQL_USER: nodeuser
+     MYSQL_PASSWORD: nodepass
+   ports:
+     - "3306:3306"
+   volumes:
+     - ./backend/db_init:/docker-entrypoint-initdb.d
+     - db_data:/var/lib/mysql
+   networks:
+     - fitai_network
 
-  # --- SERVEI DE GESTIÓ DE BD (phpMyAdmin) ---
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: fitai_pma
-    restart: always
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-    ports:
-      - "8081:80"
-    depends_on:
-      - db
-    networks:
-      - fitai_network
 
-  # --- SERVEI DE BACKEND (API Node.js) ---
-  backend:   
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile.prod
-    restart: always
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./backend:/usr/src/app
-      - ./frontend/public/uploads:/usr/src/app/../frontend/public/uploads
-      - /usr/src/app/node_modules
-    environment:
-      DB_HOST: db
-      DB_USER: nodeuser
-      DB_PASSWORD: nodepass
-      DB_NAME: entrenador_virtual
-    depends_on:
-      - db
-    networks:
-      - fitai_network
+ # --- SERVEI DE GESTIÓ DE BD (phpMyAdmin) ---
+ phpmyadmin:
+   image: phpmyadmin:latest
+   container_name: fitai_pma
+   restart: always
+   environment:
+     PMA_HOST: db
+     PMA_PORT: 3306
+   ports:
+     - "8081:80"
+   depends_on:
+     - db
+   networks:
+     - fitai_network
 
-  # --- SERVEI DE FRONTEND (Nginx) ---
-  frontend:
-    build:
-      context: .
-      dockerfile: ./frontend/Dockerfile.prod
-    restart: always
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-    networks:
-      - fitai_network
 
-  proxy:
-    image: nginx:stable
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - fitai_network
-    depends_on:
-      - frontend
-      - backend
+ # --- SERVEI DE BACKEND (API Node.js) ---
+ backend:  
+   build:
+     context: .
+     dockerfile: ./backend/Dockerfile.prod
+   restart: always
+   ports:
+     - "4000:4000"
+   volumes:
+     - ./backend:/usr/src/app
+     - /usr/src/app/node_modules
+   environment:
+     DB_HOST: db
+     DB_USER: nodeuser
+     DB_PASSWORD: nodepass
+     DB_NAME: entrenador_virtual
+   depends_on:
+     - db
+   networks:
+     - fitai_network
+
+
+ # --- SERVEI DE FRONTEND (Nginx) ---
+ frontend:
+   build:
+     context: .
+     dockerfile: ./frontend/Dockerfile.prod
+   restart: always
+   ports:
+     - "8080:80"
+   depends_on:
+     - backend
+   networks:
+     - fitai_network
+
+
+ proxy:
+   image: nginx:stable
+   restart: always
+   ports:
+     - "80:80"
+     - "443:443"
+   volumes:
+     - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+   networks:
+     - fitai_network
+   depends_on:
+     - frontend
+     - backend
+
+
+ certbot:
+   image: certbot/certbot
+   container_name: certbot
+   restart: "no"
+   volumes:
+     - ./proxy/certbot/www:/var/www/certbot
+     - ./proxy/certbot/conf:/etc/letsencrypt
+   depends_on:
+     - proxy
+
+
+
 
 volumes:
-  db_data:
+ db_data:
+
 
 networks:
-  fitai_network:
-    driver: bridge
+ fitai_network:
+   driver: bridge
+
