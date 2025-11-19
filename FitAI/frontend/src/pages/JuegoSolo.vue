@@ -10,7 +10,6 @@
           class="top-right-finish-btn" 
           variant="flat"
           size="large"
-
           prepend-icon="mdi-exit-to-app" 
           color="#8b5cf6" 
           @click="tornar"
@@ -161,15 +160,13 @@ const cameraViewRef = ref(null)
 const timerCardRef = ref(null)
 const timerActive = ref(false)
 
-// Contador manual de respaldo (para UI o por si se sale antes)
+// Contador manual de respaldo
 const tempsActiuTotal = ref(0) 
 let tempsInterval = null       
 
 // Lifecycle
 onMounted(() => connectWebSocket())
 onBeforeUnmount(() => {
-    // Eliminamos la llamada automática a tornar() aquí para evitar dobles redirecciones
-    // Si es necesario limpiar, limpiar solo recursos:
     stopCamera();
     if (ws.value) ws.value.close();
 })
@@ -198,7 +195,7 @@ function selectVideo() {
 }
 
 // ===================================================================
-// LÓGICA DEL TEMPORIZADOR Y FINALIZACIÓN (AQUÍ ESTÁN LOS CAMBIOS)
+// LÓGICA DEL TEMPORIZADOR
 // ===================================================================
 
 function startTempsCounter() {
@@ -217,23 +214,16 @@ function stopTempsCounter() {
   }
 }
 
-// 1. Cuando el usuario para el timer manualmente
 function handleTimerStop(seconds) {
   stopTempsCounter()
-  // Opcional: Si quieres que "Parar" finalice la sesión descomenta esto:
-  // tornar(seconds) 
-  
-  // Si solo quieres pausar y guardar el tiempo parcial:
   if (seconds) tempsActiuTotal.value = seconds;
 }
 
-// 2. Cuando el timer llega a 0 (FINALIZACIÓN AUTOMÁTICA)
 function handleTimerFinished(seconds) {
   stopTempsCounter() 
   if (detecting.value) {
     stopCamera()
   }
-  // Enviamos los segundos exactos que nos da el TimerCard
   tornar(seconds);
 }
 
@@ -244,8 +234,10 @@ function handleTimerReset() {
   initialY = null; 
 }
 
-// 3. FUNCIÓN CENTRAL DE NAVEGACIÓN (CORREGIDA)
-async function tornar(tempsRebut = null) { // <--- AHORA ES ASYNC
+// ===================================================================
+// FUNCIÓN CENTRAL DE NAVEGACIÓN (CORREGIDA)
+// ===================================================================
+async function tornar(arg = null) {
   stopCamera();
   timerCardRef.value?.stopTimer(); 
   stopTempsCounter(); 
@@ -253,33 +245,36 @@ async function tornar(tempsRebut = null) { // <--- AHORA ES ASYNC
   const repsFinals = count.value;
   const exerciciNormalitzat = exercici.toLowerCase();
 
-  // DECISIÓN DE TIEMPO
-  const tempsFinal = (tempsRebut !== null && tempsRebut !== undefined) 
-                      ? tempsRebut 
-                      : tempsActiuTotal.value;
+  // 🔴 CORRECCIÓN CLAVE:
+  // Si 'arg' es un número (viene del Timer), lo usamos.
+  // Si 'arg' es un Evento (viene del click) o null, usamos el contador local.
+  let tempsFinal;
+  if (typeof arg === 'number') {
+      tempsFinal = arg;
+  } else {
+      tempsFinal = tempsActiuTotal.value;
+  }
 
-  // =======================================================
-  // 🔴 NUEVO: GUARDAR EN BASE DE DATOS
-  // =======================================================
+  console.log("Finalizando sesión -> Reps:", repsFinals, "Temps:", tempsFinal);
+
+  // 2. GUARDAR EN BASE DE DATOS
   try {
       await fetch('/api/user/save-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
               reps: repsFinals,
-              time: tempsFinal
+              time: tempsFinal 
           })
       });
       
-      // Refrescamos el usuario localmente para que el perfil se actualice ya
       await authStore.refreshUser(); 
 
   } catch (error) {
       console.error("Error al guardar las estadísticas:", error);
   }
-  // =======================================================
 
-  // WebSocket cleanup
+  // 3. WebSocket cleanup
   if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({
       type: 'finish',
@@ -292,15 +287,13 @@ async function tornar(tempsRebut = null) { // <--- AHORA ES ASYNC
     ws.value = null; 
   }
   
-  // ROUTER PUSH
+  // 4. Router Push
   router.push({ 
     name: 'EstadistiquesSessio', 
     params: { 
       ejercicio: exercici,
       reps: repsFinals,
-      tempsTotal: tempsFinal,
-      // Si tu router espera 'calories', añade: calories: 0 
-      // Si lo quitaste del router, déjalo así.
+      tempsTotal: tempsFinal
     } 
   });
 }

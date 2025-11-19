@@ -35,18 +35,21 @@ const upload = multer({
 });
 
 // ==========================
-// FUNCIONES EXISTENTES
+// FUNCIONES
 // ==========================
 
+// 1. GET RANKING (🔴 CORREGIDO: Ahora busca a los mejores, no al usuario actual)
 export const getRanking = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       'SELECT nom, repeticions_totals FROM usuaris WHERE repeticions_totals > 0 ORDER BY repeticions_totals DESC, nom ASC LIMIT 10'
     );
+    
     const ranking = rows.map(r => ({
       jugador: r.nom,
       puntos: r.repeticions_totals
     }));
+    
     res.json(ranking);
   } catch (error) {
     console.error(error);
@@ -54,6 +57,7 @@ export const getRanking = async (req, res) => {
   }
 };
 
+// 2. UPDATE STREAK
 export const updateStreak = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -86,6 +90,7 @@ export const updateStreak = async (req, res) => {
   }
 };
 
+// 3. GET STREAK
 export const getStreak = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -102,9 +107,7 @@ export const getStreak = async (req, res) => {
   }
 };
 
-// ==========================
-// NUEVA FUNCIÓN: getMe (ACTUALIZADA)
-// ==========================
+// 4. GET ME (Correcto: incluye temps_total)
 export const getMe = async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'No autorizado' });
 
@@ -116,7 +119,7 @@ export const getMe = async (req, res) => {
         foto_url,
         sessions_completades,
         repeticions_totals,
-        temps_total,       -- <--- ¡AÑADE ESTA LÍNEA AQUÍ!
+        temps_total,       
         ratxa,
         ultima_sessio
      FROM usuaris 
@@ -128,9 +131,8 @@ export const getMe = async (req, res) => {
 
   res.json(rows[0]);
 };
-// ==========================
-// FUNCIÓN EXISTENTE: updateProfilePicture
-// ==========================
+
+// 5. UPDATE PROFILE PICTURE (Correcto: incluye temps_total)
 export const updateProfilePicture = [
   (req, res, next) => {
     if (!req.session.userId) return res.status(401).json({ message: 'No autorizado' });
@@ -154,7 +156,13 @@ export const updateProfilePicture = [
       );
 
       const [rows] = await pool.execute(
-        'SELECT id, nom, email, foto_url, sessions_completades, repeticions_totals, ratxa, ultima_sessio FROM usuaris WHERE id = ?',
+        `SELECT 
+            id, nom, email, foto_url, 
+            sessions_completades, 
+            repeticions_totals, 
+            temps_total, 
+            ratxa, ultima_sessio 
+         FROM usuaris WHERE id = ?`,
         [req.session.userId]
       );
 
@@ -174,37 +182,28 @@ export const updateProfilePicture = [
   }
 ];
 
-// ==========================
-// NUEVA FUNCIÓN: saveSessionStats (CORREGIDA CON TIEMPO)
-// ==========================
+// 6. SAVE SESSION STATS (Correcto: guarda tiempo)
 export const saveSessionStats = async (req, res) => {
   try {
-    // 1. Verificamos sesión
     const userId = req.session.userId;
     if (!userId) {
       return res.status(401).json({ message: 'No autorizado. Inicie sesión.' });
     }
 
-    // 2. Recibimos los datos del frontend
     const { reps, time } = req.body;
-    
-    // Convertimos a números. Si llega null o undefined, ponemos 0.
     const repsNum = Number(reps) || 0;
-    const timeNum = Number(time) || 0; // <--- AHORA SÍ LO USAMOS
+    const timeNum = Number(time) || 0; 
 
-    // 3. EJECUTAMOS SQL UPDATE
-    // IMPORTANTE: Asegúrate de que la columna 'temps_total' existe en tu base de datos
     await pool.execute(
       `UPDATE usuaris 
        SET 
          repeticions_totals = repeticions_totals + ?, 
          sessions_completades = sessions_completades + 1,
-         temps_total = IFNULL(temps_total, 0) + ?  -- Sumamos el tiempo (si es null, empieza en 0)
+         temps_total = IFNULL(temps_total, 0) + ?
        WHERE id = ?`,
       [repsNum, timeNum, userId]
     );
 
-    // 4. Recuperamos el usuario actualizado para refrescar la sesión
     const [rows] = await pool.execute(
       `SELECT 
           id, nom, email, 
@@ -218,13 +217,11 @@ export const saveSessionStats = async (req, res) => {
 
     const updatedUser = rows[0];
 
-    // Actualizamos la sesión del backend
     if (req.session.user) {
         req.session.user = { ...req.session.user, ...updatedUser };
         req.session.save();
     }
 
-    // Respondemos al frontend
     res.json({ 
       message: 'Entrenamiento guardado correctamente', 
       user: updatedUser 
@@ -232,12 +229,9 @@ export const saveSessionStats = async (req, res) => {
 
   } catch (error) {
     console.error('Error al guardar estadísticas:', error);
-    
-    // Si el error es porque falta la columna, avisamos claro
     if (error.code === 'ER_BAD_FIELD_ERROR') {
        return res.status(500).json({ message: "Error: La columna 'temps_total' no existe en la base de datos." });
     }
-    
     res.status(500).json({ message: 'Error de base de datos al guardar stats' });
   }
 };

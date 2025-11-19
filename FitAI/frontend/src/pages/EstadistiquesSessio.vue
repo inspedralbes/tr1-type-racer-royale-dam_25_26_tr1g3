@@ -73,8 +73,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // ---------------------------------------------------------
-// OBTENCIÓN DE DATOS (CORREGIDA)
-// Usamos Number() porque route.params devuelve Strings
+// OBTENCIÓN DE DATOS
 // ---------------------------------------------------------
 const reps = Number(route.params.reps) || 0
 const tempsTotal = Number(route.params.tempsTotal) || 0 
@@ -82,21 +81,10 @@ const exercici = route.params.ejercicio || 'EXERCICI'
 
 // Diccionari per mapejar els noms dels exercicis
 const noms = {
-  Flexions: 'FLEXIONS',
-  Squats: 'SQUATS',
-  Salts: 'SALTS',
-  Abdominals: 'ABDOMINALS',
-  Fons: 'FONS',
-  Pujades: 'PUJADES',
-  flexiones: 'FLEXIONS',
-  sentadillas: 'ESQUATS',
-  saltos: 'SALTS',
-  abdominales: 'ABDOMINALS',
-  fons: 'FONS',
-  pujades: 'PUJADES',
+  Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES',
+  flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES',
 }
 
-// Obtenir l'etiqueta correcta o utilitzar el valor per defecte
 const exerciciLabel = computed(() => noms[exercici] || exercici)
 
 // Funció per formatar el temps de segons a MM:SS
