@@ -25,7 +25,10 @@
           >
 
           <v-avatar size="128" class="profile-avatar mb-4 elevation-6" @click="triggerFileInput">
-            <v-img :src="previewImage || (user.foto_url ? user.foto_url + '?' + Date.now() : defaultAvatar)" alt="Foto de perfil" />
+            <v-img 
+              :src="previewImage || (user.foto_url ? `${user.foto_url}?v=${imageVersion}` : defaultAvatar)" 
+              alt="Foto de perfil" 
+            />
             
             <div class="camera-overlay">
                 <v-icon size="36" color="white">mdi-camera-plus</v-icon>
@@ -145,7 +148,10 @@ const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 const defaultAvatar = ref('https://cdn.vuetifyjs.com/images/cards/halcyon.png') 
 
-// Estats per a la càrrega de fotos
+// Control de versión para la imagen de perfil
+const imageVersion = ref(Date.now())
+
+// Estados para la carga de fotos
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const previewImage = ref(null)
@@ -154,83 +160,82 @@ const uploadMessage = ref(null)
 const uploadMessageType = ref('info')
 
 // ----------------------------
-// Al muntar el component
+// CAMBIO IMPORTANTE: Al montar
 // ----------------------------
 onMounted(async () => {
-  if (!authStore.user) {
-    // Crida al backend per carregar la sessió i l'usuari
-    await authStore.checkAuth()
+  // 1. Verificamos sesión básica
+  await authStore.checkAuth()
+  
+  // 2. Forzamos actualización de estadísticas frescas saltando la caché
+  // Esto soluciona que las reps salgan a 0 al entrar
+  if (authStore.user) {
+    await authStore.refreshUser() 
   }
 })
 
 // ----------------------------
-// Funcions per pujar foto i altres
+// Funciones para subir foto
 // ----------------------------
-const triggerFileInput = () => {
-    fileInput.value.click();
-}
+const triggerFileInput = () => fileInput.value.click()
 
 const onFileSelected = (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files[0]
     if (file) {
-        selectedFile.value = file;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewImage.value = e.target.result;
-        };
-        reader.readAsDataURL(file);
-        
-        uploadMessage.value = `Fitxer seleccionat: ${file.name}. Prem "Pujar Foto" per guardar.`;
-        uploadMessageType.value = 'info';
+        selectedFile.value = file
+        const reader = new FileReader()
+        reader.onload = (e) => previewImage.value = e.target.result
+        reader.readAsDataURL(file)
+        uploadMessage.value = `Fitxer seleccionat: ${file.name}. Prem "Pujar Foto" per guardar.`
+        uploadMessageType.value = 'info'
     } else {
-        cancelUpload();
+        cancelUpload()
     }
 }
 
 const uploadPhoto = async () => {
-    if (!selectedFile.value) return;
-
-    uploading.value = true;
-    uploadMessage.value = 'Pujant imatge...';
-    uploadMessageType.value = 'info';
+    if (!selectedFile.value) return
+    uploading.value = true
+    uploadMessage.value = 'Pujant imatge...'
+    uploadMessageType.value = 'info'
 
     try {
-        const formData = new FormData();
-        formData.append('profileImage', selectedFile.value); 
-
-        await authStore.updateProfilePicture(formData); 
+        const formData = new FormData()
+        formData.append('profileImage', selectedFile.value)
+        await authStore.updateProfilePicture(formData)
         
-        uploadMessage.value = 'Foto de perfil actualitzada correctament!';
-        uploadMessageType.value = 'success';
-        
-        selectedFile.value = null;
-        previewImage.value = null;
+        // Actualizamos versión para refrescar la imagen en el navegador
+        imageVersion.value = Date.now()
 
+        uploadMessage.value = 'Foto de perfil actualitzada correctament!'
+        uploadMessageType.value = 'success'
+        
+        selectedFile.value = null
+        previewImage.value = null
+        
     } catch (error) {
-        console.error('Error al pujar la foto:', error);
-        uploadMessage.value = error.message || 'Error desconegut al pujar la foto.';
-        uploadMessageType.value = 'error';
+        console.error('Error al pujar la foto:', error)
+        uploadMessage.value = error.message || 'Error desconegut al pujar la foto.'
+        uploadMessageType.value = 'error'
     } finally {
-        uploading.value = false;
-        fileInput.value.value = ''; 
+        uploading.value = false
+        fileInput.value.value = ''
     }
 }
 
 const cancelUpload = () => {
-    selectedFile.value = null;
-    previewImage.value = null;
-    uploadMessage.value = null;
-    fileInput.value.value = '';
+    selectedFile.value = null
+    previewImage.value = null
+    uploadMessage.value = null
+    fileInput.value.value = ''
 }
 
 const goToHome = () => router.push('/')
 const handleLogout = async () => {
-    await authStore.logout();
-    router.push({ name: 'Login' });
+    await authStore.logout()
+    router.push({ name: 'Login' })
 }
-
 </script>
+
 
 <style scoped>
 /* ==================================== */

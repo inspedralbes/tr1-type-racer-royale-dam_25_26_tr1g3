@@ -80,11 +80,44 @@ export const loginUser = async (req, res) => {
 };
 
 // Funció per obtenir l'usuari actual
-export const getCurrentUser = (req, res) => {
-  if (req.session.user) {
-    res.json(req.session.user);
-  } else {
-    res.status(401).json({ message: 'No autenticat' });
+// Funció per obtenir l'usuari actual (CORREGIDA)
+export const getCurrentUser = async (req, res) => {
+  // 1. Verifiquem si hi ha sessió
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ message: 'No autenticat' });
+  }
+
+  try {
+    // 2. Agafem l'ID guardat a la sessió
+    const userId = req.session.user.id;
+
+    // 3. Consultem la Base de Dades en temps real (Sequelize)
+    // User.findByPk busca per Primary Key (ID)
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ['password'] } // IMPORTANT: No enviem la contrasenya
+    });
+
+    if (!user) {
+      // Si l'usuari es va esborrar de la BD però encara té cookie
+      return res.status(404).json({ message: 'Usuari no trobat' });
+    }
+
+    // 4. (Opcional) Actualitzem la sessió per mantenir-la fresca
+    // Això ajuda si altres parts fan servir req.session.user
+    req.session.user = { 
+        id: user.id, 
+        nom: user.nom, 
+        email: user.email,
+        // Pots afegir altres camps si vols tenir-los en sessió, 
+        // però el important és el retorn del JSON
+    };
+
+    // 5. Retornem l'usuari FESC de la base de dades amb les noves reps
+    res.json(user);
+
+  } catch (error) {
+    console.error('Error a getCurrentUser:', error);
+    res.status(500).json({ message: 'Error del servidor' });
   }
 };
 
