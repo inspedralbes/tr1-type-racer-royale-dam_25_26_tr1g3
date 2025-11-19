@@ -7,39 +7,38 @@
 
                 <v-btn class="top-left-back-btn" variant="flat" size="large" prepend-icon="mdi-arrow-left"
                     color="error" @click="tornar">
-                    Sortir de la Sala
+                    Sortir
                 </v-btn>
 
+                <!-- COMPTADOR: Mostra PREPARACIÓ o TEMPS DE JOC -->
                 <div class="temps-counter" :class="{ 'counter-active': partidaEnCurs }">
-                    {{ minuts }}:{{ segonsFormat }}
+                    <template v-if="enPreparacio">
+                        PREPARAT: {{ tempsPreparacio }}
+                    </template>
+                    <template v-else>
+                        {{ minuts }}:{{ segonsFormat }}
+                    </template>
                 </div>
 
                 <v-row class="mt-16 mt-md-0">
-                    <!-- COLUMNA ESQUERRA: CÀMERA I CONTROLS -->
                     <v-col cols="12" md="7" class="d-flex flex-column align-center order-md-1 order-2">
                         <h2 class="text-h5 font-weight-bold mb-3 neon-player-name">
                             <v-icon color="cyan-accent-3" start>mdi-account-circle</v-icon>
                             {{ authStore.userName }} (Tu)
                         </h2>
 
-                        <!-- EL DIV DE LA CÀMERA -->
                         <div class="camera-container-wrapper">
-                            
-                            <!-- CÀMERA (A sota) -->
                             <CameraView ref="cameraViewRef" :timer-active="true"
                                 :on-check-moviment="detectarIPublicarMoviment"
                                 style="width: 100%; display: block;" />
 
-                            <!-- OVERLAY (A sobre) - ARA TRANSPARENT -->
-                            <div v-if="!partidaEnCurs" class="waiting-overlay d-flex flex-column align-center justify-center">
-                                
-                                <!-- Títol amb ombra per llegir-se sobre el vídeo -->
+                            <!-- OVERLAY SALA D'ESPERA (Només es veu si no ha començat res) -->
+                            <div v-if="!partidaEnCurs && !enPreparacio" class="waiting-overlay d-flex flex-column align-center justify-center">
                                 <h3 class="text-h4 font-weight-bold text-uppercase mb-6 waiting-title">
                                     SALA D'ESPERA
                                 </h3>
 
                                 <div class="controls-wrapper">
-                                    <!-- BOTÓ INICI -->
                                     <v-btn 
                                         v-if="workoutStore.isHost"
                                         size="x-large" 
@@ -53,7 +52,6 @@
                                         INICIAR PARTIDA
                                     </v-btn>
 
-                                    <!-- MISSATGE ESPERA -->
                                     <v-chip v-else size="large" class="glass-chip" variant="elevated" color="rgba(0,0,0,0.6)">
                                         <v-progress-circular indeterminate size="20" width="2" class="mr-3" color="cyan-accent-3"></v-progress-circular>
                                         Esperant a l'amfitrió...
@@ -70,7 +68,6 @@
                             :count="workoutStore.count" />
                     </v-col>
 
-                    <!-- COLUMNA DRETA: RIVALS -->
                     <v-col cols="12" md="5" class="d-flex flex-column align-center order-md-2 order-1">
                         <ExerciseInfo :label="exerciciLabel" :gif="exerciciGif" class="mb-6" />
 
@@ -92,9 +89,14 @@
                 </v-row>
             </v-container>
 
-            <v-dialog v-model="mostrarPopup" width="600" persistent>
-                <EstadistiquesSessioMultiplayer :ejercicio="exercici" :reps="workoutStore.count" :tempsTotal="60"
-                    :calories="Math.round(workoutStore.count * 0.35)" @close="tornar" />
+            <!-- POPUP AMB EL NOU DISSENY -->
+            <v-dialog v-model="mostrarPopup" max-width="600" persistent>
+                <EstadistiquesSessioMultiplayer 
+                    :exercici="exercici" 
+                    :totalReps="workoutStore.count" 
+                    :jugador="authStore.userName"
+                    :altresJugadors="altresJugadors" 
+                />
             </v-dialog>
 
         </v-main>
@@ -110,6 +112,7 @@ import { useWorkoutStore } from '@/stores/workoutStore';
 import CameraView from '../components/CameraView.vue';
 import RepetitionCounter from '../components/RepetitionCounter.vue';
 import ExerciseInfo from '../components/ExerciseInfo.vue';
+// Utilitzem el component nou que acabes de crear a pages
 import EstadistiquesSessioMultiplayer from '../pages/EstadistiquesSessioMultiplayer.vue';
 
 import flexionesGif from '@/assets/flexiones.gif';
@@ -135,10 +138,16 @@ const exerciciGif = gifs[exercici] || '';
 const up = ref(false);
 const cameraViewRef = ref(null);
 const canvasRemots = ref({});
+
+const tempsPreparacio = ref(5);
 const tempsRestant = ref(60);
 const intervalTemps = ref(null);
+const intervalPreparacio = ref(null);
 const mostrarPopup = ref(false);
+const enPreparacio = ref(false);
+const esFaseDeJoc = ref(false); // Controla quan es poden fer repeticions
 
+// Detecta si el joc ha rebut l'ordre d'inici
 const partidaEnCurs = computed(() => workoutStore.gameStarted);
 
 const altresJugadors = computed(() => {
@@ -154,20 +163,28 @@ onMounted(async () => {
     workoutStore.connectWebSocket(codi_acces, exercici);
     await nextTick();
     startCamera();
+    // NO INICIEM TEMPORITZADORS AQUÍ. ESPEREM AL WEBSOCKET.
 });
 
 onBeforeUnmount(() => {
     tornar();
 });
 
-// === WATCHERS ===
+// === 1. GESTIÓ D'INICI DE PARTIDA ===
+
+// Botó de l'Amfitrió
+function iniciarPartidaGlobal() {
+    workoutStore.sendStartSignal();
+}
+
+// Watcher: Quan rebem 'start' del backend -> Iniciem Compte Enrere (5s)
 watch(() => workoutStore.gameStarted, (started) => {
-    console.log("Estat partida canviat:", started);
     if (started) {
-        iniciarTemporitzadorLocal();
+        iniciarCompteEnrerePreparacio();
     }
 });
 
+// Watcher: Dibuix esquelets
 watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     if (newPoseData && newPoseData.from) {
         nextTick(() => {
@@ -176,38 +193,61 @@ watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     }
 }, { deep: true });
 
-// === ACCIONS ===
-function iniciarPartidaGlobal() {
-    console.log("Iniciant partida...");
-    workoutStore.sendStartSignal();
+
+// === 2. TEMPORITZADORS (5s -> 60s) ===
+
+function iniciarCompteEnrerePreparacio() {
+    enPreparacio.value = true;
+    tempsPreparacio.value = 5;
+    
+    if (intervalPreparacio.value) clearInterval(intervalPreparacio.value);
+
+    intervalPreparacio.value = setInterval(() => {
+        if (tempsPreparacio.value > 0) {
+            tempsPreparacio.value--;
+        } else {
+            // FI PREPARACIÓ -> INICI JOC REAL
+            clearInterval(intervalPreparacio.value);
+            enPreparacio.value = false;
+            iniciarPartidaReial();
+        }
+    }, 1000);
 }
 
-function iniciarTemporitzadorLocal() {
-    if (intervalTemps.value) clearInterval(intervalTemps.value);
+function iniciarPartidaReial() {
+    esFaseDeJoc.value = true; // Ara sí que comptem reps
     tempsRestant.value = 60;
     
+    if (intervalTemps.value) clearInterval(intervalTemps.value);
+
     intervalTemps.value = setInterval(() => {
         if (tempsRestant.value > 0) {
             tempsRestant.value--;
         } else {
+            // FI JOC -> POPUP
             clearInterval(intervalTemps.value);
+            esFaseDeJoc.value = false;
             obrirPopupFinal();
         }
     }, 1000);
 }
 
+function obrirPopupFinal() {
+    mostrarPopup.value = true;
+    // Enviem el resultat final
+    workoutStore.disconnectWebSocket(); 
+}
+
 function tornar() {
     stopCamera();
     if (intervalTemps.value) clearInterval(intervalTemps.value);
+    if (intervalPreparacio.value) clearInterval(intervalPreparacio.value);
     workoutStore.cleanupSession();
     router.push('/'); 
 }
 
-function obrirPopupFinal() {
-    mostrarPopup.value = true;
-}
+// === CÀMERA I REPS ===
 
-// === CÀMERA I EXERCICIS ===
 async function startCamera() {
     if (cameraViewRef.value) {
         try { await cameraViewRef.value.start(); } catch (e) { }
@@ -224,7 +264,7 @@ function handleRepCount() {
 }
 
 function detectarIPublicarMoviment(pose) {
-    // 1. Sempre enviem l'esquelet (per visualització)
+    // 1. Sempre enviem esquelet
     if (workoutStore.ws?.readyState === WebSocket.OPEN) {
         workoutStore.ws.send(JSON.stringify({
             type: 'pose_update',
@@ -232,8 +272,8 @@ function detectarIPublicarMoviment(pose) {
         }));
     }
 
-    // 2. Comptar repeticions NOMÉS si la partida ha començat
-    if (partidaEnCurs.value && tempsRestant.value > 0) {
+    // 2. Només comptem si estem a la fase de joc (passats els 5s i abans d'acabar)
+    if (esFaseDeJoc.value) {
         const exerciciNormalitzat = exercici.toLowerCase();
         switch (exerciciNormalitzat) {
             case 'flexiones': case 'flexions': checkFlexio(pose); break;
@@ -246,7 +286,8 @@ function detectarIPublicarMoviment(pose) {
     }
 }
 
-// === CANVAS REMOT I RECONEIXEMENT (IGUAL) ===
+// === CANVAS I EXERCICIS (IGUAL) ===
+
 function dibuixarEsqueletRemot(jugadorId, pose) {
     const canvas = canvasRemots.value[jugadorId];
     if (!canvas || !pose || !pose.keypoints) return;
@@ -333,6 +374,20 @@ function checkPujades(pose) {
 </script>
 
 <style scoped>
+/* AFEGIT ESTILS OVERLAY DE LA MEVA RESPOSTA ANTERIOR */
+.waiting-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6));
+    z-index: 20; pointer-events: none;
+}
+.controls-wrapper { pointer-events: auto; }
+.waiting-title { color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+.start-game-btn { font-weight: 900; letter-spacing: 1px; box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); pointer-events: auto; }
+.glass-chip { background: rgba(0, 0, 0, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(5px); }
+.pulse-animation { animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+/* ESTILS DEL COMPTADOR I LAYOUT */
 .bg-fitai-deep-space {
     background: radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
                 radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
@@ -340,70 +395,24 @@ function checkPujades(pose) {
     background-attachment: fixed;
     min-height: 100vh;
 }
-
-.camera-container-wrapper {
-    position: relative; 
-    width: 95%; 
-    border-radius: 16px; 
-    overflow: hidden; 
-    min-height: 300px;
-    border: 1px solid #3b82f6; /* Marc blau per saber on és */
-}
-
-/* OVERLAY TRANSPARENT PER PODER VEURE L'ESQUELET A SOTA */
-.waiting-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    /* Fons transparent o gradient molt subtil */
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6)); 
-    z-index: 20;
-    pointer-events: none; /* PERMET QUE ELS CLICS PASSIN (si calgués), però volem clicar el botó */
-}
-
-/* El contenidor de controls torna a activar els clics */
-.controls-wrapper {
-    pointer-events: auto; 
-}
-
-.waiting-title {
-    color: white;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-}
-
-.start-game-btn {
-    font-weight: 900;
-    letter-spacing: 1px;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
-    pointer-events: auto; /* Assegurem que es pot clicar */
-}
-
-.glass-chip {
-    background: rgba(0, 0, 0, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(5px);
-}
+.fade-in-container { animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.position-relative { position: relative; }
+.camera-container-wrapper { position: relative; width: 95%; border-radius: 16px; overflow: hidden; min-height: 300px; border: 1px solid #3b82f6; }
 
 .temps-counter {
-    position: fixed;
-    top: 20px; right: 20px;
-    background: #0f172a;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #94a3b8;
-    z-index: 100;
+    position: fixed; top: 20px; right: 20px;
+    background: #0f172a; padding: 12px 20px; border-radius: 12px;
+    font-size: 1.5rem; font-weight: bold; color: #94a3b8; z-index: 100; border: 2px solid #334155;
 }
-.counter-active {
-    color: white;
-    background: #ef4444;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
-}
+.counter-active { color: white; background: #ef4444; border-color: #f87171; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); }
 .top-left-back-btn {
     position: absolute; top: 15px; left: 15px; z-index: 50;
     color: white !important; background: #ef4444 !important;
-    font-weight: 700 !important;
+    font-weight: 700 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
 }
-.player-card { background: rgba(30, 30, 47, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
-.remote-canvas { width: 100%; height: auto; background-color: #111827; border-radius: 8px; }
+.player-card { background: rgba(30, 30, 47, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); }
+.neon-player-name { color: #4dd0e1; text-shadow: 0 0 5px #4dd0e1, 0 0 10px #4dd0e1; }
+.neon-player-name-remote { color: #a5b4fc; text-shadow: 0 0 5px #a5b4fc; }
+.remote-canvas { width: 100%; height: auto; background-color: #111827; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); }
 </style>

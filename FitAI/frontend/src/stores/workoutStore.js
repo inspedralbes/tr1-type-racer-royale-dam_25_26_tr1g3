@@ -17,8 +17,6 @@ export const useWorkoutStore = defineStore('workout', () => {
   const leaderboard = ref([]);
   const count = ref(0); 
   const lastReceivedPose = ref(null); 
-  
-  // Estat per controlar si la partida ha començat
   const gameStarted = ref(false); 
 
   // --- Estat del Temporitzador ---
@@ -46,7 +44,6 @@ export const useWorkoutStore = defineStore('workout', () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   });
 
-  // Determina si l'usuari actual és l'amfitrió (Host)
   const isHost = computed(() => {
     if (leaderboard.value.length > 0 && authStore.user) {
         return leaderboard.value[0].userId === authStore.user.id;
@@ -83,6 +80,8 @@ export const useWorkoutStore = defineStore('workout', () => {
       if (timeRemaining.value <= 0) {
         stopTimer();
         timerFinished.value = true;
+        // NOTA: Aquí només marquem que ha acabat, NO tanquem el socket automàticament.
+        // Això ho farà el component Vue quan l'usuari surti.
       }
     }, 1000);
   }
@@ -110,7 +109,6 @@ export const useWorkoutStore = defineStore('workout', () => {
     }
   }
 
-  // 🔴 CORRECCIÓ: El backend espera 'start', no 'start_game'
   function sendStartSignal() {
     if (ws.value?.readyState === WebSocket.OPEN) {
         ws.value.send(JSON.stringify({ 
@@ -122,17 +120,19 @@ export const useWorkoutStore = defineStore('workout', () => {
 
   // --- 3. Lògica de WebSocket ---
   function connectWebSocket(codi_acces, exercici) {
-    if (!authStore.user) {
-      console.error("No hi ha usuari autenticat.");
-      return;
-    }
+    if (!authStore.user) return;
     
     currentCodiAcces = codi_acces;
     currentExercici = exercici;
     currentUserId = authStore.user.id;
     currentUserName = authStore.userName;
     
+    // 🔴 FIX CRUCIAL: Assegurem que res està corrent en connectar-se al Lobby
+    stopTimer();            // Atura qualsevol rellotge previ
+    timeRemaining.value = 60; // Reinicia el temps
+    timerActive.value = false;
     gameStarted.value = false; 
+    count.value = 0;
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
@@ -162,34 +162,40 @@ export const useWorkoutStore = defineStore('workout', () => {
         case 'joined':
           console.log('Confirmat: Unit a la sala.');
           break;
-        
-        // 🔴 CORRECCIÓ: El backend respon amb 'start', no 'start_game'
         case 'start':
-          console.log("Partida començada!");
+          console.log("Rebut senyal START. Comença el joc.");
           gameStarted.value = true;
+          // No iniciem el timer de l'store automàticament per evitar conflictes amb el Vue.
+          // El Vue utilitza la seva pròpia lògica basada en 'gameStarted'.
           break;
       }
     };
 
-    ws.value.onclose = () => { isConnected.value = false; };
+    ws.value.onclose = () => { 
+        console.log("WebSocket tancat.");
+        isConnected.value = false; 
+    };
     ws.value.onerror = (err) => console.error('Error WebSocket:', err);
   }
 
   function disconnectWebSocket() {
     stopTimer();
     if (ws.value?.readyState === WebSocket.OPEN) {
-      ws.value.send(JSON.stringify({
-        type: 'finish',
-        reps: count.value,
-        exercici: currentExercici,
-        codi_acces: currentCodiAcces
-      }));
+      // Només enviem 'finish' si realment hem jugat (reps > 0)
+      if (count.value > 0) {
+          ws.value.send(JSON.stringify({
+            type: 'finish',
+            reps: count.value,
+            exercici: currentExercici,
+            codi_acces: currentCodiAcces
+          }));
+      }
       ws.value.send(JSON.stringify({ type: 'leave' }));
       ws.value.close();
     }
     ws.value = null;
     isConnected.value = false;
-    gameStarted.value = false; 
+    gameStarted.value = false;
   }
   
   // --- 4. Neteja de l'Store ---
@@ -199,34 +205,12 @@ export const useWorkoutStore = defineStore('workout', () => {
     count.value = 0;
     leaderboard.value = [];
     lastReceivedPose.value = null;
-    currentCodiAcces = null;
-    currentExercici = null;
-    currentUserId = null;
-    currentUserName = null;
-    gameStarted.value = false; 
+    gameStarted.value = false;
   }
 
   return {
-    ws,
-    isConnected,
-    leaderboard,
-    count,
-    timerActive,
-    timerFinished,
-    timeRemaining,
-    preCount,
-    formattedTime,
-    lastReceivedPose,
-    gameStarted,
-    isHost,
-    
-    startPreCount,
-    stopTimer,
-    resetTimer,
-    incrementCount,
-    connectWebSocket,
-    disconnectWebSocket,
-    cleanupSession,
-    sendStartSignal
+    ws, isConnected, leaderboard, count, timerActive, timerFinished, timeRemaining, preCount, formattedTime, lastReceivedPose,
+    gameStarted, isHost,
+    startPreCount, stopTimer, resetTimer, incrementCount, connectWebSocket, disconnectWebSocket, cleanupSession, sendStartSignal
   };
 });
