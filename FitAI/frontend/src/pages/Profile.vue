@@ -92,9 +92,7 @@
             </v-list>
           </v-col>
         </v-row>
-        
- <v-divider class="divider-glow mx-auto my-6"></v-divider>
-        
+          <v-divider class="divider-glow mx-auto my-6"></v-divider>
         <StreakWidget class="w-100 mb-4" :enable-popup="false" />
         
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
