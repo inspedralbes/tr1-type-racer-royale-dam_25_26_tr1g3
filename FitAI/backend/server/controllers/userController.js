@@ -103,7 +103,7 @@ export const getStreak = async (req, res) => {
 };
 
 // ==========================
-// NUEVA FUNCIÓN: getMe
+// NUEVA FUNCIÓN: getMe (ACTUALIZADA)
 // ==========================
 export const getMe = async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'No autorizado' });
@@ -116,6 +116,7 @@ export const getMe = async (req, res) => {
         foto_url,
         sessions_completades,
         repeticions_totals,
+        temps_total,       -- <--- ¡AÑADE ESTA LÍNEA AQUÍ!
         ratxa,
         ultima_sessio
      FROM usuaris 
@@ -127,7 +128,6 @@ export const getMe = async (req, res) => {
 
   res.json(rows[0]);
 };
-
 // ==========================
 // FUNCIÓN EXISTENTE: updateProfilePicture
 // ==========================
@@ -173,3 +173,71 @@ export const updateProfilePicture = [
     }
   }
 ];
+
+// ==========================
+// NUEVA FUNCIÓN: saveSessionStats (CORREGIDA CON TIEMPO)
+// ==========================
+export const saveSessionStats = async (req, res) => {
+  try {
+    // 1. Verificamos sesión
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'No autorizado. Inicie sesión.' });
+    }
+
+    // 2. Recibimos los datos del frontend
+    const { reps, time } = req.body;
+    
+    // Convertimos a números. Si llega null o undefined, ponemos 0.
+    const repsNum = Number(reps) || 0;
+    const timeNum = Number(time) || 0; // <--- AHORA SÍ LO USAMOS
+
+    // 3. EJECUTAMOS SQL UPDATE
+    // IMPORTANTE: Asegúrate de que la columna 'temps_total' existe en tu base de datos
+    await pool.execute(
+      `UPDATE usuaris 
+       SET 
+         repeticions_totals = repeticions_totals + ?, 
+         sessions_completades = sessions_completades + 1,
+         temps_total = IFNULL(temps_total, 0) + ?  -- Sumamos el tiempo (si es null, empieza en 0)
+       WHERE id = ?`,
+      [repsNum, timeNum, userId]
+    );
+
+    // 4. Recuperamos el usuario actualizado para refrescar la sesión
+    const [rows] = await pool.execute(
+      `SELECT 
+          id, nom, email, 
+          sessions_completades, 
+          repeticions_totals, 
+          temps_total, 
+          foto_url 
+       FROM usuaris WHERE id = ?`,
+      [userId]
+    );
+
+    const updatedUser = rows[0];
+
+    // Actualizamos la sesión del backend
+    if (req.session.user) {
+        req.session.user = { ...req.session.user, ...updatedUser };
+        req.session.save();
+    }
+
+    // Respondemos al frontend
+    res.json({ 
+      message: 'Entrenamiento guardado correctamente', 
+      user: updatedUser 
+    });
+
+  } catch (error) {
+    console.error('Error al guardar estadísticas:', error);
+    
+    // Si el error es porque falta la columna, avisamos claro
+    if (error.code === 'ER_BAD_FIELD_ERROR') {
+       return res.status(500).json({ message: "Error: La columna 'temps_total' no existe en la base de datos." });
+    }
+    
+    res.status(500).json({ message: 'Error de base de datos al guardar stats' });
+  }
+};

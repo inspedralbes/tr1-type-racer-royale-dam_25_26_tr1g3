@@ -77,8 +77,9 @@ const emit = defineEmits(['mainTimerStart', 'timerStop', 'timerReset', 'timerFin
 
 const timerActive = ref(false)
 const timerFinished = ref(false)
-const timeRemaining = ref(60) // 1 minuto por defecto
-const preCount = ref(0) // Cuenta regresiva de 5 segundos
+const INITIAL_TIME = 60 // Constante para evitar errores
+const timeRemaining = ref(INITIAL_TIME) 
+const preCount = ref(0)
 let timerInterval = null
 let preCountInterval = null
 
@@ -90,13 +91,11 @@ const formattedTime = computed(() => {
 
 function startPreCount() {
   if (timerActive.value || preCountInterval) return
-  
-  preCount.value = 5 // Iniciar en 5
+  preCount.value = 5
   timerFinished.value = false
   
   preCountInterval = setInterval(() => {
     preCount.value--
-    
     if (preCount.value <= 0) {
       clearInterval(preCountInterval)
       preCountInterval = null
@@ -107,18 +106,19 @@ function startPreCount() {
 
 function startMainTimer() {
   if (timerActive.value) return
-  
   timerActive.value = true
-  emit('main-timer-start')
- // Informa el pare
+  emit('mainTimerStart') 
   
   timerInterval = setInterval(() => {
     timeRemaining.value--
     
+    // CUANDO ACABA EL TIEMPO (00:00)
     if (timeRemaining.value <= 0) {
-      stopTimer(true) // Passa 'true' per indicar que ha finalitzat
+      stopTimer(true) 
       timerFinished.value = true
-      emit('timerFinished') // Informa el pare
+      
+      // 👇 AQUÍ ESTÁ LA CLAVE: Enviamos 60
+      emit('timerFinished', INITIAL_TIME) 
     }
   }, 1000)
 }
@@ -133,29 +133,25 @@ function stopTimer(finished = false) {
     preCountInterval = null
   }
   
-  // Si s'atura manualment (no perquè ha acabat), posa preCount a 0
+  // Si NO ha acabado solo (usuario pulsa Parar)
   if (!finished) {
       preCount.value = 0
+      // Calculamos cuánto ha hecho (60 - lo que queda)
+      const timeSpent = INITIAL_TIME - timeRemaining.value
+      emit('timerStop', timeSpent) 
   }
-
   timerActive.value = false
-  if (!finished) {
-      emit('timerStop') // Informa el pare
-  }
 }
 
 function resetTimer() {
   stopTimer()
-  timeRemaining.value = 60 // Reiniciar a 1 minuto
+  timeRemaining.value = INITIAL_TIME
   preCount.value = 0
   timerFinished.value = false
-  emit('timerReset') // Informa el pare
+  emit('timerReset')
 }
 
-// Exposa la funció stopTimer al pare
-defineExpose({
-    stopTimer
-})
+defineExpose({ stopTimer })
 </script>
 
 <style scoped>

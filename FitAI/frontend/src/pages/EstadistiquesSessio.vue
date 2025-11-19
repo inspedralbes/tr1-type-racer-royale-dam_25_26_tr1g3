@@ -66,16 +66,19 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore' // 1. Importar el store
+import { useAuthStore } from '@/stores/authStore'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore() // 2. Inicializar el store
+const authStore = useAuthStore()
 
-// Obtención de datos
-const reps = route.params.reps || 0
+// ---------------------------------------------------------
+// OBTENCIÓN DE DATOS (CORREGIDA)
+// Usamos Number() porque route.params devuelve Strings
+// ---------------------------------------------------------
+const reps = Number(route.params.reps) || 0
+const tempsTotal = Number(route.params.tempsTotal) || 0 
 const exercici = route.params.ejercicio || 'EXERCICI'
-const tempsTotal = route.params.tempsTotal || 0 
 
 // Diccionari per mapejar els noms dels exercicis
 const noms = {
@@ -107,9 +110,11 @@ const goHome = () => {
   router.push('/')
 }
 
-// 3. Actualizar estadísticas del usuario al cargar la pantalla de resultados
+// Actualizar estadísticas globales del usuario en segundo plano
 onMounted(async () => {
-  await authStore.refreshUser()
+  if (authStore.isAuthenticated) {
+    await authStore.refreshUser()
+  }
 })
 </script>
 

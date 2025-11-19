@@ -70,6 +70,7 @@
         </div>
 
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
+        
         <v-row dense class="text-left">
           <v-col cols="12" md="6">
             <v-list class="transparent-list">
@@ -94,8 +95,24 @@
               </v-list-item>
             </v-list>
           </v-col>
+
+          <v-col cols="12">
+            <v-list class="transparent-list">
+              <v-list-item class="mb-2">
+                <template v-slot:prepend>
+                  <v-icon color="orange-lighten-2" class="mr-2">mdi-timer-sand</v-icon>
+                </template>
+                <v-list-item-title class="font-weight-medium">Temps Total Entrenat:</v-list-item-title>
+                <v-list-item-subtitle class="text-white">
+                  {{ formatTotalTime(user.temps_total) }}
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-col>
+
         </v-row>
-          <v-divider class="divider-glow mx-auto my-6"></v-divider>
+        
+        <v-divider class="divider-glow mx-auto my-6"></v-divider>
         <StreakWidget class="w-100 mb-4" :enable-popup="false" />
         
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
@@ -158,6 +175,20 @@ const previewImage = ref(null)
 const uploading = ref(false)
 const uploadMessage = ref(null)
 const uploadMessageType = ref('info')
+
+// Añade esto antes de la parte de "onMounted"
+
+const formatTotalTime = (seconds) => {
+  if (!seconds) return '0 min';
+  
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  
+  if (h > 0) {
+    return `${h}h ${m}min`; // Ej: 1h 30min
+  }
+  return `${m} min`; // Ej: 45 min
+}
 
 // ----------------------------
 // CAMBIO IMPORTANTE: Al montar
