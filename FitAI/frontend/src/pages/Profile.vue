@@ -12,6 +12,7 @@
           El meu Perfil <v-icon color="purple-lighten-2">mdi-account-circle</v-icon>
         </v-card-title>
         
+
         <v-divider class="divider-glow mx-auto my-6"></v-divider>
 
         <div class="mb-6 photo-upload-container">
@@ -179,17 +180,21 @@ const uploadMessageType = ref('info')
 // Añade esto antes de la parte de "onMounted"
 
 const formatTotalTime = (seconds) => {
-  if (!seconds) return '0 min';
+  const s = Number(seconds);
+  if (!s || isNaN(s)) return '0 s';
   
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60; // Los segundos que sobran
   
   if (h > 0) {
-    return `${h}h ${m}min`; // Ej: 1h 30min
+    return `${h}h ${m}m ${sec}s`; // Ej: 1h 30m 15s
+  } else if (m > 0) {
+    return `${m}m ${sec}s`;       // Ej: 5m 30s
+  } else {
+    return `${sec} s`;            // Ej: 15 s (¡Ahora sí verás el 15!)
   }
-  return `${m} min`; // Ej: 45 min
 }
-
 // ----------------------------
 // CAMBIO IMPORTANTE: Al montar
 // ----------------------------
