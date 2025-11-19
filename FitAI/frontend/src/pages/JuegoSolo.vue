@@ -7,10 +7,12 @@
       >
         
         <v-btn
-          class="top-left-back-btn rectangular-btn" 
+          class="top-right-finish-btn" 
           variant="flat"
           size="large"
-          prepend-icon="mdi-check-circle-outline" color="success" @click="tornar"
+          prepend-icon="mdi-exit-to-app" 
+          color="#8b5cf6" 
+          @click="tornar"
         >
           Finalitzar Sessió
         </v-btn>
@@ -25,7 +27,23 @@
               @video-ended="detecting = false"
             />
 
-            <div class="mt-6 d-flex flex-wrap justify-center gap-2 small-btn-group">
+            <TimerCard 
+              class="mt-6"
+              style="width: 85%;"
+              @main-timer-start="startTempsCounter"
+              @timer-stop="handleTimerStop"
+              @timer-reset="handleTimerReset"
+              @timer-finished="handleTimerFinished"
+              ref="timerCardRef"
+            />
+            
+            <RepetitionCounter 
+              class="mt-8"
+              style="width: 85%;"
+              :count="count"
+            />
+            
+            <div class="mt-8 d-flex flex-wrap justify-center gap-2 small-btn-group">
               <v-btn
                 color="#8b5cf6"
                 variant="flat"
@@ -61,22 +79,6 @@
                 <svg-icon type="mdi" :path="pathCarregar" class="mr-1" width="22" height="22" />Vídeo
               </v-btn>
             </div>
-
-            <TimerCard 
-              class="mt-6"
-              style="width: 85%;"
-              @main-timer-start="startTempsCounter"
-              @timer-stop="handleTimerStop"
-              @timer-reset="handleTimerReset"
-              @timer-finished="handleTimerFinished"
-              ref="timerCardRef"
-            />
-            
-            <RepetitionCounter 
-              class="mt-8"
-              style="width: 85%;"
-              :count="count"
-            />
 
           </v-col>
 
@@ -501,32 +503,36 @@ function tornar() {
   position: relative;
 }
 
+/* AÑADIR ESTO: */
 /* ==================================== */
-/* ======== BOTÓN SUPERIOR IZQUIERDO (MÁS GRANDE Y NEÓN) ======== */
+/* ======== BOTÓN SUPERIOR DERECHO (FINALIZAR) ======== */
 /* ==================================== */
-.top-left-back-btn {
+.top-right-finish-btn {
   position: absolute;
   top: 15px; 
-  left: 15px; 
+  right: 15px; 
   z-index: 10;
   color: white !important; 
-  background: #8b5cf6 !important; 
+  background: #8b5cf6 !important; /* Color principal */
   border-radius: 8px !important; 
   font-weight: 700 !important;
-  box-shadow: 0 0 15px rgba(139, 92, 246, 1); 
-  transition: all 0.3s ease;
-  min-width: 120px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px rgba(139, 92, 246, 0.6); /* Sombra más limpia */
+  transition: all 0.2s ease;
+  min-width: 180px; /* Un poco más ancho para ser más visible */
   margin-top: 10px;
 }
-.top-left-back-btn:hover {
-    transform: scale(1.05); 
-    box-shadow: 0 0 20px rgba(139, 92, 246, 1.2);
+.top-right-finish-btn:hover {
+    transform: translateY(-2px); /* Efecto de elevación */
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7), 0 0 15px rgba(139, 92, 246, 0.8);
 }
-
-/* ==================================== */
-/* ======== TÍTULO EXERCICI (ANIMADO) ======== */
-/* ==================================== */
-/* Movido a ExerciseInfo.vue */
+@media (max-width: 600px) {
+  .top-right-finish-btn {
+    position: static; /* En móvil, dejarlo en flujo normal */
+    width: 100%;
+    margin-bottom: 20px;
+    margin-top: 0;
+  }
+}
 
 /* ==================================== */
 /* ======== CÁMARA Y CONTADOR ======== */
