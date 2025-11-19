@@ -1,15 +1,41 @@
 import { WebSocket } from 'ws';
 import pool from '../config/database.js';
 
-// Aquest objecte 'sessions' ara només emmagatzema connexions WS actives.
-// Com que està definit aquí, persisteix a la memòria del servidor per a totes les connexions.
-const sessions = {}; // Estructura: sessions[codi_acces] = { sala_id, participants: { userId: { ws, userName, reps } } }
+const sessions = {}; 
 
-/**
- * Envia un missatge a tots els participants d'una sessió.
- * @param {string} codi_acces - El codi de la sala.
- * @param {object} message - L'objecte del missatge a enviar.
- */
+// ======================================================
+// === NOU: SISTEMA DE HEARTBEAT (BATEC DE COR) ===
+// ======================================================
+
+function heartbeat() {
+  // A 'this' es refereix a la connexió WebSocket (ws) individual.
+  // Marqueu-la com a viva per a la propera comprovació.
+  this.isAlive = true;
+}
+
+// Aquesta funció s'executarà cada 30 segons per a comprovar totes les connexions.
+const interval = setInterval(function ping() {
+  Object.values(sessions).forEach(session => {
+    Object.values(session.participants).forEach(({ ws }) => {
+      // Si un client no ha respost a l'últim 'ping', el donem per mort.
+      if (ws.isAlive === false) {
+        console.log(`Connexió terminada per timeout (sense resposta al ping): ${ws.userId}`);
+        return ws.terminate(); // terminate() tanca la connexió bruscament.
+      }
+      
+      // Marquem la connexió com a "possiblement morta" i li enviem un 'ping'.
+      // Si respon amb un 'pong', la funció heartbeat() la tornarà a marcar com a viva.
+      ws.isAlive = false;
+      ws.ping();
+    });
+  });
+}, 30000); // Executa cada 30 segons.
+
+
+// ======================================================
+// === RESTA DEL CODI (amb la teva lògica) ===
+// ======================================================
+
 function broadcastToSession(codi_acces, message) {
   const session = sessions[codi_acces];
   if (!session) return;
@@ -20,10 +46,6 @@ function broadcastToSession(codi_acces, message) {
   });
 }
 
-/**
- * Calcula i envia el rànquing actualitzat (leaderboard) a tots els membres de la sala.
- * @param {string} codi_acces - El codi de la sala.
- */
 function broadcastLeaderboard(codi_acces) {
   const session = sessions[codi_acces];
   if (!session) return;
@@ -42,17 +64,11 @@ function broadcastLeaderboard(codi_acces) {
   });
 }
 
-/**
- * Elimina una sessió de la memòria si no queden participants i, opcionalment,
- * actualitza el seu estat a la base de dades.
- * @param {string} codi_acces - El codi de la sala.
- */
 async function netejarSessio(codi_acces) {
   const session = sessions[codi_acces];
   if (session && Object.keys(session.participants).length === 0) {
     delete sessions[codi_acces];
-    console.log(`Sessió ${codi_acces} eliminada de la memòria (sense participants)`);
-    // Opcional: Marcar la sala com a 'finalitzada' a la BBDD
+    console.log(`Sessió ${codi_acces} eliminada de la memòria`);
     try {
       await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ? AND estat != ?', ['finalitzada', codi_acces, 'finalitzada']);
     } catch (error) {
@@ -61,17 +77,10 @@ async function netejarSessio(codi_acces) {
   }
 }
 
-/**
- * Envia un missatge a tots els participants d'una sessió EXCEPTE a l'emissor.
- * @param {string} codi_acces - El codi de la sala.
- * @param {object} message - L'objecte del missatge a enviar.
- * @param {string} senderId - L'ID de l'usuari que envia el missatge.
- */
 function broadcastToOthers(codi_acces, message, senderId) {
   const session = sessions[codi_acces];
   if (!session) return;
   Object.entries(session.participants).forEach(([userId, { ws }]) => {
-    // Només envia si l'usuari no és l'emissor i la connexió està oberta
     if (userId !== senderId.toString() && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
     }
@@ -81,13 +90,19 @@ function broadcastToOthers(codi_acces, message, senderId) {
 
 export const handleConnection = (ws) => {
   console.log('Nou client WebSocket connectat');
+  
+  // NOU: INICIALITZEM L'ESTAT DEL HEARTBEAT PER A AQUESTA CONNEXIÓ
+  ws.isAlive = true;
+  // NOU: DEFINIM QUÈ FER QUAN REBEM UN 'PONG' (la resposta al 'ping')
+  ws.on('pong', heartbeat);
+
   let currentCodiAcces = null;
   let currentUserId = null;
 
   ws.on('message', async (data) => {
+    // ... (la teva lògica de 'message' no canvia, és la mateixa que ja tens)
     try {
       const message = JSON.parse(data.toString());
-      // Evitem omplir la consola amb les actualitzacions de l'esquelet
       if (message.type !== 'pose_update') {
           console.log('Missatge rebut:', message);
       }
@@ -95,12 +110,9 @@ export const handleConnection = (ws) => {
       switch (message.type) {
         case 'join': {
           const { codi_acces, userId, userName } = message;
-
           if (!codi_acces || !userId || !userName) {
             return ws.send(JSON.stringify({ type: 'error', message: 'Dades "join" incompletes' }));
           }
-
-          // Si la sessió no existeix a la memòria, la creem consultant la BBDD
           if (!sessions[codi_acces]) {
             const [rows] = await pool.execute('SELECT id FROM sales WHERE codi_acces = ? AND estat = ?', [codi_acces, 'esperant']);
             if (rows.length === 0) {
@@ -108,26 +120,20 @@ export const handleConnection = (ws) => {
             }
             sessions[codi_acces] = { sala_id: rows[0].id, participants: {} };
           }
-
           const session = sessions[codi_acces];
           if (Object.keys(session.participants).length >= 4) {
             return ws.send(JSON.stringify({ type: 'error', message: 'La sala està plena.' }));
           }
-
-          // Afegim el participant
           session.participants[userId] = { ws, userName, reps: 0 };
           currentCodiAcces = codi_acces;
           currentUserId = userId;
-
-          // Notifiquem a tothom
+          ws.userId = userId; // Guardem l'ID a la pròpia connexió ws
           broadcastLeaderboard(codi_acces);
           break;
         }
-
         case 'start': {
           const { codi_acces } = message;
           if (!codi_acces || !sessions[codi_acces]) return;
-          
           try {
             await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['en_curs', codi_acces]);
             console.log(`Partida iniciada a la sessió ${codi_acces}`);
@@ -137,7 +143,6 @@ export const handleConnection = (ws) => {
           }
           break;
         }
-        
         case 'pose_update': {
             if (currentCodiAcces && currentUserId && message.pose) {
               broadcastToOthers(currentCodiAcces, {
@@ -148,7 +153,6 @@ export const handleConnection = (ws) => {
             }
             break;
         }
-
         case 'update': {
           if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]?.participants[currentUserId]) {
             sessions[currentCodiAcces].participants[currentUserId].reps = message.reps || 0;
@@ -156,61 +160,50 @@ export const handleConnection = (ws) => {
           }
           break;
         }
+        // ... dins de wsHandler.js
 
         case 'finish': {
-          const { reps, exercici, codi_acces } = message;
+          const { reps, exercici, codi_acces, time } = message;
           const session = sessions[codi_acces];
-          
-          // Assegurem que tenim l'ID de l'usuari guardat a la connexió ws
-          const userId = ws.userId || currentUserId;
+          const userId = currentUserId; 
 
           if (!session || !userId || !exercici || reps === undefined) {
             console.error('Dades "finish" invàlides o sessió no trobada. Missatge:', message);
             return;
           }
-
+          
           const repsFinals = parseInt(reps, 10) || 0;
-          if (repsFinals <= 0) {
-            return; // No fem res si no hi ha repeticions
-          }
-
-          let connection;
-          try {
-            connection = await pool.getConnection();
-            await connection.beginTransaction();
-
-            // OPERACIÓ 1: Inserir la participació
-            // Tornem a la versió més simple i segura de l'ON DUPLICATE KEY
-            await connection.execute(
-              'INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)',
-              [userId, session.sala_id, exercici, repsFinals]
-            );
-
-            // OPERACIÓ 2: Actualitzar les estadístiques de l'usuari
-            await connection.execute(
-              `UPDATE usuaris SET 
-                  repeticions_totals = repeticions_totals + ?, 
-                  sessions_completades = sessions_completades + 1,
-                  ultima_sessio = CURDATE()
-              WHERE id = ?`,
-              [repsFinals, userId]
-            );
-
-            await connection.commit();
-            console.log(`[Transacció ÈXIT] Dades de la sessió finalitzada per a l'usuari ${userId} guardades correctament.`);
-
-          } catch (error) {
-            if (connection) {
-              await connection.rollback();
-            }
-            // AQUEST ÉS L'ERROR QUE NECESSITEM VEURE A LA CONSOLA
-            console.error(`[Transacció ERROR] per a l'usuari ${userId}:`, error);
-
-          } finally {
-            if (connection) {
-              connection.release();
+          const timeFinal = parseInt(time, 10) || 0;
+          
+          if (repsFinals > 0) {
+            let connection;
+            try {
+              connection = await pool.getConnection();
+              await connection.beginTransaction();
+              await connection.execute('INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)', [userId, session.sala_id, exercici, repsFinals]);
+              await connection.execute(`UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1, temps_total = IFNULL(temps_total, 0) + ?, ultima_sessio = CURDATE() WHERE id = ?`, [repsFinals, timeFinal, userId]);
+              await connection.commit();
+              console.log(`[Transacció ÈXIT] Dades de la sessió finalitzada per a l'usuari ${userId} guardades correctament.`);
+            } catch (error) {
+              if (connection) { await connection.rollback(); }
+              console.error(`[Transacció ERROR] per a l'usuari ${userId}:`, error);
+            } finally {
+              if (connection) { connection.release(); }
             }
           }
+          if (session.participants[userId]) {
+            console.log(`L'usuari ${userId} ha acabat. Es prepara per sortir de la sala ${codi_acces}`);
+            
+            // L'eliminem de la llista de participants actius
+            delete session.participants[userId];
+            
+            // Actualitzem la classificació per a la resta de jugadors
+            broadcastLeaderboard(codi_acces);
+            
+            // Comprovem si la sala ha quedat buida per a netejar-la
+            netejarSessio(codi_acces);
+          }
+          
           break;
         }
 
@@ -226,6 +219,29 @@ export const handleConnection = (ws) => {
           break;
         }
 
+        case 'session_ended': {
+          // Aquest missatge el cridarà el frontend quan es torni al menú principal
+          // des de la pantalla d'estadístiques.
+          if (currentCodiAcces && sessions[currentCodiAcces]) {
+            console.log(`L'usuari ${currentUserId} ha confirmat el final de la sessió ${currentCodiAcces}.`);
+            
+            // Marquem la sala com a finalitzada a la memòria i a la BBDD
+            sessions[currentCodiAcces].estat = 'finalitzada';
+            try {
+              await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['finalitzada', currentCodiAcces]);
+              console.log(`Sala ${currentCodiAcces} marcada com a finalitzada a la BBDD.`);
+            } catch (error) {
+              console.error('Error al finalitzar la sala a la BBDD:', error);
+            }
+
+            // Desconnectem l'usuari i netegem si cal
+            delete sessions[currentCodiAcces].participants[currentUserId];
+            broadcastLeaderboard(currentCodiAcces); // Notifiquem per si algú queda
+            netejarSessio(currentCodiAcces);
+          }
+          break;
+        }
+
         default:
           ws.send(JSON.stringify({ type: 'error', message: 'Tipus de missatge desconegut' }));
       }
@@ -236,6 +252,8 @@ export const handleConnection = (ws) => {
   });
 
   ws.on('close', () => {
+    // Aquesta és la versió simple i original, que és la correcta amb el heartbeat.
+    // El heartbeat ja s'encarrega dels talls de connexió.
     console.log('Client WebSocket desconnectat');
     if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
       delete sessions[currentCodiAcces].participants[currentUserId];
@@ -248,3 +266,9 @@ export const handleConnection = (ws) => {
     console.error('Error en WebSocket:', error);
   });
 };
+
+// NOU: NETEJA DE L'INTERVAL QUAN EL SERVIDOR ES TANCA (bona pràctica)
+process.on('SIGINT', () => {
+    clearInterval(interval);
+    process.exit();
+});
