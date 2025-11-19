@@ -4,6 +4,7 @@ export const useAuthStore = defineStore('auth', {
 
   state: () => ({
     user: null,
+    hasShownStreakPopup: false // <-- 1. AFEGEIX AIXÒ
   }),
 
   getters: {
@@ -12,7 +13,9 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    // ... (login, register... tot això queda igual) ...
     async login(email, password) {
+      // ... (código existente)
       try {
         const response = await fetch('/api/login', {
           method: 'POST',
@@ -35,6 +38,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async register(nom, email, password) {
+      // ... (código existente)
       try {
         const response = await fetch('/api/register', {
           method: 'POST',
@@ -52,15 +56,18 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
+      // ... (código existente)
       try {
         await fetch('/api/logout', { method: 'POST' });
       } catch (error) {
         console.error('Error en tancar la sessió al servidor:', error);
       }
       this.user = null; 
+      this.hasShownStreakPopup = false; // <-- 2. AFEGEIX AIXÒ (per reiniciar)
     },
 
     async checkAuth() {
+      // ... (código existente)
       try {
         const response = await fetch('/api/me');
         if (!response.ok) {
@@ -71,6 +78,33 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         this.user = null;
       }
+    },
+    
+    async updateProfilePicture(formData) {
+  try {
+    const response = await fetch('/api/user/profile/picture', { 
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Error al pujar la imatge.");
+    }
+
+    const data = await response.json();
+    this.user = data.user; // <-- SOLO ESTE CAMBIO
+
+  } catch (error) {
+    console.error('Error al pujar la foto:', error);
+    throw error;
+  }
+},
+
+    
+    // 3. AFEGEIX AQUESTA NOVA ACCIÓ SENCERA
+    setStreakPopupShown() {
+      this.hasShownStreakPopup = true;
     },
   },
 });

@@ -5,18 +5,42 @@
       style="min-height: 100vh"
     >
       <div class="header-content pt-4 pb-6 w-100">
-        <div class="d-flex justify-center logo-title-container mb-6">
-          <v-img
-            src="@/assets/LOGO.png"
-            alt="Logo NextRep"
-            max-height="60"
-            max-width="60"
-            class="logo-home mr-3 mt-1"
-            contain
-          />
-          <h1 class="nextrep-title">
-            <span class="next">Next</span><span class="rep">Rep</span>
-          </h1>
+        <div class="d-flex justify-space-between align-center px-4">
+            
+          <v-btn
+            icon
+            size="large"
+            variant="tonal"
+            class="profile-btn-glow"
+            @click="goToProfile"
+          >
+            <v-avatar size="40"> 
+                <v-img 
+                    :src="profilePhotoUrl" 
+                    alt="Foto de perfil" 
+                />
+            </v-avatar>
+            
+            <v-tooltip activator="parent" location="bottom">
+              El meu Perfil
+            </v-tooltip>
+          </v-btn>
+          
+          <div class="d-flex justify-center logo-title-container" style="flex-grow: 1;">
+            <v-img
+              src="@/assets/LOGO.png"
+              alt="Logo NextRep"
+              max-height="60"
+              max-width="60"
+              class="logo-home mr-3 mt-1"
+              contain
+            />
+            <h1 class="nextrep-title">
+              <span class="next">Next</span><span class="rep">Rep</span>
+            </h1>
+          </div>
+          
+          <div style="width: 52px; height: 52px;"></div>
         </div>
       </div>
 
@@ -26,17 +50,89 @@
 
       <GlobalRanking />
 
-      <StreakTracker />
+      <StreakPopup 
+        v-model="showStreakDialog"
+        :racha-actual="rachaActual"
+      />
 
     </v-main>
   </v-app>
 </template>
 
 <script setup>
-// Importar els nous components
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
+
+// Componentes
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
-import StreakTracker from '@/components/StreakTracker.vue'
+import StreakPopup from '@/components/StreakPopup.vue' // <--- Importamos solo el Popup visual
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+// --- 1. LÓGICA DE RACHAS (Traída aquí directamente) ---
+const rachaData = ref({ dias: 1, ultimoAcceso: null })
+const showStreakDialog = ref(false)
+
+const rachaImagenes = [
+  { dias: 1, imagen: new URL('@/assets/racha1.png', import.meta.url).href, size: 120 },
+  { dias: 2, imagen: new URL('@/assets/racha2.png', import.meta.url).href, size: 140 },
+  { dias: 3, imagen: new URL('@/assets/racha3.png', import.meta.url).href, size: 160 }
+]
+
+const rachaActual = computed(() => {
+  const dias = rachaData.value.dias
+  if (dias >= 3) return { ...rachaImagenes[2], dias }
+  if (dias === 2) return rachaImagenes[1]
+  return rachaImagenes[0]
+})
+
+const checkAndUpdateUserStreak = async () => {
+  try {
+    const response = await fetch('/api/user/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      rachaData.value = data;
+
+      // Si tiene racha y no se ha mostrado el popup hoy -> Mostrarlo
+      if (rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
+        nextTick(() => {
+          showStreakDialog.value = true;
+          authStore.setStreakPopupShown(); 
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error checking streak:', error);
+  }
+}
+
+// --- 2. LÓGICA DE PERFIL (Existente) ---
+const defaultAvatar = 'https://cdn.vuetifyjs.com/images/cards/halcyon.png' 
+
+const profilePhotoUrl = computed(() => {
+    const user = authStore.user;
+    if (user && user.foto_url) {
+        return user.foto_url + '?' + Date.now(); 
+    }
+    return defaultAvatar;
+});
+
+const goToProfile = () => {
+  router.push({ name: 'Profile' });
+}
+
+// --- ON MOUNTED ---
+onMounted(() => {
+  checkAndUpdateUserStreak(); // Ejecutamos la comprobación al cargar la página
+});
 </script>
 
 <style>
@@ -128,5 +224,22 @@ import StreakTracker from '@/components/StreakTracker.vue'
         max-width: 600px;
         height: 2px;
     }
+}
+
+/* ==================================== */
+/* ======== NOU ESTIL BOTÓ PERFIL (Mantenim l'estil exterior, canviem l'interior) ======== */
+/* ==================================== */
+.profile-btn-glow {
+    /* Estil base del botó Vuetify (icon, tonal) */
+    background-color: rgba(139, 92, 246, 0.15) !important;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #a78bfa !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.profile-btn-glow:hover {
+    background-color: rgba(139, 92, 246, 0.3) !important;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8) !important;
+    transform: scale(1.05);
 }
 </style>

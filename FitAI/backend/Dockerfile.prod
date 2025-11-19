@@ -21,16 +21,15 @@ RUN npm install --production
 
 
 
-
 # Copia el resto del código de la aplicación
 COPY backend/. .
 
-
+# Crea la carpeta uploads para Multer
+RUN mkdir -p /usr/src/app/uploads
 
 
 # Expone el puerto en el que corre tu backend
 EXPOSE 4000
-
 
 
 
