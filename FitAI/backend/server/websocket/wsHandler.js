@@ -160,33 +160,53 @@ export const handleConnection = (ws) => {
           }
           break;
         }
+        // ... dins de wsHandler.js
+
         case 'finish': {
           const { reps, exercici, codi_acces, time } = message;
           const session = sessions[codi_acces];
-          const userId = ws.userId || currentUserId;
+          const userId = currentUserId; 
+
           if (!session || !userId || !exercici || reps === undefined) {
             console.error('Dades "finish" invàlides o sessió no trobada. Missatge:', message);
             return;
           }
+          
           const repsFinals = parseInt(reps, 10) || 0;
           const timeFinal = parseInt(time, 10) || 0;
-          if (repsFinals <= 0) { return; }
-          let connection;
-          try {
-            connection = await pool.getConnection();
-            await connection.beginTransaction();
-            await connection.execute('INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)', [userId, session.sala_id, exercici, repsFinals]);
-            await connection.execute(`UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1, temps_total = IFNULL(temps_total, 0) + ?, ultima_sessio = CURDATE() WHERE id = ?`, [repsFinals, timeFinal, userId]);
-            await connection.commit();
-            console.log(`[Transacció ÈXIT] Dades de la sessió finalitzada per a l'usuari ${userId} guardades correctament.`);
-          } catch (error) {
-            if (connection) { await connection.rollback(); }
-            console.error(`[Transacció ERROR] per a l'usuari ${userId}:`, error);
-          } finally {
-            if (connection) { connection.release(); }
+          
+          if (repsFinals > 0) {
+            let connection;
+            try {
+              connection = await pool.getConnection();
+              await connection.beginTransaction();
+              await connection.execute('INSERT INTO participacions (usuari_id, sala_id, exercici, repeticions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE repeticions = VALUES(repeticions)', [userId, session.sala_id, exercici, repsFinals]);
+              await connection.execute(`UPDATE usuaris SET repeticions_totals = repeticions_totals + ?, sessions_completades = sessions_completades + 1, temps_total = IFNULL(temps_total, 0) + ?, ultima_sessio = CURDATE() WHERE id = ?`, [repsFinals, timeFinal, userId]);
+              await connection.commit();
+              console.log(`[Transacció ÈXIT] Dades de la sessió finalitzada per a l'usuari ${userId} guardades correctament.`);
+            } catch (error) {
+              if (connection) { await connection.rollback(); }
+              console.error(`[Transacció ERROR] per a l'usuari ${userId}:`, error);
+            } finally {
+              if (connection) { connection.release(); }
+            }
           }
+          if (session.participants[userId]) {
+            console.log(`L'usuari ${userId} ha acabat. Es prepara per sortir de la sala ${codi_acces}`);
+            
+            // L'eliminem de la llista de participants actius
+            delete session.participants[userId];
+            
+            // Actualitzem la classificació per a la resta de jugadors
+            broadcastLeaderboard(codi_acces);
+            
+            // Comprovem si la sala ha quedat buida per a netejar-la
+            netejarSessio(codi_acces);
+          }
+          
           break;
         }
+
         case 'leave': {
           if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
             delete sessions[currentCodiAcces].participants[currentUserId];
@@ -198,6 +218,30 @@ export const handleConnection = (ws) => {
           }
           break;
         }
+
+        case 'session_ended': {
+          // Aquest missatge el cridarà el frontend quan es torni al menú principal
+          // des de la pantalla d'estadístiques.
+          if (currentCodiAcces && sessions[currentCodiAcces]) {
+            console.log(`L'usuari ${currentUserId} ha confirmat el final de la sessió ${currentCodiAcces}.`);
+            
+            // Marquem la sala com a finalitzada a la memòria i a la BBDD
+            sessions[currentCodiAcces].estat = 'finalitzada';
+            try {
+              await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['finalitzada', currentCodiAcces]);
+              console.log(`Sala ${currentCodiAcces} marcada com a finalitzada a la BBDD.`);
+            } catch (error) {
+              console.error('Error al finalitzar la sala a la BBDD:', error);
+            }
+
+            // Desconnectem l'usuari i netegem si cal
+            delete sessions[currentCodiAcces].participants[currentUserId];
+            broadcastLeaderboard(currentCodiAcces); // Notifiquem per si algú queda
+            netejarSessio(currentCodiAcces);
+          }
+          break;
+        }
+
         default:
           ws.send(JSON.stringify({ type: 'error', message: 'Tipus de missatge desconegut' }));
       }

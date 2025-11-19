@@ -78,14 +78,16 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWorkoutStore } from '@/stores/workoutStore';
 import { useAuthStore } from '@/stores/authStore';
 
 const props = defineProps({
   exercici: { type: String, required: true },
-  totalReps: { type: Number, default: 0 }
+  totalReps: { type: Number, default: 0 },
+  // 🔴 AFEGIT: Rebem el temps final com a prop
+  totalTime: { type: Number, default: 0 } 
 });
 
 const router = useRouter();
@@ -97,16 +99,15 @@ const noms = { Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominal
 const exerciciLabel = noms[props.exercici] || props.exercici;
 const reps = props.totalReps;
 
-// 🔴 LLEGIM LES DADES DINÀMICAMENT DE L'STORE
 const jugador = computed(() => authStore.userName);
 const altresJugadors = computed(() => {
   const leaderboard = workoutStore.finalLeaderboard || workoutStore.leaderboard;
   return leaderboard.filter(j => j.userId !== authStore.user.id);
 });
 
-// 🔴 NOVA FUNCIÓ PER GESTIONAR LA SORTIDA
 function tornarAPantallaPrincipal() {
-  workoutStore.cleanupSession(); // Neteja i desconnecta el WebSocket
+  // Ara només netegem l'estat del WebSocket i tornem
+  workoutStore.cleanupSession();
   router.push('/');
 }
 </script>

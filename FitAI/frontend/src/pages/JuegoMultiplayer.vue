@@ -91,9 +91,11 @@
 
             <!-- 🔴 POPUP AMB LES PROPS MODIFICADES -->
             <v-dialog v-model="mostrarPopup" max-width="600" persistent>
-                <EstadistiquesSessioMultiplayer
-                    :exercici="exercici"
-                    :totalReps="workoutStore.count"
+                <!-- Dins de JuegoMultiplayer.vue -->
+                <EstadistiquesSessioMultiplayer 
+                    :exercici="exercici" 
+                    :totalReps="workoutStore.count" 
+                    :totalTime="finalTime"
                 />
             </v-dialog>
 
