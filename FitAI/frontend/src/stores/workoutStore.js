@@ -15,11 +15,14 @@ export const useWorkoutStore = defineStore('workout', () => {
 
   // --- Estat del Joc ---
   const leaderboard = ref([]);
-  const count = ref(0); 
-  const lastReceivedPose = ref(null); 
-  const gameStarted = ref(false); 
+  const count = ref(0);
+  const lastReceivedPose = ref(null);
+  const gameStarted = ref(false);
+  
+  // NOU ESTAT PER GUARDAR LA CLASSIFICACIÓ FINAL (SOLUCIÓ 'RACE CONDITION')
+  const finalLeaderboard = ref(null);
 
-  // --- Estat del Temporitzador ---
+  // --- Estat del Temporitzador (per a mode solo, es manté per si de cas) ---
   const timerActive = ref(false);
   const timerFinished = ref(false);
   const timeRemaining = ref(60);
@@ -55,7 +58,7 @@ export const useWorkoutStore = defineStore('workout', () => {
   // === ACCIONS (Actions) ===
   // ======================================================
 
-  // --- 1. Lògica del Temporitzador ---
+  // --- 1. Lògica del Temporitzador (per a mode solo) ---
   function startPreCount() {
     if (timerActive.value || preCountInterval) return;
     preCount.value = 5;
@@ -80,8 +83,6 @@ export const useWorkoutStore = defineStore('workout', () => {
       if (timeRemaining.value <= 0) {
         stopTimer();
         timerFinished.value = true;
-        // NOTA: Aquí només marquem que ha acabat, NO tanquem el socket automàticament.
-        // Això ho farà el component Vue quan l'usuari surti.
       }
     }, 1000);
   }
@@ -127,12 +128,13 @@ export const useWorkoutStore = defineStore('workout', () => {
     currentUserId = authStore.user.id;
     currentUserName = authStore.userName;
     
-    // 🔴 FIX CRUCIAL: Assegurem que res està corrent en connectar-se al Lobby
-    stopTimer();            // Atura qualsevol rellotge previ
-    timeRemaining.value = 60; // Reinicia el temps
+    // Assegurem que res està corrent en connectar-se al Lobby
+    stopTimer();
+    timeRemaining.value = 60;
     timerActive.value = false;
-    gameStarted.value = false; 
+    gameStarted.value = false;
     count.value = 0;
+    finalLeaderboard.value = null; // Neteja la classificació final anterior
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
@@ -165,8 +167,6 @@ export const useWorkoutStore = defineStore('workout', () => {
         case 'start':
           console.log("Rebut senyal START. Comença el joc.");
           gameStarted.value = true;
-          // No iniciem el timer de l'store automàticament per evitar conflictes amb el Vue.
-          // El Vue utilitza la seva pròpia lògica basada en 'gameStarted'.
           break;
       }
     };
@@ -181,11 +181,14 @@ export const useWorkoutStore = defineStore('workout', () => {
   function disconnectWebSocket() {
     stopTimer();
     if (ws.value?.readyState === WebSocket.OPEN) {
-      // Només enviem 'finish' si realment hem jugat (reps > 0)
       if (count.value > 0) {
+          // 🔴 CANVI CLAU: S'afegeix el temps a les dades enviades
+          const finalTime = 60; // El temps de partida multijugador sempre és 60 segons
+
           ws.value.send(JSON.stringify({
             type: 'finish',
             reps: count.value,
+            time: finalTime, // AFEGIT PER DESAR EL TEMPS TOTAL
             exercici: currentExercici,
             codi_acces: currentCodiAcces
           }));
@@ -206,11 +209,12 @@ export const useWorkoutStore = defineStore('workout', () => {
     leaderboard.value = [];
     lastReceivedPose.value = null;
     gameStarted.value = false;
+    finalLeaderboard.value = null; // Neteja la classificació final
   }
 
   return {
     ws, isConnected, leaderboard, count, timerActive, timerFinished, timeRemaining, preCount, formattedTime, lastReceivedPose,
-    gameStarted, isHost,
+    gameStarted, isHost, finalLeaderboard, // EXPORTEM 'finalLeaderboard'
     startPreCount, stopTimer, resetTimer, incrementCount, connectWebSocket, disconnectWebSocket, cleanupSession, sendStartSignal
   };
 });

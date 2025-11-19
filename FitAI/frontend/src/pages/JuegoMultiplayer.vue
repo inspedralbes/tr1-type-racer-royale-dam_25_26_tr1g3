@@ -39,11 +39,11 @@
                                 </h3>
 
                                 <div class="controls-wrapper">
-                                    <v-btn 
+                                    <v-btn
                                         v-if="workoutStore.isHost"
-                                        size="x-large" 
+                                        size="x-large"
                                         rounded="xl"
-                                        color="#22c55e" 
+                                        color="#22c55e"
                                         class="start-game-btn pulse-animation"
                                         elevation="10"
                                         prepend-icon="mdi-play-circle"
@@ -89,14 +89,11 @@
                 </v-row>
             </v-container>
 
-            <!-- POPUP AMB EL NOU DISSENY -->
+            <!-- 🔴 POPUP AMB LES PROPS MODIFICADES -->
             <v-dialog v-model="mostrarPopup" max-width="600" persistent>
-                <EstadistiquesSessioMultiplayer 
-                    :exercici="exercici" 
-                    :totalReps="workoutStore.count" 
-                    :jugador="authStore.userName"
-                    :altresJugadors="altresJugadors" 
-                    :totalTime="finalTime"
+                <EstadistiquesSessioMultiplayer
+                    :exercici="exercici"
+                    :totalReps="workoutStore.count"
                 />
             </v-dialog>
 
@@ -113,7 +110,6 @@ import { useWorkoutStore } from '@/stores/workoutStore';
 import CameraView from '../components/CameraView.vue';
 import RepetitionCounter from '../components/RepetitionCounter.vue';
 import ExerciseInfo from '../components/ExerciseInfo.vue';
-// Utilitzem el component nou que acabes de crear a pages
 import EstadistiquesSessioMultiplayer from '../pages/EstadistiquesSessioMultiplayer.vue';
 
 import flexionesGif from '@/assets/flexiones.gif';
@@ -149,7 +145,6 @@ const mostrarPopup = ref(false);
 const enPreparacio = ref(false);
 const esFaseDeJoc = ref(false);
 
-// Detecta si el joc ha rebut l'ordre d'inici
 const partidaEnCurs = computed(() => workoutStore.gameStarted);
 
 const altresJugadors = computed(() => {
@@ -160,33 +155,26 @@ const minuts = computed(() => Math.floor(tempsRestant.value / 60));
 const segons = computed(() => tempsRestant.value % 60);
 const segonsFormat = computed(() => (segons.value < 10 ? "0" + segons.value : segons.value));
 
-// === LIFECYCLE ===
 onMounted(async () => {
     workoutStore.connectWebSocket(codi_acces, exercici);
     await nextTick();
     startCamera();
-    // NO INICIEM TEMPORITZADORS AQUÍ. ESPEREM AL WEBSOCKET.
 });
 
 onBeforeUnmount(() => {
     tornar();
 });
 
-// === 1. GESTIÓ D'INICI DE PARTIDA ===
-
-// Botó de l'Amfitrió
 function iniciarPartidaGlobal() {
     workoutStore.sendStartSignal();
 }
 
-// Watcher: Quan rebem 'start' del backend -> Iniciem Compte Enrere (5s)
 watch(() => workoutStore.gameStarted, (started) => {
     if (started) {
         iniciarCompteEnrerePreparacio();
     }
 });
 
-// Watcher: Dibuix esquelets
 watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     if (newPoseData && newPoseData.from) {
         nextTick(() => {
@@ -195,19 +183,15 @@ watch(() => workoutStore.lastReceivedPose, (newPoseData) => {
     }
 }, { deep: true });
 
-// === 2. TEMPORITZADORS (5s -> 60s) ===
-
 function iniciarCompteEnrerePreparacio() {
     enPreparacio.value = true;
     tempsPreparacio.value = 5;
-    
     if (intervalPreparacio.value) clearInterval(intervalPreparacio.value);
 
     intervalPreparacio.value = setInterval(() => {
         if (tempsPreparacio.value > 0) {
             tempsPreparacio.value--;
         } else {
-            // FI PREPARACIÓ -> INICI JOC REAL
             clearInterval(intervalPreparacio.value);
             enPreparacio.value = false;
             iniciarPartidaReial();
@@ -216,16 +200,14 @@ function iniciarCompteEnrerePreparacio() {
 }
 
 function iniciarPartidaReial() {
-    esFaseDeJoc.value = true; // Ara sí que comptem reps
+    esFaseDeJoc.value = true;
     tempsRestant.value = 60;
-    
     if (intervalTemps.value) clearInterval(intervalTemps.value);
 
     intervalTemps.value = setInterval(() => {
         if (tempsRestant.value > 0) {
             tempsRestant.value--;
         } else {
-            // FI JOC -> POPUP
             clearInterval(intervalTemps.value);
             esFaseDeJoc.value = false;
             obrirPopupFinal();
@@ -234,9 +216,13 @@ function iniciarPartidaReial() {
 }
 
 function obrirPopupFinal() {
+    // 🔴 CANVI CLAU: Guarda la classificació final abans d'obrir el popup
+    workoutStore.finalLeaderboard = [...workoutStore.leaderboard];
+
     mostrarPopup.value = true;
     finalTime.value = 60 - tempsRestant.value;
-    workoutStore.disconnectWebSocket(); 
+
+    // HEM ELIMINAT LA CRIDA A `workoutStore.disconnectWebSocket()` D'AQUÍ
 }
 
 function tornar() {
@@ -244,10 +230,8 @@ function tornar() {
     if (intervalTemps.value) clearInterval(intervalTemps.value);
     if (intervalPreparacio.value) clearInterval(intervalPreparacio.value);
     workoutStore.cleanupSession();
-    router.push('/'); 
+    router.push('/');
 }
-
-// === CÀMERA I REPS ===
 
 async function startCamera() {
     if (cameraViewRef.value) {
@@ -265,7 +249,6 @@ function handleRepCount() {
 }
 
 function detectarIPublicarMoviment(pose) {
-    // 1. Sempre enviem esquelet
     if (workoutStore.ws?.readyState === WebSocket.OPEN) {
         workoutStore.ws.send(JSON.stringify({
             type: 'pose_update',
@@ -273,7 +256,6 @@ function detectarIPublicarMoviment(pose) {
         }));
     }
 
-    // 2. Només comptem si estem a la fase de joc (passats els 5s i abans d'acabar)
     if (esFaseDeJoc.value) {
         const exerciciNormalitzat = exercici.toLowerCase();
         switch (exerciciNormalitzat) {
@@ -286,8 +268,6 @@ function detectarIPublicarMoviment(pose) {
         }
     }
 }
-
-// === CANVAS I EXERCICIS (IGUAL) ===
 
 function dibuixarEsqueletRemot(jugadorId, pose) {
     const canvas = canvasRemots.value[jugadorId];
@@ -375,7 +355,7 @@ function checkPujades(pose) {
 </script>
 
 <style scoped>
-/* AFEGIT ESTILS OVERLAY DE LA MEVA RESPOSTA ANTERIOR */
+/* ELS ESTILS NO HAN CANVIAT, SÓN ELS MATEIXOS */
 .waiting-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6));
@@ -387,20 +367,16 @@ function checkPujades(pose) {
 .glass-chip { background: rgba(0, 0, 0, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(5px); }
 .pulse-animation { animation: pulse 2s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
-
-/* ESTILS DEL COMPTADOR I LAYOUT */
 .bg-fitai-deep-space {
     background: radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
                 radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
                 linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
+    background-attachment: fixed; min-height: 100vh;
 }
 .fade-in-container { animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 .position-relative { position: relative; }
 .camera-container-wrapper { position: relative; width: 95%; border-radius: 16px; overflow: hidden; min-height: 300px; border: 1px solid #3b82f6; }
-
 .temps-counter {
     position: fixed; top: 20px; right: 20px;
     background: #0f172a; padding: 12px 20px; border-radius: 12px;

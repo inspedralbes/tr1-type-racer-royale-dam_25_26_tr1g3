@@ -7,7 +7,7 @@
           SESSIÓ COMPLETADA
         </h1>
 
-        <!-- CANVI 1: Afegeix 'd-flex flex-column' i un 'max-height' a la targeta -->
+        <!-- AFEGIT 'd-flex flex-column' I 'max-height' PER A L'SCROLL -->
         <v-card 
           class="results-card rounded-xl pa-6 pa-sm-8 elevation-8 d-flex flex-column"
           style="max-height: 85vh;"
@@ -16,9 +16,10 @@
           <h2 v-if="jugador" class="text-h6 font-weight-bold mb-4 text-white">
             Jugador: <span class="text-cyan-lighten-2">{{ jugador }}</span>
           </h2>
+
           <h2 class="text-h6 font-weight-bold mb-6 text-white ranking-title">RESUM D'ESTADÍSTIQUES</h2>
 
-          <!-- CANVI 2: Embolcalla la secció de dades en un <v-card-text> per fer-la scrollable -->
+          <!-- AFEGIT 'v-card-text' PER FER LA ZONA CENTRAL SCROLLABLE -->
           <v-card-text class="flex-grow-1 pa-0" style="overflow-y: auto;">
             <v-row class="justify-center">
               <v-col cols="12" sm="8" md="6" class="px-0">
@@ -41,18 +42,9 @@
                   </v-col>
                 </v-row>
 
-              <v-row class="mb-8 ga-3"> 
-                <v-col cols="12" class="d-flex">
-                  <v-card class="data-card time-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
-                    <h3 class="text-caption font-weight-light text-cyan-lighten-2">TEMPS TOTAL</h3>
-                    <p class="text-h6 font-weight-black time-value">{{ formattedTime }}</p>
-                  </v-card>
-                </v-col>
-              </v-row>
-
-              <!-- SECCIÓ ALTRES JUGADORS -->
-              <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
-              <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
+                <!-- SECCIÓ ALTRES JUGADORS -->
+                <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
+                <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
 
                 <v-row v-if="altresJugadors.length > 0" class="mb-4 ga-3">
                   <v-col cols="12" v-for="jug in altresJugadors" :key="jug.userId" class="d-flex">
@@ -68,13 +60,13 @@
               </v-col>
             </v-row>
           </v-card-text>
-          <!-- FI DE LA SECCIÓ SCROLLABLE -->
+          <!-- FI DE LA ZONA SCROLLABLE -->
 
           <v-divider class="divider-subtle mx-auto my-6"></v-divider>
 
-          <!-- CANVI 3: Embolcalla el botó en <v-card-actions> per a una millor estructura -->
+          <!-- AFEGIT 'v-card-actions' I EL BOTÓ CRIDA A LA NOVA FUNCIÓ -->
           <v-card-actions class="pa-0 justify-center">
-            <v-btn color="#8b5cf6" class="mt-4 clean-button" height="48" @click="$router.push('/')">
+            <v-btn color="#8b5cf6" class="mt-4 clean-button" height="48" @click="tornarAPantallaPrincipal">
               TORNAR A LA PANTALLA PRINCIPAL
               <v-icon end class="ml-2">mdi-home-outline</v-icon>
             </v-btn>
@@ -86,33 +78,37 @@
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useWorkoutStore } from '@/stores/workoutStore';
+import { useAuthStore } from '@/stores/authStore';
 
-const route = useRoute()
 const props = defineProps({
   exercici: { type: String, required: true },
-  totalReps: { type: Number, default: 0 },
-  jugador: { type: String, default: '' },
-  altresJugadors: { type: Array, default: () => [] },
-  totalTime: { type: Number, default: 0 }
-})
+  totalReps: { type: Number, default: 0 }
+});
 
-const noms = { Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES', flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES' }
+const router = useRouter();
+const workoutStore = useWorkoutStore();
+const authStore = useAuthStore();
 
-const exerciciLabel = noms[props.exercici] || props.exercici
-const tempsTotal = props.totalTime
+const noms = { Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES', flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES' };
 
-// Funció per formatar el temps de segons a MM:SS
-const formattedTime = computed(() => {
-  const minuts = Math.floor(tempsTotal / 60)
-  const segons = tempsTotal % 60
-  return `${minuts.toString().padStart(2, '0')}:${segons.toString().padStart(2, '0')}`
-})
+const exerciciLabel = noms[props.exercici] || props.exercici;
+const reps = props.totalReps;
 
-const reps = props.totalReps
-const jugador = props.jugador
-const altresJugadors = props.altresJugadors
+// 🔴 LLEGIM LES DADES DINÀMICAMENT DE L'STORE
+const jugador = computed(() => authStore.userName);
+const altresJugadors = computed(() => {
+  const leaderboard = workoutStore.finalLeaderboard || workoutStore.leaderboard;
+  return leaderboard.filter(j => j.userId !== authStore.user.id);
+});
+
+// 🔴 NOVA FUNCIÓ PER GESTIONAR LA SORTIDA
+function tornarAPantallaPrincipal() {
+  workoutStore.cleanupSession(); // Neteja i desconnecta el WebSocket
+  router.push('/');
+}
 </script>
 
 <style scoped>
