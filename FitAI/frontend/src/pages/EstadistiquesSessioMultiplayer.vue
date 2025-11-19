@@ -7,59 +7,69 @@
           SESSIÓ COMPLETADA
         </h1>
 
-        <v-card class="results-card rounded-xl pa-6 pa-sm-8 elevation-8">
+        <!-- CANVI 1: Afegeix 'd-flex flex-column' i un 'max-height' a la targeta -->
+        <v-card 
+          class="results-card rounded-xl pa-6 pa-sm-8 elevation-8 d-flex flex-column"
+          style="max-height: 85vh;"
+        >
 
           <h2 v-if="jugador" class="text-h6 font-weight-bold mb-4 text-white">
             Jugador: <span class="text-cyan-lighten-2">{{ jugador }}</span>
           </h2>
-
           <h2 class="text-h6 font-weight-bold mb-6 text-white ranking-title">RESUM D'ESTADÍSTIQUES</h2>
 
-          <v-row class="justify-center">
-            <v-col cols="12" sm="8" md="6" class="px-0">
+          <!-- CANVI 2: Embolcalla la secció de dades en un <v-card-text> per fer-la scrollable -->
+          <v-card-text class="flex-grow-1 pa-0" style="overflow-y: auto;">
+            <v-row class="justify-center">
+              <v-col cols="12" sm="8" md="6" class="px-0">
 
-              <v-row class="mb-4 ga-3">
-                <v-col cols="12" class="d-flex">
-                  <v-card class="data-card pa-3 rounded-lg flex-grow-1 blue-glow-card" color="#0e111d">
-                    <h3 class="text-caption font-weight-light text-blue-lighten-2">EXERCICI</h3>
-                    <p class="text-subtitle-1 font-weight-bold text-uppercase">{{ exerciciLabel }}</p>
-                  </v-card>
-                </v-col>
-              </v-row>
+                <v-row class="mb-4 ga-3">
+                  <v-col cols="12" class="d-flex">
+                    <v-card class="data-card pa-3 rounded-lg flex-grow-1 blue-glow-card" color="#0e111d">
+                      <h3 class="text-caption font-weight-light text-blue-lighten-2">EXERCICI</h3>
+                      <p class="text-subtitle-1 font-weight-bold text-uppercase">{{ exerciciLabel }}</p>
+                    </v-card>
+                  </v-col>
+                </v-row>
 
-              <v-row class="mb-4 ga-3">
-                <v-col cols="12" class="d-flex">
-                  <v-card class="data-card reps-card pa-3 rounded-lg flex-grow-1 purple-glow-card" color="#0e111d">
-                    <h3 class="text-caption font-weight-light text-purple-lighten-2">REPETICIONS TOTALS</h3>
-                    <p class="text-h6 font-weight-black reps-number">{{ reps }}</p>
-                  </v-card>
-                </v-col>
-              </v-row>
+                <v-row class="mb-4 ga-3">
+                  <v-col cols="12" class="d-flex">
+                    <v-card class="data-card reps-card pa-3 rounded-lg flex-grow-1 purple-glow-card" color="#0e111d">
+                      <h3 class="text-caption font-weight-light text-purple-lighten-2">LES TEVES REPETICIONS</h3>
+                      <p class="text-h6 font-weight-black reps-number">{{ reps }}</p>
+                    </v-card>
+                  </v-col>
+                </v-row>
 
-              <!-- SECCIÓ ALTRES JUGADORS -->
-              <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
-              <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
+                <!-- SECCIÓ ALTRES JUGADORS -->
+                <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
+                <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
 
-              <v-row v-if="altresJugadors.length > 0" class="mb-4 ga-3">
-                <v-col cols="12" v-for="jug in altresJugadors" :key="jug.userId" class="d-flex">
-                  <v-card class="data-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
-                    <div class="d-flex justify-space-between align-center">
-                        <h3 class="text-body-1 font-weight-bold text-cyan-lighten-2 mb-0">{{ jug.userName }}</h3>
-                        <p class="text-h6 font-weight-black reps-number mb-0">{{ jug.reps }}</p>
-                    </div>
-                  </v-card>
-                </v-col>
-              </v-row>
+                <v-row v-if="altresJugadors.length > 0" class="mb-4 ga-3">
+                  <v-col cols="12" v-for="jug in altresJugadors" :key="jug.userId" class="d-flex">
+                    <v-card class="data-card pa-3 rounded-lg flex-grow-1 cyan-glow-card" color="#0e111d">
+                      <div class="d-flex justify-space-between align-center">
+                          <h3 class="text-body-1 font-weight-bold text-cyan-lighten-2 mb-0">{{ jug.userName }}</h3>
+                          <p class="text-h6 font-weight-black reps-number mb-0">{{ jug.reps }}</p>
+                      </div>
+                    </v-card>
+                  </v-col>
+                </v-row>
 
-            </v-col>
-          </v-row>
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <!-- FI DE LA SECCIÓ SCROLLABLE -->
 
           <v-divider class="divider-subtle mx-auto my-6"></v-divider>
 
-          <v-btn color="#8b5cf6" class="mt-4 clean-button" height="48" @click="$router.push('/')">
-            TORNAR A LA PANTALLA PRINCIPAL
-            <v-icon end class="ml-2">mdi-home-outline</v-icon>
-          </v-btn>
+          <!-- CANVI 3: Embolcalla el botó en <v-card-actions> per a una millor estructura -->
+          <v-card-actions class="pa-0 justify-center">
+            <v-btn color="#8b5cf6" class="mt-4 clean-button" height="48" @click="$router.push('/')">
+              TORNAR A LA PANTALLA PRINCIPAL
+              <v-icon end class="ml-2">mdi-home-outline</v-icon>
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-container>
     </v-main>
@@ -83,6 +93,7 @@ const altresJugadors = props.altresJugadors
 </script>
 
 <style scoped>
+/* ELS ESTILS NO HAN CANVIAT, SÓN ELS MATEIXOS */
 .bg-fitai-deep-space {
   background: radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
