@@ -18,7 +18,6 @@ services:
      - fitai_network
 
 
-<<<<<<< HEAD
  # --- SERVEI DE GESTIÓ DE BD (phpMyAdmin) ---
  phpmyadmin:
    image: phpmyadmin:latest
@@ -96,29 +95,6 @@ services:
    depends_on:
      - proxy
 
-=======
-  # --- SERVEI DE BACKEND (API Node.js) ---
-  backend:   
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile.prod
-    restart: always
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./backend:/usr/src/app
-      - ./frontend/public/uploads:/usr/src/app/../frontend/public/uploads
-      - /usr/src/app/node_modules
-    environment:
-      DB_HOST: db
-      DB_USER: nodeuser
-      DB_PASSWORD: nodepass
-      DB_NAME: entrenador_virtual
-    depends_on:
-      - db
-    networks:
-      - fitai_network
->>>>>>> Kim2
 
 
 
@@ -129,3 +105,4 @@ volumes:
 networks:
  fitai_network:
    driver: bridge
+
