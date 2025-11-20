@@ -54,53 +54,77 @@ Començant.
  * [Enunciat](https://sites.google.com/inspedralbes.cat/tr1dam2025-26/enunciat)
  * [Bitacores](https://docs.google.com/spreadsheets/d/1dAmw4pHsqixxw78n4tTtcN0cRsuXmbkM/edit?gid=1283798028#gid=1283798028)
 
+#  NEXTREP: Type Racer Royale (TR1) Documentation
 
-#  FitAI/NEXTREP: Type Racer Royale (TR1) Documentation
+Aquesta documentació ofereix una visió general completa del sistema **NEXTREP** (originalment TR1 - Type Racer Royale), una aplicació web de fitness que combina detecció de posició mitjançant IA i sessions multijugador competitives en temps real, amb un mode individual on el usuaris mantenen les seves dades i clasificacio.
 
-Aquesta documentació ofereix una visió general d'alt nivell de l'aplicació **FitAI** (originalment TR1 - Type Racer Royale), un sistema web de seguiment de fitness basat en IA que combina detecció de posició i sessions multijugador competitives.
+---
+
+## 0.  Propòsit i Àmbit
+
+NEXTREP és una aplicació basada en navegador que fusiona la **visió per computador** (per a la detecció de posicions i el recompte de repeticions) amb la **comunicació en temps real** i funcions socials. L'objectiu és oferir una experiència d'entrenament interactiva on els usuaris puguin realitzar exercicis en solitari o competir en sessions multijugador, rastrejant estadístiques de rendiment persistents.
 
 ---
 
 ## 1.  Arquitectura de l'Aplicació
 
-L'aplicació FitAI segueix una **arquitectura de tres capes** (Three-Tier Architecture) dissenyada per a la separació de responsabilitats i l'escalabilitat. El sistema es basa en un enfocament de microserveis (containeritzats amb Docker) que es comuniquen mitjançant protocols HTTP/REST i WebSocket.
+L'aplicació segueix una **arquitectura de tres capes** robusta, amb serveis containeritzats (Docker Compose) que faciliten la separació de responsabilitats entre la presentació, la lògica de negoci i les dades.
 
-### Piles Tecnològiques Clau
+### Piles Tecnològiques i Fitxers Clau Detallats
 
-| Capa | Tecnologia | Propòsit |
-| :--- | :--- | :--- |
-| **Frontend** | **Vue.js 3** (Composition API), **Vuetify** | Interfície d'Usuari (UI/UX) i lògica de presentació. |
-| | **Pinia** | Gestió de l'estat global del client. |
-| | **TensorFlow Lite** | Detecció de posició (*Pose Detection*) executada al navegador per comptar repeticions. |
-| **Backend** | **Node.js** + **Express 5** | Servidor per a la lògica de negoci, autenticació i API REST. |
-| | **WebSocket** (`ws`) | Comunicació **en temps real** per a les actualitzacions de sessions multijugador. |
-| | **Sequelize** (ORM) | Abstracció i gestió de la Base de Dades. |
-| **Base de Dades** | **MariaDB** | Emmagatzematge persistent de dades d'usuaris i resultats de sessions. |
+| Capa | Tecnologia | Propòsit | Fitxers / Configuracions Clau |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | **Vue.js 3** (Composition API) | UI framework | `FitAI/frontend/src/pages/*.vue` |
+| | **Vuetify** | Components Material Design | `FitAI.vue`, components `*.vue` |
+| | **Pinia** | Gestió de l'estat global | `authStore`, `workoutStore` |
+| | **TensorFlow Lite** | Detecció de posició (AI) | Execució al client (browser) |
+| **Backend** | **Node.js + Express 5** | Servidor HTTP i API REST | `FitAI/backend/server.js` |
+| | **WebSocket** (`ws`) | Comunicació en temps real | `wsServer.js`, `wsHandler.js` |
+| | **Sequelize** | ORM per a BBDD | Fitxers de definició de models |
+| | **express-session** | Gestió de sessions HTTP | `sessionConfig` |
+| | **bcryptjs** | *Hashing* de contrasenyes | `authController` |
+| | **multer** | Gestió de pujada d'arxius | Càrrega d'imatges de perfil |
+| **Base de Dades** | **MariaDB** | Base de dades relacional | Taules: `usuaris`, `sales`, `participacions` |
+| **Infraestructura** | **Docker Compose** | Orquestració de contenidors | `docker-compose.yml` (Ús local) |
+| |**nginx** | Reverse proxy + Terminació SSL | `nginx.conf` |
+| | **certbot** | Automatització de certificats SSL | Integració Let's Encrypt |
 
-### Flux de Comunicació
+### Protocols de Comunicació
 
-L'aplicació utilitza dos canals de comunicació:
-* **HTTP/REST:** Per a operacions de gestió de recursos (autenticació, registre, creació de sales, dades d'usuari).
-* **WebSocket:** Per a la comunicació d'alta freqüència durant les sessions d'entrenament (enviament de repeticions, actualitzacions del *leaderboard*).
+L'aplicació utilitza una estratègia de comunicació dual:
+1.  **HTTP/REST:** Per a operacions inicials i persistents (Autenticació, registre, gestió de perfils).
+2.  **WebSocket:** Per a la comunicació d'alta freqüència durant l'exercici (actualització de repeticions i *leaderboards* en temps real).
 
 ---
 
 ## 2.  Esquema de Components
 
-La lògica de l'aplicació es distribueix entre components de la UI, *stores* de gestió d'estat i controladors del servidor, interconnectats per gestionar les dades en temps real i les operacions persistents.
+La lògica del sistema es distribueix en mòduls clars, amb una separació entre el codi del client i el del servidor.
 
-### Components Clau i Interacció
+### 2.1. Estructura de Directoris
 
-| Component | Responsabilitat | Interaccions Principals |
+| Directori | Propòsit | Subdirectoris Clau |
 | :--- | :--- | :--- |
-| **Pàgines/Components Vue** | Interacció amb l'usuari i captura de dades. | Es comunica amb les Stores de Pinia i executa TensorFlow Lite. |
-| **Pinia Stores** | Manteniment de l'estat del client (sessió, estat de l'exercici). | Fa crides als *endpoints* de l'API REST i gestiona la connexió WebSocket. |
-| **Controladors Backend** | Processament de peticions REST i lògica de negoci. | Interactua amb la capa ORM (Sequelize) per a les operacions BBDD. |
-| **WebSocket Handler** | Gestió de l'estat en memòria de les sales d'exercici actives. | Envia missatges de *broadcast* a tots els participants de la sala. |
+| `FitAI/frontend/` | Aplicació Vue.js | `src/pages/`, `src/components/`, `src/stores/` |
+| `FitAI/backend/` | Servidor Express | `server/routes/`, `server/controllers/`, `server/websocket/` |
+| `doc/` | Documentació del Projecte | Diagrames i especificacions |
 
-A continuació, es presenta un diagrama conceptual del flux de dades principal:
+### 2.2. Flux de Petició (Request Flow Summary)
 
-### Esquema de Base de Dades (MariaDB)
+| Acció d'Usuari | Component Frontend | Endpoint / Missatge WS | Operacions a la BBDD |
+| :--- | :--- | :--- | :--- |
+| Login | `Login.vue` → `authStore` | `POST /api/login` | Consulta `usuaris` |
+| Unir-se a Multijugador | `Multiplayer.vue` | `POST /api/sala/unir` + WS `join` | Consulta i insereix `sales`/`participacions` |
+| Realitzar Repetició | `JuegoMultiplayer.vue` (TensorFlow) | WS `update` | Actualització de l'estat de la sessió **en memòria** |
+| Finalitzar Sessió | `JuegoMultiplayer.vue` | WS `finish` | Insereix `participacions`, actualitza agregats a `usuaris` |
+
+### 2.3. Gestió de Sessions
+
+NEXTREP implementa una gestió de sessions dual:
+* **Sessions HTTP:** Gestionades per `express-session` amb dades emmagatzemades al servidor per a la seguretat de les rutes REST.
+* **Sessions WebSocket:** Objectes de sessió mantinguts **en memòria** pel `wsHandler.js` per rastrejar participants i repeticions en temps real, sense dependre de la BBDD durant l'exercici actiu.
+
+### 2.4. Esquema de Base de Dades (MariaDB)
 
 | Taula | Propòsit | Camps Clau (Exemples) |
 | :--- | :--- | :--- |
@@ -112,29 +136,37 @@ A continuació, es presenta un diagrama conceptual del flux de dades principal:
 
 ## 3.  Diagrama de Docker
 
-L'entorn es defineix mitjançant `docker-compose.yml`, que defineix els contenidors necessaris per al funcionament de l'aplicació.
+L'entorn es defineix mitjançant `docker-compose.yml`, que orquestra els diferents serveis.
 
-Per al desplegament **local** i de desenvolupament, els serveis clau són:
+### Serveis de Desplegament Local
 
-| Servei | Tecnologia Base | Port Exposat | Funció Local |
+Aquests són els serveis essencials per a un entorn de desenvolupament local:
+
+| Servei | Tecnologia Base | Port Exposat (Host) | Funció |
 | :--- | :--- | :--- | :--- |
-| `frontend` | Vue.js Build | Interna (Host: 8080) | Serveix l'aplicació client. |
-| `backend` | Node.js/Express | 4000 (Host: 4000) | Servidor d'API i WebSocket. |
-| `mariadb` | MariaDB | 3306 (Host: 3306) | Contenidor de Base de Dades relacional. |
+| `frontend` | Vue.js Build | Interna (8080) | Servidor client (UI). |
+| `backend` | Node.js/Express | 4000 | Servidor d'API i WebSocket. |
+| `mariadb` | MariaDB | 3306 | Contenidor de Base de Dades. |
 
-**Nota:** Els serveis d'alt nivell com `nginx` i `certbot` es reserven habitualment per a l'entorn de producció i poden ser omesos en un desplegament local senzill.
+### Serveis d'Infraestructura de Producció
 
-Aquest diagrama conceptual il·lustra l'estructura de contenidors per a l'entorn de desenvolupament:
+| Servei | Tecnologia Base | Port Exposat (Host) | Funció |
+| :--- | :--- | :--- | :--- |
+| `nginx` | Reverse Proxy | 80, 443 | Distribueix trànsit, gestiona peticions i terminació SSL. |
+| `certbot` | Automatització SSL | N/A | Obté i renova certificats Let's Encrypt. |
+
+Aquest diagrama conceptual il·lustra l'estructura completa de contenidors:
+
 
 ---
 
 ## 4.  Explicació del Desplegament en Local
 
-La manera més ràpida i fiable d'executar l'aplicació en un entorn de desenvolupament o proves és utilitzant Docker Compose, ja que automatitza la configuració dels tres components principals.
+El desplegament local es fa mitjançant Docker Compose, automatitzant la configuració i llançament de tots els components necessaris.
 
 ### Requisits
 
-* **Docker** (amb Docker Engine en execució)
+* **Docker**
 * **Docker Compose**
 
 ### Passos per al Desplegament Local
@@ -146,25 +178,22 @@ La manera més ràpida i fiable d'executar l'aplicació en un entorn de desenvol
     ```
 
 2.  **Preparar Variables d'Entorn:**
-    * Assegureu-vos de tenir els fitxers d'entorn (`.env`) amb les credencials de la base de dades i configuracions de port, seguint la documentació del projecte.
+    * Creeu i configureu els fitxers d'entorn (`.env`) necessaris per a la base de dades i els secrets d'Express.
 
 3.  **Llançar els Serveis:**
-    * Executeu la següent comanda al directori arrel, la qual construirà les imatges de `frontend` i `backend` i aixecarà els tres contenidors en segon pla:
+    * Executeu la següent comanda per construir les imatges i aixecar els contenidors en segon pla:
 
     ```bash
     docker-compose up -d --build
     ```
 
-    * **(`-d`):** Executa els contenidors en mode *detached*.
-    * **(`--build`):** Força la reconstrucció de les imatges customitzades (Vue i Node.js).
-
 4.  **Accés a l'Aplicació:**
-    * Un cop els contenidors estiguin en execució (`docker ps`), l'aplicació serà accessible localment:
-        * **Frontend (UI):** Normalment a `http://localhost:[PORT_FRONTEND]` (sovint 8080 o 3000).
-        * **Backend (API/WS):** Normalment a `http://localhost:4000`.
+    * Un cop els contenidors estiguin en execució, accediu a l'aplicació:
+        * **Frontend (UI):** Normalment a `http://localhost:[PORT_FRONTEND]`.
+        * **Backend (API/WS):** `http://localhost:4000`.
 
 5.  **Aturar l'Entorn:**
-    * Per aturar i eliminar els contenidors (mantenint volums de dades):
+    * Per aturar i eliminar els contenidors (mantenint els volums de dades si no s'especifica):
     ```bash
     docker-compose down
     ```
