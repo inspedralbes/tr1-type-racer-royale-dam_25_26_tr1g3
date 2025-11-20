@@ -44,12 +44,12 @@
 
 <script setup>
 defineProps({
-  // Controla si se ve o no (v-model)
+
   modelValue: {
     type: Boolean,
     default: false
   },
-  // Recibe el objeto racha ya calculado del padre
+
   rachaActual: {
     type: Object,
     required: true,

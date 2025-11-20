@@ -73,14 +73,14 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 
-// --- LÓGICA DE RACHAS ---
+
 const rachaData = ref({
   dias: 1,
   ultimoAcceso: null
 })
 const showStreakDialog = ref(false)
 
-// Imágenes de rachas
+
 const rachaImagenes = [
   {
     dias: 1,
@@ -99,11 +99,9 @@ const rachaImagenes = [
   }
 ]
 
-// Computed para obtener la imagen de racha actual
 const rachaActual = computed(() => {
   const dias = rachaData.value.dias
   
-  // Si los días son mayores a 3, mostrar la imagen del día 3 (máximo)
   if (dias >= 3) {
     return { ...rachaImagenes[2], dias }
   } else if (dias === 2) {
@@ -113,7 +111,6 @@ const rachaActual = computed(() => {
   }
 })
 
-// Función para cargar y actualizar la racha del usuario
 const loadUserStreak = async () => {
   try {
     const response = await fetch('/api/user/streak')
@@ -122,22 +119,20 @@ const loadUserStreak = async () => {
       const data = await response.json()
       rachaData.value = data
       
-      // Llama a updateUserStreak para registrar el inicio de sesión y actualizar la racha
-      // El backend debe devolver la racha actualizada, y updateUserStreak se encarga de mostrar el diálogo
       await updateUserStreak()
 
     } else {
-      // Si no existe racha (404), o hay otro error, intenta crear/actualizar la racha
+
       await updateUserStreak()
     }
   } catch (error) {
     console.error('Error al cargar la racha:', error)
-    // Si hay un error de red, intenta crear/actualizar la racha
+
     await updateUserStreak()
   }
 }
 
-// Función para actualizar la racha del usuario
+
 const updateUserStreak = async () => {
   try {
     const response = await fetch('/api/user/streak', {
@@ -149,14 +144,12 @@ const updateUserStreak = async () => {
       const data = await response.json()
       rachaData.value = data
       
-      // Mostrar el diálogo después de actualizar/crear la racha
       if (rachaData.value.dias >= 1) {
         nextTick(() => {
           showStreakDialog.value = true
         })
       }
     } else {
-      // Si el backend falla, mostramos un error en consola, pero no forzamos el incremento
       console.error('Error al actualizar la racha en el backend:', response.statusText)
     }
   } catch (error) {
@@ -165,11 +158,8 @@ const updateUserStreak = async () => {
 }
 
 onMounted(() => {
-  // Cargar la racha del usuario
-  // loadUserStreak(); // <-- COMENTA ESTO
 
-  // FUERZA EL POP-UP PARA PROBAR
-  rachaData.value.dias = 3 // Pon los días que quieras
+  rachaData.value.dias = 3 
   nextTick(() => {
     showStreakDialog.value = true
   })
@@ -177,15 +167,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== DIÁLOGO Y GLASS ======== */
-/* ==================================== */
+
 .glass-card-futuristic {
-  background: rgba(30, 30, 47, 0.9) !important; /* Fondo oscuro semitransparente */
-  border: 1px solid rgba(139, 92, 246, 0.3); /* Borde morado sutil */
+  background: rgba(30, 30, 47, 0.9) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 20px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  backdrop-filter: blur(10px); /* Efecto glassmorphism */
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
@@ -197,15 +185,11 @@ onMounted(() => {
   box-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
 }
 
-/* Colores específicos para el diálogo */
 .text-amber-lighten-2 {
   color: #ffd54f !important;
   text-shadow: 0 0 8px rgba(255, 213, 79, 0.8);
 }
 
-/* ==================================== */
-/* ======== SECCIÓN DE RACHA ======== */
-/* ==================================== */
 .streak-container {
   display: flex;
   flex-direction: column;
@@ -248,13 +232,11 @@ onMounted(() => {
   text-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
 }
 
-/* Título (copiado del original para consistencia) */
 .ranking-title {
   text-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
   font-weight: 700;
 }
 
-/* Divisor (copiado del original) */
 .divider-glow {
     max-width: 85%;
     height: 1px;

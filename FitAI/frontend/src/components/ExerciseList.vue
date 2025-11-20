@@ -73,7 +73,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const searchQuery = ref('')
 
-// --- DATOS Y LÓGICA DE EJERCICIOS (Sin cambios) ---
 const exercicis = [
   {
     nom: 'Flexions',
@@ -127,9 +126,8 @@ const anarAExercici = (nom) => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== TARJETAS (CARD) ======== */
-/* ==================================== */
+
+
 .exercise-card {
   width: 100%;
   max-width: 380px;
@@ -144,7 +142,7 @@ const anarAExercici = (nom) => {
   position: relative; 
 }
 
-/* Overlay de descripción con animación de entrada */
+
 .exercise-description-overlay {
   position: absolute;
   top: 0;
@@ -169,7 +167,7 @@ const anarAExercici = (nom) => {
   transform: translateY(0); 
 }
 
-/* Franja inferior para el nombre */
+
 .exercise-label-bottom {
   position: absolute;
   bottom: 0;
@@ -181,23 +179,22 @@ const anarAExercici = (nom) => {
   letter-spacing: 1px;
   text-transform: uppercase;
   z-index: 1; 
-  transition: all 0.3s ease; /* AÑADIDO: Para animar la salida */
+  transition: all 0.3s ease; 
 }
 
-/* ANIMACIÓN DE SALIDA: Cuando se hace hover en la tarjeta, la etiqueta desaparece */
+
 .exercise-card:hover .exercise-label-bottom {
-  opacity: 0; /* Desaparece */
-  transform: translateY(100%); /* Se desliza fuera de la tarjeta hacia abajo */
+  opacity: 0; 
+  transform: translateY(100%); 
 }
 
-/* Resto de estilos (sin cambios) */
+
+
 .transition-img {
   transition: transform 0.6s ease;
 }
 
-/* ==================================== */
-/* ======== BUSCADOR (SEARCH BAR) ======== */
-/* ==================================== */
+
 .search-bar {
   max-width: 600px;
   border-radius: 12px !important;
