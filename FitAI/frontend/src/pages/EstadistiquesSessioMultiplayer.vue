@@ -7,7 +7,6 @@
           SESSIÓ COMPLETADA
         </h1>
 
-        <!-- AFEGIT 'd-flex flex-column' I 'max-height' PER A L'SCROLL -->
         <v-card 
           class="results-card rounded-xl pa-6 pa-sm-8 elevation-8 d-flex flex-column"
           style="max-height: 85vh;"
@@ -19,7 +18,6 @@
 
           <h2 class="text-h6 font-weight-bold mb-6 text-white ranking-title">RESUM D'ESTADÍSTIQUES</h2>
 
-          <!-- AFEGIT 'v-card-text' PER FER LA ZONA CENTRAL SCROLLABLE -->
           <v-card-text class="flex-grow-1 pa-0" style="overflow-y: auto;">
             <v-row class="justify-center">
               <v-col cols="12" sm="8" md="6" class="px-0">
@@ -42,7 +40,6 @@
                   </v-col>
                 </v-row>
 
-                <!-- SECCIÓ ALTRES JUGADORS -->
                 <v-divider v-if="altresJugadors.length > 0" class="divider-subtle mx-auto my-4"></v-divider>
                 <h3 v-if="altresJugadors.length > 0" class="text-subtitle-2 text-grey-lighten-1 mb-3">RIVALS</h3>
 
@@ -60,11 +57,9 @@
               </v-col>
             </v-row>
           </v-card-text>
-          <!-- FI DE LA ZONA SCROLLABLE -->
 
           <v-divider class="divider-subtle mx-auto my-6"></v-divider>
 
-          <!-- AFEGIT 'v-card-actions' I EL BOTÓ CRIDA A LA NOVA FUNCIÓ -->
           <v-card-actions class="pa-0 justify-center">
             <v-btn color="#8b5cf6" class="mt-4 clean-button" height="48" @click="tornarAPantallaPrincipal">
               TORNAR A LA PANTALLA PRINCIPAL
@@ -86,7 +81,6 @@ import { useAuthStore } from '@/stores/authStore';
 const props = defineProps({
   exercici: { type: String, required: true },
   totalReps: { type: Number, default: 0 },
-  // 🔴 AFEGIT: Rebem el temps final com a prop
   totalTime: { type: Number, default: 0 } 
 });
 
@@ -106,14 +100,12 @@ const altresJugadors = computed(() => {
 });
 
 function tornarAPantallaPrincipal() {
-  // Ara només netegem l'estat del WebSocket i tornem
   workoutStore.cleanupSession();
   router.push('/');
 }
 </script>
 
 <style scoped>
-/* ELS ESTILS NO HAN CANVIAT, SÓN ELS MATEIXOS */
 .bg-fitai-deep-space {
   background: radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),

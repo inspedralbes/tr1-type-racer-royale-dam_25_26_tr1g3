@@ -72,14 +72,11 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-// ---------------------------------------------------------
-// OBTENCIÓN DE DATOS
-// ---------------------------------------------------------
+
 const reps = Number(route.params.reps) || 0
 const tempsTotal = Number(route.params.tempsTotal) || 0 
 const exercici = route.params.ejercicio || 'EXERCICI'
 
-// Diccionari per mapejar els noms dels exercicis
 const noms = {
   Flexions: 'FLEXIONS', Squats: 'SQUATS', Salts: 'SALTS', Abdominals: 'ABDOMINALS', Fons: 'FONS', Pujades: 'PUJADES',
   flexiones: 'FLEXIONS', sentadillas: 'ESQUATS', saltos: 'SALTS', abdominales: 'ABDOMINALS', fons: 'FONS', pujades: 'PUJADES',
@@ -87,7 +84,6 @@ const noms = {
 
 const exerciciLabel = computed(() => noms[exercici] || exercici)
 
-// Funció per formatar el temps de segons a MM:SS
 const formattedTime = computed(() => {
   const minuts = Math.floor(tempsTotal / 60)
   const segons = tempsTotal % 60
@@ -98,7 +94,6 @@ const goHome = () => {
   router.push('/')
 }
 
-// Actualizar estadísticas globales del usuario en segundo plano
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     await authStore.refreshUser()
@@ -107,14 +102,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== FONDO Y ANIMACIÓN ======== */
-/* ==================================== */
+
 .bg-fitai-deep-space {
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 40%), 
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%), 
-    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%); /* Fons més fosc per contrast */
+    linear-gradient(135deg, #0e111d, #141829 50%, #0e111d 100%); 
   background-attachment: fixed;
   background-size: cover;
   min-height: 100vh;
@@ -126,11 +119,9 @@ onMounted(async () => {
   100% { filter: brightness(1.03); }
 }
 
-/* ==================================== */
-/* ======== NOU TÍTOL NEÓ ESTILITZAT ======== */
-/* ==================================== */
+
 .results-title-neon {
-  /* Estil copiat de l'exemple */
+  
   font-size: 2.5rem;
   font-weight: 900;
   letter-spacing: 2px;
@@ -146,12 +137,12 @@ onMounted(async () => {
 }
 
 .results-title-neon::after {
-  /* Subratllat neó */
+
   content: '';
   position: absolute;
   bottom: -10px;
   left: 50%;
-  width: 160px; /* Reduïm l'amplada */
+  width: 160px; 
   height: 3px;
   transform: translateX(-50%);
   background: linear-gradient(90deg, #3b82f6, #8b5cf6);
@@ -171,7 +162,7 @@ onMounted(async () => {
   50% { opacity: 1; box-shadow: 0 0 25px rgba(139, 92, 246, 0.9); }
 }
 
-/* Títol de les estadístiques - mantenim l'estil anterior */
+
 .ranking-title {
     color: #ffffff; 
     text-shadow: 0 0 8px rgba(139, 92, 246, 0.5); 
@@ -180,9 +171,7 @@ onMounted(async () => {
 }
 
 
-/* ==================================== */
-/* ======== TARGETES DE DADES (MÉS COLORIDES) ======== */
-/* ==================================== */
+
 .results-card {
     background: rgba(30, 30, 47, 0.75) !important; 
     backdrop-filter: blur(12px);
@@ -193,10 +182,9 @@ onMounted(async () => {
     transition: all 0.4s ease;
 }
 
-/* Fons de les targetes de dades canviat a un fons més fosc #0e111d per contrast */
 .data-card {
     background-color: #0e111d !important; 
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Vora subtil per defecte */
+    border: 1px solid rgba(255, 255, 255, 0.1); 
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -205,9 +193,8 @@ onMounted(async () => {
     transform: translateY(-2px);
 }
 
-/* Estils de color neó millorats per cada quadre */
 
-.blue-glow-card { /* EXERCICI */
+.blue-glow-card { 
     border: 1px solid #81d4fa;
     box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
@@ -215,7 +202,7 @@ onMounted(async () => {
     box-shadow: 0 0 15px rgba(59, 130, 246, 1);
 }
 
-.purple-glow-card { /* REPETICIONS */
+.purple-glow-card { 
     border: 1px solid #ce93d8;
     box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); 
 }
@@ -223,7 +210,7 @@ onMounted(async () => {
     box-shadow: 0 0 15px rgba(139, 92, 246, 1);
 }
 
-.cyan-glow-card { /* TEMPS */
+.cyan-glow-card { 
     border: 1px solid #00ffaa;
     box-shadow: 0 0 8px rgba(0, 255, 170, 0.5); 
 }
@@ -231,19 +218,17 @@ onMounted(async () => {
     box-shadow: 0 0 15px rgba(0, 255, 170, 1);
 }
 
-/* Estilo para los números grandes (Colores mantenidos) */
 .reps-number {
     color: #81d4fa !important;
     text-shadow: 0 0 5px rgba(129, 212, 250, 0.6);
 }
 
 .time-value {
-    color: #00ffaa !important; /* Verd Neón */
+    color: #00ffaa !important; 
     text-shadow: 0 0 5px rgba(0, 255, 170, 0.6);
 }
 
 
-/* Estilo para los títulos de las tarjetas (Mantenidos) */
 .text-blue-lighten-2 {
     color: #81d4fa !important;
     opacity: 0.9;
@@ -258,9 +243,7 @@ onMounted(async () => {
 }
 
 
-/* ==================================== */
-/* ======== DIVIDER Y BOTÓN LIMPIO ======== */
-/* ==================================== */
+
 .divider-subtle {
     max-width: 90%;
     height: 1px;

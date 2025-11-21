@@ -64,15 +64,14 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
-// Componentes
 import ExerciseList from '@/components/ExerciseList.vue'
 import GlobalRanking from '@/components/GlobalRanking.vue'
-import StreakPopup from '@/components/StreakPopup.vue' // <--- Importamos solo el Popup visual
+import StreakPopup from '@/components/StreakPopup.vue' 
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-// --- 1. LÓGICA DE RACHAS (Traída aquí directamente) ---
+
 const rachaData = ref({ dias: 1, ultimoAcceso: null })
 const showStreakDialog = ref(false)
 
@@ -101,7 +100,6 @@ const checkAndUpdateUserStreak = async () => {
       const data = await response.json();
       rachaData.value = data;
 
-      // Si tiene racha y no se ha mostrado el popup hoy -> Mostrarlo
       if (rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
         nextTick(() => {
           showStreakDialog.value = true;
@@ -114,7 +112,6 @@ const checkAndUpdateUserStreak = async () => {
   }
 }
 
-// --- 2. LÓGICA DE PERFIL (Existente) ---
 const defaultAvatar = 'https://cdn.vuetifyjs.com/images/cards/halcyon.png' 
 
 const profilePhotoUrl = computed(() => {
@@ -129,29 +126,19 @@ const goToProfile = () => {
   router.push({ name: 'Profile' });
 }
 
-// --- ON MOUNTED ---
 onMounted(() => {
-  checkAndUpdateUserStreak(); // Ejecutamos la comprobación al cargar la página
+  checkAndUpdateUserStreak(); 
 });
 </script>
 
 <style>
-/* NOTA: AQUEST BLOC NO ÉS 'scoped'. 
-  Això permet que .bg-fitai-bright i .divider-glow 
-  s'apliquin correctament a la vista i als fills.
-*/
 
-/* ==================================== */
-/* ======== NUEVO ESTILO DE LOGO ======== */
-/* ==================================== */
 .logo-home {
-    /* Mismo filtro de brillo que en Login/Registro, pero más sutil para la Home */
+    
     filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
 }
 
-/* ==================================== */
-/* ======== FONDO NEÓN BRILLANTE ======== */
-/* ==================================== */
+
 .bg-fitai-bright {
   background:
     radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.25) 0%, transparent 45%),
@@ -168,9 +155,7 @@ onMounted(() => {
   100% { background-position: 0% 50%; }
 }
 
-/* ==================================== */
-/* ======== TÍTULO NEXTREP ======== */
-/* ==================================== */
+
 .nextrep-title {
   font-size: 3.5rem; 
   font-weight: 900;
@@ -210,7 +195,6 @@ onMounted(() => {
   100% { background-position: 0% 50%; }
 }
 
-/* Línea luminosa decorativa (aplicada globalmente) */
 .divider-glow {
     max-width: 85%;
     height: 1px;
@@ -226,27 +210,22 @@ onMounted(() => {
     }
 }
 
-/* ==================================== */
-/* ======== ESTILO BOTÓN PERFIL PROFESIONAL ======== */
-/* ==================================== */
 
-/* Contenedor del Botón (V-BTN) */
 .profile-btn-clean {
-    /* Le damos un fondo sutil en hover si es 'plain' */
     transition: background-color 0.2s ease-in-out;
-    border-radius: 50%; /* Asegurar que el botón sigue el contorno del avatar */
+    border-radius: 50%; 
 }
 
 .profile-btn-clean:hover {
-    /* Un ligero fondo oscuro en hover */
+
     background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Avatar (V-AVATAR) */
+
 .profile-avatar-border {
-    /* Borde sutil y profesional (similar a Discord o Slack) */
-    border: 3px solid #3b82f6; /* Usar el azul de tu paleta */
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); /* Sombra muy suave para destacarlo */
-    background-color: #1a2238; /* Fondo oscuro si la imagen no carga */
+
+    border: 3px solid #3b82f6; 
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); 
+    background-color: #1a2238; 
 }
 </style>

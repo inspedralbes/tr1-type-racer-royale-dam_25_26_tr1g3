@@ -57,10 +57,9 @@ async function start() {
   try {
     streamRef = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     video.value.srcObject = streamRef
-    video.value.src = null // Neteja src si hi havia un fitxer
+    video.value.src = null
     await video.value.play()
 
-    // Un cop el vídeo comença a reproduir-se i té dimensions, ajusta el canvas
     video.value.onloadedmetadata = () => {
       if (video.value && canvas.value) {
         canvas.value.width = video.value.offsetWidth;
@@ -75,7 +74,7 @@ async function start() {
     }
   } catch (e) {
     console.error('Error a CameraView.start():', e.message)
-    throw e // Rellança l'error perquè el pare el pugui agafar
+    throw e
   }
 }
 
@@ -85,10 +84,9 @@ function stop() {
     if (video.value) video.value.srcObject = null;
     streamRef = null
   }
-  // Atura també el vídeo si s'està reproduint un fitxer
   if (video.value && video.value.src) {
       video.value.pause();
-      video.value.src = ""; // Allibera el fitxer
+      video.value.src = "";
   }
   detecting = false
   const ctx = canvas.value?.getContext('2d');
@@ -96,7 +94,7 @@ function stop() {
 }
 
 function select() {
-  stop() // Atura la càmera abans de seleccionar un fitxer
+  stop()
   fileInput.value?.click()
 }
 
@@ -112,7 +110,6 @@ async function loadVideoFromFile(event) {
   video.value.src = url
   
   video.value.onloadedmetadata = () => {
-    // Un cop el vídeo del fitxer es carrega i té dimensions, ajusta el canvas
     if (video.value && canvas.value) {
       canvas.value.width = video.value.offsetWidth;
       canvas.value.height = video.value.offsetHeight;
@@ -137,17 +134,14 @@ async function detectPose() {
   async function poseDetectionFrame() {
     if (!detecting || !video.value || video.value.paused || video.value.ended) return
     
-    // Neteja el canvas per dibuixar el nou esquelet
     if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
     const poses = await detector.estimatePoses(video.value, { flipHorizontal: false })
 
     if (poses.length > 0) {
-      // Passa les dimensions actuals del video mostrat a `drawPose`
       drawPose(ctx, poses[0], video.value.videoWidth, video.value.videoHeight, video.value.offsetWidth, video.value.offsetHeight)
-      // Només comprovar moviment si el temporitzador (principal) està actiu (info via prop)
       if (props.timerActive) {
-        props.onCheckMoviment(poses[0]) // Crida la funció del pare
+        props.onCheckMoviment(poses[0])
       }
     }
     requestAnimationFrame(poseDetectionFrame)
@@ -161,21 +155,18 @@ async function detectVideoFrame() {
     if (!detecting || !video.value || video.value.paused || video.value.ended) {
         if (video.value?.ended) {
             detecting = false;
-            emit('videoEnded'); // Informa el pare
+            emit('videoEnded');
         }
         return
     }
 
-    // Neteja el canvas per dibuixar el nou esquelet
     if (ctx) ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
     
     const poses = await detector.estimatePoses(video.value)
     if (poses.length > 0) {
-      // Passa les dimensions actuals del video mostrat a `drawPose`
       drawPose(ctx, poses[0], video.value.videoWidth, video.value.videoHeight, video.value.offsetWidth, video.value.offsetHeight)
-      // Només comprovar moviment si el temporitzador (principal) està actiu (info via prop)
       if (props.timerActive) {
-        props.onCheckMoviment(poses[0]) // Crida la funció del pare
+        props.onCheckMoviment(poses[0])
       }
     }
     requestAnimationFrame(frameLoop)
@@ -183,36 +174,29 @@ async function detectVideoFrame() {
   requestAnimationFrame(frameLoop)
 }
 
-// Funció `drawPose` simplificada per dibuixar directament sobre la imatge del vídeo
 function drawPose(ctx, pose, videoNaturalWidth, videoNaturalHeight, videoDisplayedWidth, videoDisplayedHeight) {
   const canvasElement = canvas.value;
 
   if (!ctx || !canvasElement || !pose || !pose.keypoints) return;
   
-  // Assegura que les dimensions del canvas coincideixen amb les del vídeo mostrat
   if (canvasElement.width !== videoDisplayedWidth || canvasElement.height !== videoDisplayedHeight) {
       canvasElement.width = videoDisplayedWidth;
       canvasElement.height = videoDisplayedHeight;
   }
 
-  // Calcula factors d'escalat i desplaçament
-  // Aquests factors tradueixen les coordenades del model (basades en videoNaturalWidth/Height)
-  // a les coordenades del canvas (basades en videoDisplayedWidth/Height)
   const aspectRatioVideo = videoNaturalWidth / videoNaturalHeight;
   const aspectRatioDisplayed = videoDisplayedWidth / videoDisplayedHeight;
 
   let scaleX, scaleY, offsetX, offsetY;
 
   if (aspectRatioVideo > aspectRatioDisplayed) {
-      // El vídeo natural és més ample que la pantalla, s'ajusta a l'amplada (cover)
       scaleX = videoDisplayedWidth / videoNaturalWidth;
-      scaleY = scaleX; // mateix factor d'escalat
+      scaleY = scaleX;
       offsetY = (videoDisplayedHeight - videoNaturalHeight * scaleY) / 2;
       offsetX = 0;
   } else {
-      // El vídeo natural és més alt que la pantalla, s'ajusta a l'alçada (cover)
       scaleY = videoDisplayedHeight / videoNaturalHeight;
-      scaleX = scaleY; // mateix factor d'escalat
+      scaleX = scaleY;
       offsetX = (videoDisplayedWidth - videoNaturalWidth * scaleX) / 2;
       offsetY = 0;
   }
@@ -231,7 +215,7 @@ function drawPose(ctx, pose, videoNaturalWidth, videoNaturalHeight, videoDisplay
   
   for (const kp of pose.keypoints) {
     const transformed = transformPoint(kp);
-    if (transformed) { // Si el punt és vàlid i té un bon score
+    if (transformed) {
       ctx.beginPath();
       ctx.arc(transformed.x, transformed.y, 6, 0, 2 * Math.PI);
       ctx.fill();
@@ -251,7 +235,7 @@ function drawPose(ctx, pose, videoNaturalWidth, videoNaturalHeight, videoDisplay
     const p1 = transformPoint(kp1);
     const p2 = transformPoint(kp2);
     
-    if (p1 && p2) { // Si ambdós punts transformats són vàlids
+    if (p1 && p2) {
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
@@ -262,7 +246,6 @@ function drawPose(ctx, pose, videoNaturalWidth, videoNaturalHeight, videoDisplay
   ctx.shadowBlur = 0; 
 }
 
-// Exposa els mètodes al component pare
 defineExpose({
   start,
   stop,

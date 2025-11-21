@@ -93,7 +93,6 @@ const router = useRouter();
 const authStore = useAuthStore();
 const exercici = route.params.ejercicio;
 
-// Configuración de WebSocket (igual en ambos)
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const wsHost = window.location.host;
 const WS_URL = `${wsProtocol}//${wsHost}/ws`;
@@ -103,38 +102,28 @@ const aSala = ref(false);
 const codiSala = ref("");
 const codiSalaInput = ref("");
 const jugadors = ref([]);
-// 🟢 CAMBIO: hostId ahora usa el valor inicial numérico (0) de 'prueva'
 const hostId = ref(0); 
 const errorMsg = ref("");
 
-// 2. AFEGIM AQUESTA NOVA VARIABLE
-const isStartingGame = ref(false); // Controla si estem sortint per començar
+const isStartingGame = ref(false); 
 
-// 🟢 CAMBIO: Se obtienen tanto el ID numérico como el nombre de usuario
-const userId = authStore.user.id; // Asume que el store de autenticación tiene 'user.id'
-// 👇 CAMBIO AQUÍ 👇
-const userName = authStore.userName; // Corregido: Obtener 'userName' del store, no 'value'
+const userId = authStore.user.id;
+const userName = authStore.userName; 
 
 onBeforeUnmount(() => {
-  // 3. MODIFIQUEM EL 'onBeforeUnmount'
   if (isStartingGame.value) {
-    // Si estem començant, no enviem 'leave'.
-    // Desvinculem els esdeveniments per si de cas.
     if (socket) {
       socket.onmessage = null;
       socket.onclose = null;
     }
     return;
   }
-  
-  // Si sortim per qualsevol altra raó (ex: botó 'enrere'),
-  // netegem la sala.
+
   sortirSala();
   if (socket) socket.close();
 });
 
 
-// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva'): Crea la sala mediante la API (POST /api/sala/crear)
 async function crearSala() {
   try {
     const res = await fetch('/api/sala/crear', { method: 'POST' });
@@ -143,14 +132,12 @@ async function crearSala() {
       throw new Error(errData.message || 'Error en crear la sala');
     }
     const sala = await res.json();
-    // Usa 'codi_acces' y 'creador_id' devueltos por el backend
     connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
     errorMsg.value = err.message;
   }
 }
 
-// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva'): Une la sala mediante la API (POST /api/sala/unir)
 async function unirSala() {
   const codi = codiSalaInput.value.trim().toUpperCase();
   if (!codi) return;
@@ -171,7 +158,6 @@ async function unirSala() {
     }
 
     const sala = await res.json();
-    // Usa 'codi_acces' y 'creador_id' devueltos por el backend
     connectToSession(sala.codi_acces, sala.creador_id);
   } catch (err) {
     errorMsg.value = "Error en la connexió amb el servidor.";
@@ -179,15 +165,13 @@ async function unirSala() {
   }
 }
 
-// 🟢 FUNCIÓN ACTUALIZADA (BASADA EN 'prueva'): Maneja la conexión WebSocket
 function connectToSession(codi_acces, creador_id) {
   socket = new WebSocket(WS_URL);
 
   socket.addEventListener("open", () => {
     codiSala.value = codi_acces;
     aSala.value = true;
-    hostId.value = creador_id; // Guarda el ID numérico del creador/host
-    // Envía el ID numérico y el nombre de usuario para el registro en el servidor WS
+    hostId.value = creador_id; 
     socket.send(JSON.stringify({ type: "join", codi_acces, userId, userName }));
   });
 
@@ -195,17 +179,14 @@ function connectToSession(codi_acces, creador_id) {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "leaderboard") {
-      // ➡️ Ahora 'jugadors' almacena el objeto completo { userId, userName, reps }
       jugadors.value = msg.leaderboard;
       
-      // La lógica del hostId se mantiene, aunque el valor principal viene de la API.
       if (!hostId.value && msg.leaderboard.length > 0) {
         hostId.value = msg.leaderboard[0].userId;
       }
     }
 
     if (msg.type === "start") {
-      // 4. MARQUEM LA VARIABLE (per als clients)
       isStartingGame.value = true; 
       
       router.push({
@@ -214,7 +195,6 @@ function connectToSession(codi_acces, creador_id) {
       });
     }
     
-    // ➡️ Adición de manejo de errores WS (de 'prueva')
     if (msg.type === "error") {
       errorMsg.value = msg.message;
       sortirSala();
@@ -226,31 +206,27 @@ function connectToSession(codi_acces, creador_id) {
   });
 }
 
-// 🟢 FUNCIÓN AJUSTADA: Reinicia hostId a 0 y cierra el socket
 function sortirSala() {
   if (socket) {
     try {
       socket.send(JSON.stringify({ type: "leave" }));
       socket.close();
-    } catch (e) { /* Ignora errores si ya está cerrado */ }
+    } catch (e) {  }
     socket = null;
   }
   aSala.value = false;
   codiSala.value = "";
   jugadors.value = [];
-  // ➡️ Reinicia a 0
   hostId.value = 0; 
 }
 
 function sortirManual() {
-  // 5. Assegurem que 'isStartingGame' és fals
   isStartingGame.value = false;
   sortirSala();
 }
 
 function iniciarPartida() {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    // 6. MARQUEM LA VARIABLE (per a l'amfitrió)
     isStartingGame.value = true;
     
     socket.send(JSON.stringify({
@@ -261,9 +237,8 @@ function iniciarPartida() {
 }
 
 function tornarEnrere() {
-  // 7. Assegurem que 'isStartingGame' és fals
   isStartingGame.value = false;
-  router.back(); // Això activarà 'onBeforeUnmount' correctament
+  router.back(); 
 }
 </script>
 

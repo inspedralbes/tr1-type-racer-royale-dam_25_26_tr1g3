@@ -166,10 +166,8 @@ const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 const defaultAvatar = ref('https://cdn.vuetifyjs.com/images/cards/halcyon.png') 
 
-// Control de versión para la imagen de perfil
 const imageVersion = ref(Date.now())
 
-// Estados para la carga de fotos
 const fileInput = ref(null)
 const selectedFile = ref(null)
 const previewImage = ref(null)
@@ -177,7 +175,6 @@ const uploading = ref(false)
 const uploadMessage = ref(null)
 const uploadMessageType = ref('info')
 
-// Añade esto antes de la parte de "onMounted"
 
 const formatTotalTime = (seconds) => {
   const s = Number(seconds);
@@ -185,33 +182,26 @@ const formatTotalTime = (seconds) => {
   
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60; // Los segundos que sobran
+  const sec = s % 60; 
   
   if (h > 0) {
-    return `${h}h ${m}m ${sec}s`; // Ej: 1h 30m 15s
+    return `${h}h ${m}m ${sec}s`; 
   } else if (m > 0) {
-    return `${m}m ${sec}s`;       // Ej: 5m 30s
+    return `${m}m ${sec}s`;       
   } else {
-    return `${sec} s`;            // Ej: 15 s (¡Ahora sí verás el 15!)
+    return `${sec} s`;            
   }
 }
-// ----------------------------
-// CAMBIO IMPORTANTE: Al montar
-// ----------------------------
+
 onMounted(async () => {
-  // 1. Verificamos sesión básica
   await authStore.checkAuth()
   
-  // 2. Forzamos actualización de estadísticas frescas saltando la caché
-  // Esto soluciona que las reps salgan a 0 al entrar
   if (authStore.user) {
     await authStore.refreshUser() 
   }
 })
 
-// ----------------------------
-// Funciones para subir foto
-// ----------------------------
+
 const triggerFileInput = () => fileInput.value.click()
 
 const onFileSelected = (event) => {
@@ -239,7 +229,6 @@ const uploadPhoto = async () => {
         formData.append('profileImage', selectedFile.value)
         await authStore.updateProfilePicture(formData)
         
-        // Actualizamos versión para refrescar la imagen en el navegador
         imageVersion.value = Date.now()
 
         uploadMessage.value = 'Foto de perfil actualitzada correctament!'
@@ -274,9 +263,7 @@ const handleLogout = async () => {
 
 
 <style scoped>
-/* ==================================== */
-/* ======== ESTILS DE FONS I CONTENIDOR ======== */
-/* ==================================== */
+
 .bg-fitai-deep-space {
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
@@ -316,18 +303,15 @@ const handleLogout = async () => {
     opacity: 0.8;
 }
 
-/* Estil que faltava per a l'alerta */
 .glass-alert {
-    background-color: rgba(255, 152, 0, 0.1) !important; /* Base per advertència (groc/taronja) */
+    background-color: rgba(255, 152, 0, 0.1) !important; 
     border-left: 5px solid #ff9800 !important;
     color: white !important;
     backdrop-filter: blur(5px);
 }
 
 
-/* ==================================== */
-/* ======== ESTILS DE LA FOTO DE PERFIL ======== */
-/* ==================================== */
+
 
 .photo-upload-container {
     position: relative;
@@ -370,12 +354,6 @@ const handleLogout = async () => {
     text-shadow: 0 0 5px rgba(59, 130, 246, 0.8);
 }
 
-
-/* ==================================== */
-/* ======== ESTILS D'ELEMENTS INTERNS ======== */
-/* ==================================== */
-
-/* Llista de dades transparent */
 .transparent-list {
     background-color: transparent !important;
     color: #ffffff;
@@ -398,9 +376,7 @@ const handleLogout = async () => {
 }
 
 
-/* Botons */
 
-/* Botó de Pujar Foto (Verd Neón) */
 .neon-btn-upload {
     background: linear-gradient(90deg, #10b981, #34d399) !important; 
     color: white !important;
@@ -416,7 +392,7 @@ const handleLogout = async () => {
 }
 
 .neon-btn-secondary {
-    color: #3b82f6 !important; /* Text blau neón */
+    color: #3b82f6 !important; 
     border: 1px solid rgba(59, 130, 246, 0.4);
     background-color: rgba(59, 130, 246, 0.1) !important;
     font-weight: bold;
@@ -431,7 +407,7 @@ const handleLogout = async () => {
     transform: translateY(-1px);
 }
 
-/* Botó de Tancar Sessió (Primari Morat/Blau) */
+
 .neon-btn-primary {
     background: linear-gradient(90deg, #8b5cf6, #3b82f6) !important; 
     color: white !important;

@@ -108,7 +108,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore';
 
-// Imports components
+
 import CameraView from '../components/CameraView.vue'
 import TimerCard from '../components/TimerCard.vue'
 import RepetitionCounter from '../components/RepetitionCounter.vue'
@@ -118,7 +118,7 @@ import LeaderboardCard from '../components/LeaderboardCard.vue'
 import SvgIcon from '@jamescoyle/vue-icon'
 import { mdiFolderOutline } from '@mdi/js'
 
-// Assets
+
 import flexionesGif from '@/assets/flexiones.gif'
 import sentadillasGif from '@/assets/sentadillas.gif'
 import saltosGif from '@/assets/saltos.gif'
@@ -146,7 +146,7 @@ const gifs = {
 const exerciciLabel = noms[exercici] || noms[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || 'EXERCICI'
 const exerciciGif = gifs[exercici] || gifs[exercici.charAt(0).toUpperCase() + exercici.slice(1)] || ''
 
-// Estado
+
 const count = ref(0)
 const leaderboard = ref([])
 const up = ref(false) 
@@ -160,18 +160,18 @@ const cameraViewRef = ref(null)
 const timerCardRef = ref(null)
 const timerActive = ref(false)
 
-// Contador manual de respaldo
+
 const tempsActiuTotal = ref(0) 
 let tempsInterval = null       
 
-// Lifecycle
+
 onMounted(() => connectWebSocket())
 onBeforeUnmount(() => {
     stopCamera();
     if (ws.value) ws.value.close();
 })
 
-// Funciones Cámara
+
 async function startCamera() {
   if (!cameraViewRef.value) return;
   try {
@@ -194,9 +194,6 @@ function selectVideo() {
   detecting.value = true; 
 }
 
-// ===================================================================
-// LÓGICA DEL TEMPORIZADOR
-// ===================================================================
 
 function startTempsCounter() {
   timerActive.value = true
@@ -234,9 +231,7 @@ function handleTimerReset() {
   initialY = null; 
 }
 
-// ===================================================================
-// FUNCIÓN CENTRAL DE NAVEGACIÓN (CORREGIDA)
-// ===================================================================
+
 async function tornar(arg = null) {
   stopCamera();
   timerCardRef.value?.stopTimer(); 
@@ -245,9 +240,7 @@ async function tornar(arg = null) {
   const repsFinals = count.value;
   const exerciciNormalitzat = exercici.toLowerCase();
 
-  // 🔴 CORRECCIÓN CLAVE:
-  // Si 'arg' es un número (viene del Timer), lo usamos.
-  // Si 'arg' es un Evento (viene del click) o null, usamos el contador local.
+
   let tempsFinal;
   if (typeof arg === 'number') {
       tempsFinal = arg;
@@ -257,7 +250,7 @@ async function tornar(arg = null) {
 
   console.log("Finalizando sesión -> Reps:", repsFinals, "Temps:", tempsFinal);
 
-  // 2. GUARDAR EN BASE DE DATOS
+
   try {
       await fetch('/api/user/save-session', {
           method: 'POST',
@@ -274,7 +267,7 @@ async function tornar(arg = null) {
       console.error("Error al guardar las estadísticas:", error);
   }
 
-  // 3. WebSocket cleanup
+
   if (ws.value?.readyState === WebSocket.OPEN) {
     ws.value.send(JSON.stringify({
       type: 'finish',
@@ -287,7 +280,7 @@ async function tornar(arg = null) {
     ws.value = null; 
   }
   
-  // 4. Router Push
+
   router.push({ 
     name: 'EstadistiquesSessio', 
     params: { 
@@ -298,9 +291,7 @@ async function tornar(arg = null) {
   });
 }
 
-// ===================================================================
-// LÓGICA DE MOVIMIENTO
-// ===================================================================
+
 
 function handleRepCount() {
   if (!timerActive.value) return; 
@@ -394,7 +385,7 @@ function checkPujades(pose) {
   if (dist > UMBRAL_ARRIBA && up.value) handleRepCount()
 }
 
-// WebSocket
+
 function connectWebSocket() {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.host;
@@ -420,9 +411,7 @@ function connectWebSocket() {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== FONDO Y LAYOUT ======== */
-/* ==================================== */
+
 .bg-fitai-deep-space {
   background: 
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
@@ -443,40 +432,34 @@ function connectWebSocket() {
   position: relative;
 }
 
-/* AÑADIR ESTO: */
-/* ==================================== */
-/* ======== BOTÓN SUPERIOR DERECHO (FINALIZAR) ======== */
-/* ==================================== */
 .top-right-finish-btn {
   position: absolute;
   top: 15px; 
   right: 15px; 
   z-index: 10;
   color: white !important; 
-  background: #8b5cf6 !important; /* Color principal */
+  background: #8b5cf6 !important; 
   border-radius: 8px !important; 
   font-weight: 700 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px rgba(139, 92, 246, 0.6); /* Sombra más limpia */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px rgba(139, 92, 246, 0.6); 
   transition: all 0.2s ease;
-  min-width: 180px; /* Un poco más ancho para ser más visible */
+  min-width: 180px; 
   margin-top: 10px;
 }
 .top-right-finish-btn:hover {
-    transform: translateY(-2px); /* Efecto de elevación */
+    transform: translateY(-2px); 
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7), 0 0 15px rgba(139, 92, 246, 0.8);
 }
 @media (max-width: 600px) {
   .top-right-finish-btn {
-    position: static; /* En móvil, dejarlo en flujo normal */
+    position: static; 
     width: 100%;
     margin-bottom: 20px;
     margin-top: 0;
   }
 }
 
-/* ==================================== */
-/* ======== CÁMARA Y CONTADOR ======== */
-/* ==================================== */
+
 .shadow-card {
   box-shadow: 0 8px 35px rgba(0, 0, 0, 0.6);
   transition: transform 0.3s ease;
@@ -486,17 +469,7 @@ function connectWebSocket() {
     transform: translateY(-2px);
 }
 
-/* Movido a RepetitionCounter.vue */
-/* .count-card { ... } */
-/* .counter-value { ... } */
 
-/* Movido a TimerCard.vue */
-/* .timer-card { ... } */
-/* @keyframes timerPulse { ... } */
-
-/* ==================================== */
-/* ======== BOTONES DE ACCIÓN ======== */
-/* ==================================== */
 .small-btn-group {
   gap: 12px;
 }
@@ -525,8 +498,4 @@ function connectWebSocket() {
   filter: brightness(1.1); 
 }
 
-/* ==================================== */
-/* ======== CLASIFICACIÓN (LEADERBOARD) ======== */
-/* ==================================== */
-/* Movido a LeaderboardCard.vue */
 </style>

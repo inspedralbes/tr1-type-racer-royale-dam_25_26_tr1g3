@@ -41,13 +41,12 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
-import StreakPopup from './StreakPopup.vue' // Tu componente Popup separado
+import StreakPopup from './StreakPopup.vue'
 
-// --- DEFINIR PROPS ---
 const props = defineProps({
   enablePopup: {
     type: Boolean,
-    default: true // Por defecto, el popup funciona.
+    default: true
   }
 })
 
@@ -55,7 +54,6 @@ const rachaData = ref({ dias: 1, ultimoAcceso: null })
 const showStreakDialog = ref(false)
 const authStore = useAuthStore()
 
-// Imágenes
 const rachaImagenes = [
   { dias: 1, imagen: new URL('@/assets/racha1.png', import.meta.url).href, size: 120 },
   { dias: 2, imagen: new URL('@/assets/racha2.png', import.meta.url).href, size: 140 },
@@ -70,7 +68,6 @@ const rachaActual = computed(() => {
 })
 
 const handleManualClick = () => {
-  // Solo abre el diálogo si el popup está habilitado
   if (props.enablePopup) {
     showStreakDialog.value = true
   }
@@ -88,8 +85,6 @@ const checkAndUpdateUserStreak = async () => {
       const data = await response.json();
       rachaData.value = data;
 
-      // LÓGICA CONDICIONAL:
-      // Solo mostramos el popup automático si enablePopup es TRUE
       if (props.enablePopup && rachaData.value.dias >= 1 && !authStore.hasShownStreakPopup) {
         nextTick(() => {
           showStreakDialog.value = true;
@@ -111,9 +106,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== DIÁLOGO Y GLASS (Sense canvis) ======== */
-/* ==================================== */
 .glass-card-futuristic {
   background: rgba(30, 30, 47, 0.9) !important; 
   border: 1px solid rgba(139, 92, 246, 0.3); 
@@ -136,9 +128,6 @@ onMounted(() => {
   text-shadow: 0 0 8px rgba(255, 213, 79, 0.8);
 }
 
-/* ==================================== */
-/* ======== SECCIÓN DE RACHA ======== */
-/* ==================================== */
 .streak-container {
   display: flex;
   flex-direction: column;
@@ -181,9 +170,6 @@ onMounted(() => {
   text-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
 }
 
-/* ==================================== */
-/* ======== NOU AJUST DE TÍTOL PER AL PERFIL ======== */
-/* ==================================== */
 .ranking-title-profile { 
   font-size: 1.5rem !important; 
   text-shadow: 0 0 10px rgba(255, 165, 0, 0.8);

@@ -4,7 +4,6 @@
       <v-container
         class="text-center text-white pt-10 pb-16 px-4 fade-in-container position-relative"
       >
-        <!-- ======== 1. BOTÓN DE NAVEGACIÓN (VOLVER) - AHORA RECTANGULAR ======== -->
         <v-btn
             class="top-left-back-btn rectangular-btn"
             variant="flat"
@@ -15,19 +14,15 @@
           Tornar
         </v-btn>
 
-        <!-- Título del ejercicio (Animado) -->
         <h2 class="exercise-title mb-4 pt-4">
           {{ exerciciLabel }}
         </h2>
 
-        <!-- Subtítulo -->
         <p class="subtitle mb-12">
           Vols jugar sol o multijugador?
         </p>
 
-        <!-- Opciones de Juego (Apiladas y Grandes) -->
         <v-row justify="center" align="center" class="ga-6">
-          <!-- Tarjeta Modo Sol -->
           <v-col cols="12" class="d-flex justify-center pa-2">
             <v-card
               class="option-card solo-card"
@@ -45,7 +40,6 @@
             </v-card>
           </v-col>
 
-          <!-- Tarjeta Multijugador -->
           <v-col cols="12" class="d-flex justify-center pa-2">
             <v-card
               class="option-card multi-card"
@@ -63,7 +57,6 @@
           </v-col>
         </v-row>
 
-        <!-- Mensaje de Error (si ocurre en la conexión) -->
         <v-alert
           v-if="errorMessage"
           type="error"
@@ -94,29 +87,24 @@ const nombres = {
   Squats: 'Squats',
   Salts: 'Salts',
   Abdominals: 'Abdominals',
-  // Se asume que si hay más ejercicios en el listado de 'Kim', deberían ir aquí:
-  // Fons: 'Fons', 
-  // Pujades: 'Pujades', 
+  Fons: 'Fons',
+  Pujades: 'Pujades',
 }
 
 const exerciciLabel = computed(() => nombres[exercici] || 'Exercici')
 
-// 🟢 FUNCIÓN ACTUALIZADA (TOMADA DE 'prueva') para usar la API de la BBDD
 const jugarSol = async () => {
   errorMessage.value = null
   try {
-    // ➡️ Llama a la nueva API para crear una sala/sesión en la BBDD
     const res = await fetch('/api/sala/crear', { method: 'POST' })
 
     if (!res.ok) {
-      // Intenta obtener el mensaje de error del cuerpo de la respuesta
       const errorData = await res.json();
       throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
     }
     
     const data = await res.json()
     
-    // ➡️ Navega usando 'codi_acces' (lo que devuelve la nueva API de BBDD)
     router.push({
       name: 'JuegoSolo',
       params: { ejercicio: exercici, codi_acces: data.codi_acces },
@@ -133,9 +121,7 @@ const jugarMultijugador = () => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== FONDO Y LAYOUT ======== */
-/* ==================================== */
+
 .bg-fitai-deep-space {
 
   background:
@@ -165,9 +151,7 @@ const jugarMultijugador = () => {
     position: relative;
 }
 
-/* ==================================== */
-/* ======== TÍTULO Y TEXTOS ======== */
-/* ==================================== */
+
 .exercise-title {
 
   font-size: 2.5rem;
@@ -226,9 +210,7 @@ const jugarMultijugador = () => {
   }
 }
 
-/* ==================================== */
-/* ======== CARTAS DE OPCIÓN (GRANDES Y APILADAS) ======== */
-/* ==================================== */
+
 .option-card {
   width: 100%;
 
@@ -246,11 +228,10 @@ const jugarMultijugador = () => {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 20px; /* Aumentamos el padding para más espacio */
+  padding: 20px; 
 }
 
 .option-title {
-  /* Mantenemos tamaño grande en móvil y escritorio */
   font-size: 1.75rem; 
   font-weight: 800;
   text-transform: uppercase;
@@ -258,7 +239,6 @@ const jugarMultijugador = () => {
 }
 
 .option-desc {
-  /* Aumentamos el tamaño de la fuente para mejor legibilidad */
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.75);
 }
@@ -267,7 +247,6 @@ const jugarMultijugador = () => {
   text-shadow: 0 0 10px currentColor; 
 }
 
-/* --- MODO SOLO (AZUL) --- */
 .solo-card {
   background: rgba(59, 130, 246, 0.1); 
   border: 3px solid rgba(59, 130, 246, 0.3);
@@ -281,7 +260,6 @@ const jugarMultijugador = () => {
     0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
-/* --- MULTIJUGADOR (MORADO) --- */
 .multi-card {
   background: rgba(139, 92, 246, 0.1); 
   border: 3px solid rgba(139, 92, 246, 0.3);
@@ -295,27 +273,23 @@ const jugarMultijugador = () => {
     0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
-/* ==================================== */
-/* ======== BOTÓN SUPERIOR IZQUIERDO (MÁS GRANDE) ======== */
-/* ==================================== */
+
 .top-left-back-btn {
-  /* [MODIFICAR COLOR Y TAMAÑO DEL BOTÓN DE VOLVER] */
   position: absolute;
-  top: 15px; /* Ajuste la posición vertical */
-  left: 15px; /* Ajuste la posición horizontal */
+  top: 15px; 
+  left: 15px; 
   z-index: 10;
-  color: white !important; /* Texto blanco para mejor contraste */
-  background: #8b5cf6 !important; /* Fondo morado neón para el botón rectangular */
-  border-radius: 8px; /* Bordes redondeados */
-  box-shadow: 0 0 15px rgba(139, 92, 246, 1); /* Brillo neón */
+  color: white !important; 
+  background: #8b5cf6 !important; 
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 1); 
   transition: all 0.3s ease;
 }
 .top-left-back-btn:hover {
-    transform: scale(1.05); /* Ligeramente más grande en hover */
+    transform: scale(1.05); 
     box-shadow: 0 0 20px rgba(139, 92, 246, 1.2);
 }
 
-/* Eliminamos los estilos del botón de abajo */
 .fixed-bottom-button, .back-btn {
     display: none !important;
 }

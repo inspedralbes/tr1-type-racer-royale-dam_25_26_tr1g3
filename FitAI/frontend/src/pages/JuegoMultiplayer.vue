@@ -10,7 +10,7 @@
                     Sortir
                 </v-btn>
 
-                <!-- COMPTADOR: Mostra PREPARACIÓ o TEMPS DE JOC -->
+
                 <div class="temps-counter" :class="{ 'counter-active': partidaEnCurs }">
                     <template v-if="enPreparacio">
                         PREPARAT: {{ tempsPreparacio }}
@@ -32,8 +32,8 @@
                                 :on-check-moviment="detectarIPublicarMoviment"
                                 style="width: 100%; display: block;" />
 
-                            <!-- OVERLAY SALA D'ESPERA (Només es veu si no ha començat res) -->
-                            <div v-if="!partidaEnCurs && !enPreparacio" class="waiting-overlay d-flex flex-column align-center justify-center">
+
+                                <div v-if="!partidaEnCurs && !enPreparacio" class="waiting-overlay d-flex flex-column align-center justify-center">
                                 <h3 class="text-h4 font-weight-bold text-uppercase mb-6 waiting-title">
                                     SALA D'ESPERA
                                 </h3>
@@ -89,9 +89,9 @@
                 </v-row>
             </v-container>
 
-            <!-- 🔴 POPUP AMB LES PROPS MODIFICADES -->
+
             <v-dialog v-model="mostrarPopup" max-width="600" persistent>
-                <!-- Dins de JuegoMultiplayer.vue -->
+
                 <EstadistiquesSessioMultiplayer 
                     :exercici="exercici" 
                     :totalReps="workoutStore.count" 
@@ -218,13 +218,13 @@ function iniciarPartidaReial() {
 }
 
 function obrirPopupFinal() {
-    // 🔴 CANVI CLAU: Guarda la classificació final abans d'obrir el popup
+
     workoutStore.finalLeaderboard = [...workoutStore.leaderboard];
 
     mostrarPopup.value = true;
     finalTime.value = 60 - tempsRestant.value;
 
-    // HEM ELIMINAT LA CRIDA A `workoutStore.disconnectWebSocket()` D'AQUÍ
+
 }
 
 function tornar() {
@@ -357,7 +357,7 @@ function checkPujades(pose) {
 </script>
 
 <style scoped>
-/* ELS ESTILS NO HAN CANVIAT, SÓN ELS MATEIXOS */
+
 .waiting-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6));

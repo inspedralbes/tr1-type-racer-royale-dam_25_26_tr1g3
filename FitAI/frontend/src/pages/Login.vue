@@ -123,7 +123,6 @@ const handleLogin = async () => {
 
   } catch (error) {
     loading.value = false;
-    // Asumiendo que `error.message` contiene el mensaje de error de Firebase/Auth
     errorMessage.value = error.message; 
     password.value = '';
   }
@@ -135,11 +134,8 @@ const goToRegister = () => {
 </script>
 
 <style scoped>
-/* ==================================== */
-/* ======== FONDO Y ANIMACIÓN ======== */
-/* ==================================== */
+
 .bg-fitai-deep-space {
-  /* Fondo oscuro similar al ejemplo */
   background:
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
@@ -149,7 +145,6 @@ const goToRegister = () => {
 }
 
 .fade-in-container {
-  /* Animación de entrada suave */
   animation: fadeInUp 0.8s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
 }
 @keyframes fadeInUp {
@@ -163,32 +158,21 @@ const goToRegister = () => {
   }
 }
 
-/* ==================================== */
-/* ======== LOGO DE LOGIN ======== */
-/* ==================================== */
 .logo-login {
-    /* Centra la imagen dentro de su contenedor (la tarjeta) */
     margin-left: auto;
     margin-right: auto;
-    /* Puedes añadir un poco de brillo si quieres un efecto neón */
     filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
 }
 
-/* ==================================== */
-/* ======== TARJETA (GLASS CARDS) ======== */
-/* ==================================== */
 .glass-card-futuristic {
-  background: rgba(30, 30, 47, 0.7); /* Fondo oscuro semitransparente */
-  border: 1px solid rgba(139, 92, 246, 0.3); /* Borde morado sutil */
+  background: rgba(30, 30, 47, 0.7); 
+  border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 20px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  backdrop-filter: blur(10px); /* Efecto glassmorphism */
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
-/* ==================================== */
-/* ======== TÍTULO NEXTREP ======== */
-/* ==================================== */
 .nextrep-title-login {
   font-size: 3rem !important;
   font-weight: 900 !important;
@@ -201,11 +185,11 @@ const goToRegister = () => {
 
 .next {
   color: #ffffff;
-  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8)); /* Brillo azul */
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8)); 
 }
 
 .rep {
-  background: linear-gradient(90deg, #9b6bff, #3b82f6); /* Degradado Morado/Azul */
+  background: linear-gradient(90deg, #9b6bff, #3b82f6);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -220,7 +204,7 @@ const goToRegister = () => {
   100% { background-position: 0% 50%; }
 }
 
-/* Línea luminosa decorativa */
+
 .divider-glow {
     height: 2px;
     border-radius: 4px;
@@ -229,76 +213,65 @@ const goToRegister = () => {
     opacity: 0.8;
 }
 
-/* ==================================== */
-/* ======== CAMPOS DE TEXTO ======== */
-/* ==================================== */
 .custom-input {
-    /* Elimina el padding de v-text-field que puede interferir */
     padding: 0 !important;
 }
 
-/* Sobrescribe el estilo interno de Vuetify para el campo de texto */
 .custom-input :deep(.v-field) {
-    background-color: rgba(0, 0, 0, 0.3) !important; /* Fondo del campo más oscuro */
+    background-color: rgba(0, 0, 0, 0.3) !important; 
     color: white !important;
     border-radius: 10px !important;
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.3s ease;
 }
 
-/* Estilo del texto y la etiqueta */
+
 .custom-input :deep(.v-field__input),
 .custom-input :deep(.v-label) {
-    color: #e0f7fa !important; /* Texto claro */
+    color: #e0f7fa !important; 
     opacity: 1 !important;
 }
 
-/* Estilo del icono interno */
+
 .custom-input :deep(.v-input__prepend-inner .v-icon) {
-    color: #8b5cf6 !important; /* Icono neón morado */
+    color: #8b5cf6 !important; 
 }
 
-/* Estado de enfoque */
+
 .custom-input:focus-within :deep(.v-field) {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.7) !important; /* Borde azul brillante al enfocar */
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.7) !important; 
     border-color: #3b82f6;
 }
 
-/* ==================================== */
-/* ======== BOTONES NEÓN ======== */
-/* ==================================== */
 
-/* Botón de Acceso (Primario) */
 .neon-btn-primary {
-    background: linear-gradient(90deg, #8b5cf6, #3b82f6) !important; /* Degradado Morado a Azul */
+    background: linear-gradient(90deg, #8b5cf6, #3b82f6) !important; 
     color: white !important;
     font-weight: bold;
     letter-spacing: 1px;
     border-radius: 10px !important;
     transition: all 0.4s ease;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8); /* Brillo inicial */
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8); 
 }
 
 .neon-btn-primary:hover {
     transform: translateY(-2px);
     background: linear-gradient(90deg, #a78bfa, #60a5fa) !important; 
-    box-shadow: 0 0 25px rgba(139, 92, 246, 1.2), 0 5px 20px rgba(0, 0, 0, 0.5); /* Brillo más intenso en hover */
+    box-shadow: 0 0 25px rgba(139, 92, 246, 1.2), 0 5px 20px rgba(0, 0, 0, 0.5); 
 }
 
-/* Botón de Registro (Secundario/Texto) */
 .neon-btn-secondary {
-    color: #9b6bff !important; /* Color morado neón para el texto */
+    color: #9b6bff !important; 
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .neon-btn-secondary:hover {
-    color: #3b82f6 !important; /* Cambia a azul neón en hover */
+    color: #3b82f6 !important; 
     text-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
     background-color: transparent !important;
 }
 
-/* Estilo para la alerta de error */
 .glass-alert {
     background-color: rgba(255, 0, 0, 0.1) !important;
     border-left: 5px solid #ff5252 !important;
