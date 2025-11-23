@@ -17,7 +17,7 @@ Un cop comenceu heu de canviar aquesta explicació amb la corresponent al vostre
 
 ---
 
-# FitAI G3
+# Nextrep G3
 
 ### Grup 3
 
@@ -29,7 +29,7 @@ Un cop comenceu heu de canviar aquesta explicació amb la corresponent al vostre
 
 ### Descripció
 
-FitAI, vol ser una aplicació social per ajudar-te com si fos un entrenador personal a fer els teus exercicis, estiguis on estiguis, ja només necessitarà tecnologies com un TensorFlow lite (el qual té capacitat per treballar amb navegadors), una càmera (per fer un stream de vídeo el qual la IA podrà interpretar). Fent que pugui treballar amb gairebé qualsevol dispositiu mòbil.
+Nextrep, vol ser una aplicació social per ajudar-te com si fos un entrenador personal a fer els teus exercicis, estiguis on estiguis, ja només necessitarà tecnologies com un TensorFlow lite (el qual té capacitat per treballar amb navegadors), una càmera (per fer un stream de vídeo el qual la IA podrà interpretar). Fent que pugui treballar amb gairebé qualsevol dispositiu mòbil.
 
 ### Gestor de Tasques
 
@@ -41,11 +41,11 @@ Enllaç per accedir al [Prototip Gràfic](https://www.canva.com/design/DAG2-s00H
 
 ## URL de Producció
 
-TODO
+Aquí teniu l'enllaç a la nostra aplicació, clicant a [aquest link](https://nextrep.dam.inspedralbes.cat/).
 
 ## Estat
 
-Començant.
+Finalitzat.
 
 ---
 
