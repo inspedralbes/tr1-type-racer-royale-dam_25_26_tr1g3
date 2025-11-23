@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuración de Multer (para subir imágenes)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = path.join(__dirname, '../../../', 'frontend/public/uploads');
@@ -34,11 +33,6 @@ const upload = multer({
   }
 });
 
-// ==========================
-// FUNCIONES
-// ==========================
-
-// 1. GET RANKING (🔴 CORREGIDO: Ahora busca a los mejores, no al usuario actual)
 export const getRanking = async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -57,7 +51,6 @@ export const getRanking = async (req, res) => {
   }
 };
 
-// 2. UPDATE STREAK
 export const updateStreak = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -90,7 +83,6 @@ export const updateStreak = async (req, res) => {
   }
 };
 
-// 3. GET STREAK
 export const getStreak = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -107,7 +99,6 @@ export const getStreak = async (req, res) => {
   }
 };
 
-// 4. GET ME (Correcto: incluye temps_total)
 export const getMe = async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'No autorizado' });
 
@@ -122,8 +113,8 @@ export const getMe = async (req, res) => {
         temps_total,       
         ratxa,
         ultima_sessio
-     FROM usuaris 
-     WHERE id = ?`,
+    FROM usuaris 
+    WHERE id = ?`,
     [req.session.userId]
   );
 
@@ -132,7 +123,6 @@ export const getMe = async (req, res) => {
   res.json(rows[0]);
 };
 
-// 5. UPDATE PROFILE PICTURE (Correcto: incluye temps_total)
 export const updateProfilePicture = [
   (req, res, next) => {
     if (!req.session.userId) return res.status(401).json({ message: 'No autorizado' });
@@ -162,7 +152,7 @@ export const updateProfilePicture = [
             repeticions_totals, 
             temps_total, 
             ratxa, ultima_sessio 
-         FROM usuaris WHERE id = ?`,
+        FROM usuaris WHERE id = ?`,
         [req.session.userId]
       );
 
@@ -182,7 +172,6 @@ export const updateProfilePicture = [
   }
 ];
 
-// 6. SAVE SESSION STATS (Correcto: guarda tiempo)
 export const saveSessionStats = async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -196,11 +185,11 @@ export const saveSessionStats = async (req, res) => {
 
     await pool.execute(
       `UPDATE usuaris 
-       SET 
-         repeticions_totals = repeticions_totals + ?, 
-         sessions_completades = sessions_completades + 1,
-         temps_total = IFNULL(temps_total, 0) + ?
-       WHERE id = ?`,
+        SET 
+          repeticions_totals = repeticions_totals + ?, 
+          sessions_completades = sessions_completades + 1,
+          temps_total = IFNULL(temps_total, 0) + ?
+        WHERE id = ?`,
       [repsNum, timeNum, userId]
     );
 
@@ -211,7 +200,7 @@ export const saveSessionStats = async (req, res) => {
           repeticions_totals, 
           temps_total, 
           foto_url 
-       FROM usuaris WHERE id = ?`,
+        FROM usuaris WHERE id = ?`,
       [userId]
     );
 
@@ -230,7 +219,7 @@ export const saveSessionStats = async (req, res) => {
   } catch (error) {
     console.error('Error al guardar estadísticas:', error);
     if (error.code === 'ER_BAD_FIELD_ERROR') {
-       return res.status(500).json({ message: "Error: La columna 'temps_total' no existe en la base de datos." });
+        return res.status(500).json({ message: "Error: La columna 'temps_total' no existe en la base de datos." });
     }
     res.status(500).json({ message: 'Error de base de datos al guardar stats' });
   }

@@ -1,6 +1,5 @@
 import mysql from 'mysql2/promise';
 import 'dotenv/config';
-// Això utilitza l'arxiu .env (esta al drive)
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',

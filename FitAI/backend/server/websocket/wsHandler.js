@@ -3,38 +3,23 @@ import pool from '../config/database.js';
 
 const sessions = {}; 
 
-// ======================================================
-// === NOU: SISTEMA DE HEARTBEAT (BATEC DE COR) ===
-// ======================================================
-
 function heartbeat() {
-  // A 'this' es refereix a la connexió WebSocket (ws) individual.
-  // Marqueu-la com a viva per a la propera comprovació.
   this.isAlive = true;
 }
 
-// Aquesta funció s'executarà cada 30 segons per a comprovar totes les connexions.
 const interval = setInterval(function ping() {
   Object.values(sessions).forEach(session => {
     Object.values(session.participants).forEach(({ ws }) => {
-      // Si un client no ha respost a l'últim 'ping', el donem per mort.
       if (ws.isAlive === false) {
         console.log(`Connexió terminada per timeout (sense resposta al ping): ${ws.userId}`);
-        return ws.terminate(); // terminate() tanca la connexió bruscament.
+        return ws.terminate();
       }
       
-      // Marquem la connexió com a "possiblement morta" i li enviem un 'ping'.
-      // Si respon amb un 'pong', la funció heartbeat() la tornarà a marcar com a viva.
       ws.isAlive = false;
       ws.ping();
     });
   });
-}, 30000); // Executa cada 30 segons.
-
-
-// ======================================================
-// === RESTA DEL CODI (amb la teva lògica) ===
-// ======================================================
+}, 30000); 
 
 function broadcastToSession(codi_acces, message) {
   const session = sessions[codi_acces];
@@ -91,16 +76,13 @@ function broadcastToOthers(codi_acces, message, senderId) {
 export const handleConnection = (ws) => {
   console.log('Nou client WebSocket connectat');
   
-  // NOU: INICIALITZEM L'ESTAT DEL HEARTBEAT PER A AQUESTA CONNEXIÓ
   ws.isAlive = true;
-  // NOU: DEFINIM QUÈ FER QUAN REBEM UN 'PONG' (la resposta al 'ping')
   ws.on('pong', heartbeat);
 
   let currentCodiAcces = null;
   let currentUserId = null;
 
   ws.on('message', async (data) => {
-    // ... (la teva lògica de 'message' no canvia, és la mateixa que ja tens)
     try {
       const message = JSON.parse(data.toString());
       if (message.type !== 'pose_update') {
@@ -127,7 +109,7 @@ export const handleConnection = (ws) => {
           session.participants[userId] = { ws, userName, reps: 0 };
           currentCodiAcces = codi_acces;
           currentUserId = userId;
-          ws.userId = userId; // Guardem l'ID a la pròpia connexió ws
+          ws.userId = userId; 
           broadcastLeaderboard(codi_acces);
           break;
         }
@@ -160,7 +142,6 @@ export const handleConnection = (ws) => {
           }
           break;
         }
-        // ... dins de wsHandler.js
 
         case 'finish': {
           const { reps, exercici, codi_acces, time } = message;
@@ -194,13 +175,10 @@ export const handleConnection = (ws) => {
           if (session.participants[userId]) {
             console.log(`L'usuari ${userId} ha acabat. Es prepara per sortir de la sala ${codi_acces}`);
             
-            // L'eliminem de la llista de participants actius
             delete session.participants[userId];
             
-            // Actualitzem la classificació per a la resta de jugadors
             broadcastLeaderboard(codi_acces);
             
-            // Comprovem si la sala ha quedat buida per a netejar-la
             netejarSessio(codi_acces);
           }
           
@@ -220,12 +198,9 @@ export const handleConnection = (ws) => {
         }
 
         case 'session_ended': {
-          // Aquest missatge el cridarà el frontend quan es torni al menú principal
-          // des de la pantalla d'estadístiques.
           if (currentCodiAcces && sessions[currentCodiAcces]) {
             console.log(`L'usuari ${currentUserId} ha confirmat el final de la sessió ${currentCodiAcces}.`);
             
-            // Marquem la sala com a finalitzada a la memòria i a la BBDD
             sessions[currentCodiAcces].estat = 'finalitzada';
             try {
               await pool.execute('UPDATE sales SET estat = ? WHERE codi_acces = ?', ['finalitzada', currentCodiAcces]);
@@ -234,9 +209,8 @@ export const handleConnection = (ws) => {
               console.error('Error al finalitzar la sala a la BBDD:', error);
             }
 
-            // Desconnectem l'usuari i netegem si cal
             delete sessions[currentCodiAcces].participants[currentUserId];
-            broadcastLeaderboard(currentCodiAcces); // Notifiquem per si algú queda
+            broadcastLeaderboard(currentCodiAcces); 
             netejarSessio(currentCodiAcces);
           }
           break;
@@ -252,8 +226,6 @@ export const handleConnection = (ws) => {
   });
 
   ws.on('close', () => {
-    // Aquesta és la versió simple i original, que és la correcta amb el heartbeat.
-    // El heartbeat ja s'encarrega dels talls de connexió.
     console.log('Client WebSocket desconnectat');
     if (currentCodiAcces && currentUserId && sessions[currentCodiAcces]) {
       delete sessions[currentCodiAcces].participants[currentUserId];
@@ -267,7 +239,6 @@ export const handleConnection = (ws) => {
   });
 };
 
-// NOU: NETEJA DE L'INTERVAL QUAN EL SERVIDOR ES TANCA (bona pràctica)
 process.on('SIGINT', () => {
     clearInterval(interval);
     process.exit();
