@@ -64,7 +64,7 @@ services:
     networks:
       - fitai_network
 
-  proxy:
+proxy:
     image: nginx:stable
     restart: always
     ports:
@@ -72,7 +72,9 @@ services:
       - "443:443"
     volumes:
       - ./proxy/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Añade esto para que LEA los certificados que generarás luego
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
     networks:
       - fitai_network
     depends_on:
