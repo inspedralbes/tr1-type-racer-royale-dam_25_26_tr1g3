@@ -28,7 +28,7 @@
           
           <div class="d-flex justify-center logo-title-container" style="flex-grow: 1;">
             <v-img
-              src="@/assets/LOGO.png"
+              src="@/assets/logo.png"
               alt="Logo NextRep"
               max-height="60"
               max-width="60"
