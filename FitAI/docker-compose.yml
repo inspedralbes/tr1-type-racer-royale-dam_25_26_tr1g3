@@ -1,5 +1,4 @@
 services:
- # --- SERVEI DE BASE DE DADES (MariaDB) ---
  db:
    image: mariadb:latest
    container_name: fitai_mysql_db
@@ -18,7 +17,6 @@ services:
      - fitai_network
 
 
- # --- SERVEI DE GESTIÓ DE BD (phpMyAdmin) ---
  phpmyadmin:
    image: phpmyadmin:latest
    container_name: fitai_pma
@@ -34,7 +32,6 @@ services:
      - fitai_network
 
 
- # --- SERVEI DE BACKEND (API Node.js) ---
  backend:  
    build:
      context: .
@@ -57,7 +54,6 @@ services:
      - fitai_network
 
 
- # --- SERVEI DE FRONTEND (Nginx) ---
  frontend:
    build:
      context: .

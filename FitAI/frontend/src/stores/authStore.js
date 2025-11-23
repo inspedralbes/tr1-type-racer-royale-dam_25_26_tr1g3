@@ -61,12 +61,8 @@ export const useAuthStore = defineStore('auth', {
       this.hasShownStreakPopup = false;
     },
 
-    // ----------------------------
-    // CheckAuth
-    // ----------------------------
     async checkAuth() {
       try {
-        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' en lugar de '/api/me'
         const response = await fetch(`/api/user/me?t=${Date.now()}`);
         
         if (!response.ok) {
@@ -81,12 +77,8 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // ----------------------------
-    // RefreshUser
-    // ----------------------------
     async refreshUser() {
       try {
-        // 🔴 CAMBIO IMPORTANTE: '/api/user/me' aquí también
         const response = await fetch(`/api/user/me?t=${Date.now()}`);
         
         if (!response.ok) return;

@@ -18,11 +18,10 @@ const routes = [
   },
 
   {
-    // ‼️ CANVI AQUÍ: Afegim els paràmetres
     path: '/estadistiques/:ejercicio/:reps/:tempsTotal',
     name: 'EstadistiquesSessio',
     component: EstadistiquesSessio,
-    props: true // Això és opcional, però és bona pràctica
+    props: true 
   },
 
   {
@@ -34,8 +33,8 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('@/pages/Profile.vue'), // Ruta al nou component
-    meta: { requiresAuth: true } // Etiqueta per a la guàrdia
+    component: () => import('@/pages/Profile.vue'),
+    meta: { requiresAuth: true }
   },
 
   {
@@ -51,7 +50,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    // Canviat de sessionId a codi_acces
     path: '/juego-solo/:ejercicio/:codi_acces',
     name: 'JuegoSolo',
     component: JuegoSolo,
@@ -64,11 +62,10 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    // Canviat de sessionId a codi_acces
     path: '/juego-multi/:ejercicio/:codi_acces',
     name: 'JuegoMultiplayer',
     component: JuegoMultiplayer,
-    props: true // Permet rebre 'codi_acces' com a prop
+    props: true
   },
 ]
 
@@ -77,12 +74,10 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach(async (to, from, next) => { // Afegit async
+router.beforeEach(async (to, from, next) => { 
 
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  // Intentem comprovar l'autenticació si no tenim usuari a l'store
-  // Això gestiona el refresc de pàgina
   if (!authStore.isAuthenticated && to.name !== 'Login' && to.name !== 'Register') {
     await authStore.checkAuth();
   }
