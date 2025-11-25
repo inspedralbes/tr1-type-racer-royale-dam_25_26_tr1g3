@@ -89,7 +89,7 @@ export const useAuthStore = defineStore('auth', {
         console.error('Error refrescando usuario:', error);
       }
     },
-
+// nodeuser - nodepass
     async updateProfilePicture(formData) {
       try {
         const response = await fetch('/api/user/profile/picture', { 
